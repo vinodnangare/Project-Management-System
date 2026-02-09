@@ -1,11 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { fetchActivities } from '../thunks';
 
-/**
- * Activities Slice
- * Manages activity/audit log state for the selected task
- */
-
 export interface TaskActivity {
   id: string;
   task_id: string;
@@ -35,7 +30,6 @@ const activitiesSlice = createSlice({
     resetActivities: () => initialState
   },
   extraReducers: (builder) => {
-    // Fetch activities
     builder
       .addCase(fetchActivities.pending, (state) => {
         state.loading = true;

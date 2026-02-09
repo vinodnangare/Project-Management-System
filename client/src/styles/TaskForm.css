@@ -147,8 +147,6 @@
   background: rgba(79, 134, 255, 0.1);
   border-color: rgba(79, 134, 255, 0.3);
 }
-
-/* Multi-select with checkboxes */
 .multi-select-container {
   background: var(--card);
   border: var(--border);
@@ -193,8 +191,6 @@
   color: var(--muted);
   font-size: 14px;
 }
-
-/* Scrollbar styling for multi-select */
 .multi-select-container::-webkit-scrollbar {
   width: 8px;
 }

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -5,6 +7,8 @@
 }
 
 :root {
+  --font-sans: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Sora', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --bg: #0f172a;
   --darker: #0a0f1f;
   --card: #0b1224;
@@ -13,6 +17,7 @@
   --muted: #9ca3af;
   --accent: #4f86ff;
   --accent-2: #22d3ee;
+  --accent-warm: #fbbf24;
   --success: #34d399;
   --error: #f87171;
   --border: 1px solid rgba(255, 255, 255, 0.05);
@@ -21,11 +26,39 @@
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg);
+  background: radial-gradient(circle at 10% 15%, rgba(79, 134, 255, 0.12), transparent 40%),
+    radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.12), transparent 38%),
+    radial-gradient(circle at 20% 90%, rgba(251, 191, 36, 0.08), transparent 45%),
+    var(--bg);
   color: var(--text);
+}
+
+h1, h2, h3, .brand-title {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgba(79, 134, 255, 0.35);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(79, 134, 255, 0.35);
+  border-radius: 999px;
+  border: 2px solid rgba(10, 15, 31, 0.8);
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 15, 31, 0.6);
 }
 
 .app-container {
@@ -45,6 +78,7 @@ body {
   border-bottom: var(--border);
   box-shadow: var(--shadow);
   gap: 24px;
+  backdrop-filter: blur(14px);
 }
 
 .header-brand {
@@ -138,6 +172,71 @@ body {
   align-items: center;
 }
 
+.btn-profile {
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(79, 134, 255, 0.3);
+  background: linear-gradient(135deg, rgba(79, 134, 255, 0.15), rgba(34, 211, 238, 0.1));
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-profile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.btn-profile:hover {
+  transform: translateY(-2px);
+  border-color: rgba(79, 134, 255, 0.6);
+  box-shadow: 0 8px 20px rgba(79, 134, 255, 0.3);
+}
+
+.btn-profile:hover::before {
+  opacity: 0.1;
+}
+
+.btn-profile:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  position: relative;
+  z-index: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.profile-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .btn-create-task,
 .btn-logout {
   padding: 10px 16px;
@@ -177,8 +276,28 @@ body {
 
 .app-main {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px 24px;
+  animation: appFade 240ms ease-out;
+}
+
+@keyframes appFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
 }
 
 .app-layout {
@@ -278,6 +397,17 @@ body {
     justify-content: center;
   }
 
+  .btn-profile {
+    width: 40px;
+    height: 40px;
+  }
+
+  .profile-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
   .btn-create-task,
   .btn-logout {
     flex: 1;
@@ -287,6 +417,9 @@ body {
 @media (max-width: 480px) {
   .app-main {
     padding: 12px 14px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   .app-header {
@@ -304,6 +437,17 @@ body {
   .nav-btn {
     padding: 8px 10px;
     font-size: 11px;
+  }
+
+  .btn-profile {
+    width: 38px;
+    height: 38px;
+  }
+
+  .profile-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
   }
 
   .btn-create-task,

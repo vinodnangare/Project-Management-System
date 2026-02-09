@@ -1,68 +1,30 @@
-import { useCallback } from 'react';
-import { useAppDispatch, useAppSelector } from './redux';
-import { fetchTasks, fetchTaskById } from '../store/thunks';
+import { useGetTasksQuery, useGetTaskByIdQuery } from '../services/api';
 
-/**
- * Custom Hook: useTasks
- * 
- * Why custom hooks:
- * - Encapsulates API calling logic
- * - Separates data fetching from UI components
- * - Handles loading and error states
- * - Reusable across components
- * - Makes explaining data flow easy
- */
-
-export const useTasks = () => {
-  const dispatch = useAppDispatch();
-  const { items: tasks, loading, error, pagination } = useAppSelector((state) => state.tasks);
-
-  const getTasks = useCallback(
-    (page = 1, limit = 10, filters?: Record<string, string>) => {
-      dispatch(
-        fetchTasks({ page, limit, ...filters })
-      );
-    },
-    [dispatch]
-  );
-
-  const getTaskById = useCallback(
-    (taskId: string) => {
-      dispatch(fetchTaskById(taskId));
-    },
-    [dispatch]
-  );
+export const useTasks = (page = 1, limit = 10, filters?: Record<string, string>) => {
+  const { data, isLoading, error } = useGetTasksQuery({
+    page,
+    limit,
+    status: filters?.status,
+    priority: filters?.priority,
+    assigned_to: filters?.assigned_to
+  });
 
   return {
-    tasks,
-    loading,
+    tasks: data?.tasks || [],
+    loading: isLoading,
     error,
-    pagination,
-    getTasks,
-    getTaskById
+    pagination: data?.meta
   };
 };
 
-/**
- * Custom Hook: useTaskDetails
- * Used for fetching a single task with its comments and activities
- */
-export const useTaskDetails = () => {
-  const dispatch = useAppDispatch();
-  const { selectedTaskId, loading, error, items } = useAppSelector((state) => state.tasks);
-  const selectedTask = selectedTaskId ? items.find(t => t.id === selectedTaskId) : null;
-
-  const fetchDetails = useCallback(
-    (taskId: string) => {
-      dispatch(fetchTaskById(taskId));
-    },
-    [dispatch]
-  );
+export const useTaskDetails = (taskId?: string) => {
+  const { data, isLoading, error } = useGetTaskByIdQuery(taskId || '', {
+    skip: !taskId
+  });
 
   return {
-    task: selectedTask,
-    loading,
-    error,
-    fetchDetails
+    task: data || null,
+    loading: isLoading,
+    error
   };
 };

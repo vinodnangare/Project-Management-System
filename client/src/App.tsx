@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import TaskList from './components/TaskList';
 import TaskDetail from './components/TaskDetail';
 import TaskForm from './components/TaskForm';
@@ -6,70 +7,125 @@ import Login from './components/Login';
 import Register from './components/Register';
 import TimeLogger from './components/TimeLogger';
 import AdminStats from './components/AdminStats.tsx';
+import Reports from './components/Reports.tsx';
 import EmployeeDashboard from './components/EmployeeDashboard.tsx';
+import ProfileModal from './components/ProfileModal';
 import { useAppDispatch, useAppSelector } from './hooks/redux';
-import { fetchTasks } from './store/thunks';
 import { openTaskForm, closeTaskForm, setSelectedTask } from './store/slices/uiSlice';
-import { login as loginThunk, register as registerThunk, logout } from './store/slices/authSlice';
+import { logout, setCredentials } from './store/slices/authSlice';
+import { openProfileModal } from './store/slices/uiModalSlice';
 import './App.css';
 
 function App() {
   const dispatch = useAppDispatch();
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [activeView, setActiveView] = useState<'tasks' | 'timeLog' | 'dashboard' | 'stats'>('dashboard');
-  
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated, user, token } = useAppSelector((state) => state.auth);
+
   const selectedTaskId = useAppSelector((state) => state.ui.selectedTaskId);
   const showTaskForm = useAppSelector((state) => state.ui.showTaskForm);
-  const { isAuthenticated, loading, error, user } = useAppSelector((state) => state.auth);
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  // Clear old Express tokens on app initialization
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    // If there's a token but no valid user data, it's likely an old Express token
+    // Clear it and let user re-login with Django
+    if (storedToken && !storedUser) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      dispatch(logout());
+    }
+  }, [dispatch]);
+
+  // Validate token once on app load to avoid stale/invalid tokens causing 403s
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken) return;
+
+    const controller = new AbortController();
+    fetch(`${apiBaseUrl}/auth/profile`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${storedToken}`,
+      },
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          dispatch(logout());
+        }
+      })
+      .catch(() => {
+        // Ignore network errors on startup
+      });
+
+    return () => controller.abort();
+  }, [apiBaseUrl, dispatch]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      // Set default view based on user role
-      setActiveView(user?.role === 'admin' ? 'stats' : 'dashboard');
-      dispatch(fetchTasks({ page: 1, limit: 10 }));
+    // Only redirect if:
+    // 1. User is authenticated AND
+    // 2. User has a role AND
+    // 3. They're on a public route
+    if (isAuthenticated && user && (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register')) {
+      const defaultRoute = user.role === 'admin' ? '/admin/analytics' : '/dashboard';
+      navigate(defaultRoute, { replace: true });
     }
-  }, [dispatch, isAuthenticated, user?.role]);
-
-  const handleLogin = (email: string, password: string) => {
-    dispatch(loginThunk({ email, password }));
-  };
-
-  const handleRegister = (email: string, password: string, fullName: string) => {
-    dispatch(registerThunk({ email, password, full_name: fullName }));
-  };
+  }, [isAuthenticated, user, navigate, location.pathname]);
 
   const handleLogout = () => {
     dispatch(logout());
+    navigate('/login', { replace: true });
   };
 
   const handleTaskCreated = () => {
     dispatch(closeTaskForm());
-    dispatch(fetchTasks({ page: 1, limit: 10 }));
   };
 
   const roleLabel = user?.role === 'admin' ? 'Admin' : 'Developer';
   const roleEmoji = user?.role === 'admin' ? '🛠️' : '💻';
 
-  // Show login/register if not authenticated
+  // Public routes (no authentication required)
   if (!isAuthenticated) {
-    return authMode === 'login' ? (
-      <Login
-        onLogin={handleLogin}
-        onSwitchToRegister={() => setAuthMode('register')}
-        loading={loading}
-        error={error}
-      />
-    ) : (
-      <Register
-        onRegister={handleRegister}
-        onSwitchToLogin={() => setAuthMode('login')}
-        loading={loading}
-        error={error}
-      />
+    return (
+      <Routes>
+        <Route path="/login" element={<Login onSwitchToRegister={() => navigate('/register')} />} />
+        <Route path="/register" element={<Register onSwitchToLogin={() => navigate('/login')} />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
     );
   }
 
-  // Show task management app if authenticated
+  // Protected routes (authentication required)
+  return (
+    <Routes>
+      <Route path="*" element={<AuthenticatedLayout 
+        user={user}
+        roleLabel={roleLabel}
+        roleEmoji={roleEmoji}
+        handleLogout={handleLogout}
+        dispatch={dispatch}
+        navigate={navigate}
+        location={location}
+        selectedTaskId={selectedTaskId}
+        showTaskForm={showTaskForm}
+        handleTaskCreated={handleTaskCreated}
+      />} />
+    </Routes>
+  );
+}
+
+function AuthenticatedLayout({ 
+  user, roleLabel, roleEmoji, handleLogout, dispatch, navigate, location,
+  selectedTaskId, showTaskForm, handleTaskCreated 
+}: any) {
+  const currentPath = location.pathname;
+  
   return (
     <div className="app-container">
       <header className="app-header">
@@ -86,29 +142,37 @@ function App() {
 
         <nav className="app-nav">
           <button
-            className={`nav-btn ${activeView === 'tasks' ? 'active' : ''}`}
-            onClick={() => setActiveView('tasks')}
+            className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
+            onClick={() => navigate('/tasks')}
           >
             📋 Tasks
           </button>
           {user?.role === 'admin' ? (
-            <button
-              className={`nav-btn ${activeView === 'stats' ? 'active' : ''}`}
-              onClick={() => setActiveView('stats')}
-            >
-              📊 Analytics
-            </button>
+            <>
+              <button
+                className={`nav-btn ${currentPath === '/admin/analytics' ? 'active' : ''}`}
+                onClick={() => navigate('/admin/analytics')}
+              >
+                📊 Analytics
+              </button>
+              <button
+                className={`nav-btn ${currentPath === '/admin/reports' ? 'active' : ''}`}
+                onClick={() => navigate('/admin/reports')}
+              >
+                📈 Reports
+              </button>
+            </>
           ) : (
             <>
               <button
-                className={`nav-btn ${activeView === 'dashboard' ? 'active' : ''}`}
-                onClick={() => setActiveView('dashboard')}
+                className={`nav-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
+                onClick={() => navigate('/dashboard')}
               >
                 🎯 Dashboard
               </button>
               <button
-                className={`nav-btn ${activeView === 'timeLog' ? 'active' : ''}`}
-                onClick={() => setActiveView('timeLog')}
+                className={`nav-btn ${currentPath === '/time-log' ? 'active' : ''}`}
+                onClick={() => navigate('/time-log')}
               >
                 ⏱️ Time
               </button>
@@ -117,7 +181,25 @@ function App() {
         </nav>
 
         <div className="header-actions">
-          {user?.role === 'admin' && activeView === 'tasks' && (
+          <button
+            className="btn-profile"
+            onClick={() => dispatch(openProfileModal())}
+            aria-label="Profile"
+            title="My Profile"
+          >
+            <span className="profile-avatar">
+              {user?.profile_image_url ? (
+                <img
+                  src={user.profile_image_url}
+                  alt="Profile"
+                  className="profile-avatar-image"
+                />
+              ) : (
+                user?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()
+              )}
+            </span>
+          </button>
+          {user?.role === 'admin' && currentPath === '/tasks' && (
             <button
               className="btn-create-task"
               onClick={() => dispatch(openTaskForm())}
@@ -131,40 +213,73 @@ function App() {
         </div>
       </header>
 
-      <main className="app-main">
-        {activeView === 'stats' ? (
-          <AdminStats />
-        ) : activeView === 'dashboard' ? (
-          <EmployeeDashboard />
-        ) : activeView === 'timeLog' ? (
-          <TimeLogger />
-        ) : (
-          <div className="app-layout">
-            {/* Left Panel: Task List */}
-            <aside className="task-list-panel">
-              <TaskList
-                onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
-                selectedTaskId={selectedTaskId || undefined}
-              />
-            </aside>
+      <ProfileModal />
 
-            {/* Right Panel: Task Detail or Form */}
-            <section className="task-detail-panel">
-              {showTaskForm ? (
-                <TaskForm
-                  onTaskCreated={handleTaskCreated}
-                  onClose={() => dispatch(closeTaskForm())}
-                />
-              ) : selectedTaskId ? (
-                <TaskDetail taskId={selectedTaskId} />
-              ) : (
-                <div className="empty-state">
-                  <p>Select a task to view details or create a new one</p>
+      <main className="app-main">
+        <Routes>
+          {/* Admin routes */}
+          {user?.role === 'admin' && (
+            <>
+              <Route path="/admin/analytics" element={<AdminStats />} />
+              <Route path="/admin/reports" element={<Reports />} />
+              <Route path="/tasks" element={
+                <div className="app-layout">
+                  <aside className="task-list-panel">
+                    <TaskList
+                      onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
+                      selectedTaskId={selectedTaskId || undefined}
+                    />
+                  </aside>
+                  <section className="task-detail-panel">
+                    {showTaskForm ? (
+                      <TaskForm
+                        onTaskCreated={handleTaskCreated}
+                        onClose={() => dispatch(closeTaskForm())}
+                      />
+                    ) : selectedTaskId ? (
+                      <TaskDetail taskId={selectedTaskId} />
+                    ) : (
+                      <div className="empty-state">
+                        <p>Select a task to view details or create a new one</p>
+                      </div>
+                    )}
+                  </section>
                 </div>
-              )}
-            </section>
-          </div>
-        )}
+              } />
+              <Route path="/" element={<Navigate to="/admin/analytics" replace />} />
+              <Route path="*" element={<Navigate to="/admin/analytics" replace />} />
+            </>
+          )}
+          
+          {/* Employee routes */}
+          {user?.role === 'employee' && (
+            <>
+              <Route path="/dashboard" element={<EmployeeDashboard />} />
+              <Route path="/time-log" element={<TimeLogger />} />
+              <Route path="/tasks" element={
+                <div className="app-layout">
+                  <aside className="task-list-panel">
+                    <TaskList
+                      onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
+                      selectedTaskId={selectedTaskId || undefined}
+                    />
+                  </aside>
+                  <section className="task-detail-panel">
+                    {selectedTaskId ? (
+                      <TaskDetail taskId={selectedTaskId} />
+                    ) : (
+                      <div className="empty-state">
+                        <p>Select a task to view details</p>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              } />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </>
+          )}
+        </Routes>
       </main>
     </div>
   );

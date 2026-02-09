@@ -1,11 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { fetchComments, addTaskComment } from '../thunks';
 
-/**
- * Comments Slice
- * Manages comment state for the selected task
- */
-
 export interface TaskComment {
   id: string;
   task_id: string;
@@ -33,7 +28,6 @@ const commentsSlice = createSlice({
     resetComments: () => initialState
   },
   extraReducers: (builder) => {
-    // Fetch comments
     builder
       .addCase(fetchComments.pending, (state) => {
         state.loading = true;
@@ -49,7 +43,6 @@ const commentsSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // Add comment
     builder
       .addCase(addTaskComment.pending, (state) => {
         state.loading = true;

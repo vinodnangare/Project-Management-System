@@ -48,8 +48,6 @@
   color: var(--muted);
   font-size: 13px;
 }
-
-/* Filters Section */
 .filters-section {
   display: grid;
   grid-template-columns: 1fr auto auto auto;

@@ -1,24 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosError } from 'axios';
 
-/**
- * API Client Configuration
- * 
- * Centralized API client with JWT authentication and error handling.
- * 
- * Features:
- * - Automatic JWT token injection via interceptors
- * - Consistent error handling across all API calls
- * - Type-safe request/response interfaces
- * - Single source of truth for all backend endpoints
- * 
- * Architecture:
- * - Uses Axios for HTTP requests with interceptors
- * - Stores JWT token in localStorage (set during login/register)
- * - Adds Authorization: Bearer <token> header to all requests
- * - Provides methods for all REST API endpoints
- */
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export interface ApiError {
@@ -38,7 +20,6 @@ class ApiClient {
       }
     });
 
-    // Request interceptor to add Authorization header
     this.client.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('token');
@@ -50,7 +31,6 @@ class ApiClient {
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
@@ -64,7 +44,6 @@ class ApiClient {
     );
   }
 
-  // Task endpoints
   async getTasks(page = 1, limit = 10, filters?: Record<string, string>) {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -90,7 +69,6 @@ class ApiClient {
     return this.client.delete(`/tasks/${id}?performed_by=${performedBy}`);
   }
 
-  // Comment endpoints
   async addComment(taskId: string, data: any) {
     return this.client.post(`/tasks/${taskId}/comments`, data);
   }
@@ -99,22 +77,18 @@ class ApiClient {
     return this.client.get(`/tasks/${taskId}/comments`);
   }
 
-  // Activity endpoints
   async getTaskActivities(taskId: string) {
     return this.client.get(`/tasks/${taskId}/activities`);
   }
 
-  // Users endpoints
   async getAssignableUsers() {
-    return this.client.get('/tasks/assignees');
+    return this.client.get('/tasks/users/assignable');
   }
 
-  // Stats endpoint
   async getTaskStats() {
     return this.client.get('/tasks/stats');
   }
 
-  // Time logging endpoints
   async logTime(data: { date: string; hours_worked: number; task_id: string | null; description: string | null }) {
     return this.client.post('/time-logs', data);
   }
@@ -127,7 +101,6 @@ class ApiClient {
     return this.client.get(`/time-logs/date?date=${date}`);
   }
 
-  // Group task assignees endpoints
   async addTaskAssignee(taskId: string, userId: string) {
     return this.client.post(`/tasks/${taskId}/assignees`, { user_id: userId });
   }
@@ -141,7 +114,27 @@ class ApiClient {
   }
 
   async getMyAssignedTasks() {
-    return this.client.get('/tasks/my-assigned');
+    return this.client.get('/tasks/assigned/me');
+  }
+
+  async getSubtasks(taskId: string) {
+    return this.client.get(`/tasks/${taskId}/subtasks`);
+  }
+
+  async createSubtask(taskId: string, data: any) {
+    return this.client.post(`/tasks/${taskId}/subtasks`, data);
+  }
+
+  async updateSubtaskStatus(taskId: string, subtaskId: string, data: any) {
+    return this.client.patch(`/tasks/${taskId}/subtasks/${subtaskId}`, data);
+  }
+
+  async deleteSubtask(taskId: string, subtaskId: string) {
+    return this.client.delete(`/tasks/${taskId}/subtasks/${subtaskId}`);
+  }
+
+  async updateProfile(data: { full_name?: string; mobile_number?: string | null }) {
+    return this.client.patch('/auth/profile', data);
   }
 }
 

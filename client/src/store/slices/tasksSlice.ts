@@ -2,19 +2,11 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { fetchTasks, fetchTaskById, createTask, updateTask, deleteTask } from '../thunks';
 
-/**
- * Task Slice
- * 
- * Redux slice for managing task state
- * Combines actions and reducers into a single file
- * Uses Immer for immutable updates with mutable syntax
- */
-
 export interface Task {
   id: string;
   title: string;
   description: string | null;
-  status: 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'REJECTED';
+  status: 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
   assigned_to: string | null;
   assigned_to_name?: string | null;
@@ -63,20 +55,14 @@ const initialState: TasksState = {
   filters: {}
 };
 
-/**
- * Tasks Slice
- * Contains all task-related state and reducers
- */
 const tasksSlice = createSlice({
   name: 'tasks',
   initialState,
   reducers: {
-    // Single task
     setSelectedTask: (state, action: PayloadAction<string | null>) => {
       state.selectedTaskId = action.payload;
     },
 
-    // Pagination and filtering
     setPagination: (state, action: PayloadAction<Partial<PaginationMeta>>) => {
       state.pagination = { ...state.pagination, ...action.payload };
     },
@@ -85,11 +71,9 @@ const tasksSlice = createSlice({
       state.filters = action.payload;
     },
 
-    // Reset
     resetTasks: () => initialState
   },
   extraReducers: (builder) => {
-    // Fetch tasks
     builder
       .addCase(fetchTasks.pending, (state) => {
         state.loading = true;
@@ -106,7 +90,6 @@ const tasksSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // Fetch single task
     builder
       .addCase(fetchTaskById.pending, (state) => {
         state.loading = true;
@@ -123,7 +106,6 @@ const tasksSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // Create task
     builder
       .addCase(createTask.pending, (state) => {
         state.loading = true;
@@ -140,7 +122,6 @@ const tasksSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // Update task
     builder
       .addCase(updateTask.pending, (state) => {
         state.loading = true;
@@ -159,7 +140,6 @@ const tasksSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // Delete task
     builder
       .addCase(deleteTask.pending, (state) => {
         state.loading = true;

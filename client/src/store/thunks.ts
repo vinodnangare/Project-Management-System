@@ -1,20 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import apiClient from '../api/client';
 
-/**
- * Redux Thunks for Async Operations
- * 
- * Why thunks:
- * - Handle async API calls in Redux
- * - Dispatch actions before, during, and after API calls
- * - Cleaner than spreading API calls across components
- * - Reusable across the app
- * - Built into Redux Toolkit (@reduxjs/toolkit)
- */
-
-/**
- * Fetch tasks with pagination and filtering
- */
 export const fetchTasks = createAsyncThunk(
   'tasks/fetchTasks',
   async (
@@ -38,9 +24,6 @@ export const fetchTasks = createAsyncThunk(
   }
 );
 
-/**
- * Fetch single task details
- */
 export const fetchTaskById = createAsyncThunk(
   'tasks/fetchById',
   async (taskId: string, { rejectWithValue }) => {
@@ -53,9 +36,6 @@ export const fetchTaskById = createAsyncThunk(
   }
 );
 
-/**
- * Create a new task
- */
 export const createTask = createAsyncThunk(
   'tasks/create',
   async (
@@ -80,9 +60,6 @@ export const createTask = createAsyncThunk(
   }
 );
 
-/**
- * Update an existing task
- */
 export const updateTask = createAsyncThunk(
   'tasks/update',
   async (
@@ -106,9 +83,6 @@ export const updateTask = createAsyncThunk(
   }
 );
 
-/**
- * Delete a task
- */
 export const deleteTask = createAsyncThunk(
   'tasks/delete',
   async (
@@ -124,9 +98,6 @@ export const deleteTask = createAsyncThunk(
   }
 );
 
-/**
- * Fetch comments for a task
- */
 export const fetchComments = createAsyncThunk(
   'comments/fetch',
   async (taskId: string, { rejectWithValue }) => {
@@ -139,9 +110,6 @@ export const fetchComments = createAsyncThunk(
   }
 );
 
-/**
- * Add comment to a task
- */
 export const addTaskComment = createAsyncThunk(
   'comments/add',
   async (
@@ -157,9 +125,6 @@ export const addTaskComment = createAsyncThunk(
   }
 );
 
-/**
- * Fetch activities for a task
- */
 export const fetchActivities = createAsyncThunk(
   'activities/fetch',
   async (taskId: string, { rejectWithValue }) => {
@@ -168,6 +133,65 @@ export const fetchActivities = createAsyncThunk(
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to fetch activities');
+    }
+  }
+);
+
+export const fetchSubtasks = createAsyncThunk(
+  'subtasks/fetch',
+  async (taskId: string, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.getSubtasks(taskId);
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch subtasks');
+    }
+  }
+);
+
+export const createSubtask = createAsyncThunk(
+  'subtasks/create',
+  async (
+    { taskId, title, description, createdBy }: { taskId: string; title: string; description?: string; createdBy: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await apiClient.createSubtask(taskId, { title, description: description || null, created_by: createdBy });
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to create subtask');
+    }
+  }
+);
+
+export const updateSubtaskStatus = createAsyncThunk(
+  'subtasks/updateStatus',
+  async (
+    { taskId, subtaskId, status }: { taskId: string; subtaskId: string; status: 'TODO' | 'DONE' },
+    { rejectWithValue, dispatch }
+  ) => {
+    try {
+      const response = await apiClient.updateSubtaskStatus(taskId, subtaskId, { status });
+      dispatch(fetchTaskById(taskId));
+      dispatch(fetchActivities(taskId));
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update subtask status');
+    }
+  }
+);
+
+export const deleteSubtask = createAsyncThunk(
+  'subtasks/delete',
+  async (
+    { taskId, subtaskId }: { taskId: string; subtaskId: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      await apiClient.deleteSubtask(taskId, subtaskId);
+      return subtaskId;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to delete subtask');
     }
   }
 );

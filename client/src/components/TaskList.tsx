@@ -1,17 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '../hooks/redux';
-import { fetchTasks } from '../store/thunks';
+import React, { useState } from 'react';
+import { useGetTasksQuery } from '../services/api';
 import '../styles/TaskList.css';
-
-/**
- * TaskList Component
- * 
- * Why separate components:
- * - Single Responsibility Principle
- * - Reusable across different pages
- * - Easy to test
- * - Clear visual separation of concerns
- */
 
 interface TaskListProps {
   onTaskSelect: (taskId: string) => void;
@@ -42,17 +31,15 @@ const getStatusClass = (status: string): string => {
 };
 
 export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId }) => {
-  const dispatch = useAppDispatch();
-  const { items: tasks, loading, error, pagination } = useAppSelector((state) => state.tasks);
+  const { data: tasksData, isLoading: loading, error } = useGetTasksQuery({ page: 1, limit: 50 });
+  const tasks = tasksData?.tasks || [];
+  const pagination = tasksData?.meta;
+  
   const [filters, setFilters] = useState<Filters>({
     search: '',
     status: '',
     priority: ''
   });
-
-  useEffect(() => {
-    dispatch(fetchTasks({ page: 1, limit: 10 }));
-  }, [dispatch]);
 
   const filteredTasks = tasks.filter((task: any) => {
     const matchesSearch = task.title.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -91,7 +78,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
   if (error && tasks.length === 0) {
     return (
       <div className="task-list-container">
-        <div className="error">{error}</div>
+        <div className="error">{(error as any)?.data?.message || 'Failed to load tasks'}</div>
       </div>
     );
   }
@@ -102,11 +89,10 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
         <div>
           <p className="eyebrow">Workspace</p>
           <h2>All Tasks</h2>
-          <p className="header-sub">{pagination.total} total</p>
+          <p className="header-sub">{pagination?.total ?? tasks.length} total</p>
         </div>
       </div>
 
-      {/* Filters Section */}
       <div className="filters-section">
         <div className="filter-group">
           <input
@@ -183,7 +169,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
                     <p className="task-title">{task.title}</p>
                     {task.assigned_to && (
                       <p className="task-assigned">
-                        Assigned to {task.assigned_to_name || task.assigned_to_email}
+                        Assigned to {task.assigned_to_user?.full_name || task.assigned_to_user?.email || task.assigned_to_name || task.assigned_to_email || task.assigned_to}
                       </p>
                     )}
                   </div>
@@ -213,11 +199,10 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
         </div>
       )}
 
-      {pagination.pages > 1 && (
+      {pagination && pagination.pages > 1 && (
         <div className="pagination">
           <button
-            onClick={() => dispatch(fetchTasks({ page: pagination.page - 1, limit: 10 }))}
-            disabled={pagination.page === 1}
+            disabled={true}
             className="pag-btn"
           >
             ← Previous
@@ -226,8 +211,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
             {pagination.page} / {pagination.pages}
           </span>
           <button
-            onClick={() => dispatch(fetchTasks({ page: pagination.page + 1, limit: 10 }))}
-            disabled={pagination.page === pagination.pages}
+            disabled={true}
             className="pag-btn"
           >
             Next →

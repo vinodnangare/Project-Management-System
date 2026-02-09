@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import apiClient from '../api/client';
+import { useGetTasksQuery, useGetTimeLogsQuery, useLogTimeMutation } from '../services/api';
 import '../styles/TimeLogger.css';
 
 interface TimeLog {
   id: string;
   user_id: string;
+  user?: {
+    id: string;
+    email: string;
+    full_name: string;
+    role: string;
+  };
   task_id: string | null;
   hours_worked: number;
   date: string;
@@ -18,97 +24,63 @@ interface Task {
 }
 
 export const TimeLogger: React.FC = () => {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  const { data: tasksData } = useGetTasksQuery({ page: 1, limit: 100 });
+  const { data: timeLogs = [], refetch: refetchTimeLogs } = useGetTimeLogsQuery({
+    startDate: thirtyDaysAgo.toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+  const [logTime, { isLoading: loading, error, isSuccess: success }] = useLogTimeMutation();
+  
+  const tasks = tasksData?.tasks || [];
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [hoursWorked, setHoursWorked] = useState('');
   const [taskId, setTaskId] = useState('');
   const [description, setDescription] = useState('');
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [localError, setLocalError] = useState('');
+  const [localSuccess, setLocalSuccess] = useState('');
 
   useEffect(() => {
-    fetchTasks();
-    fetchTimeLogs();
-  }, []);
-
-  useEffect(() => {
-    fetchTimeLogForDate();
-  }, [date]);
-
-  const fetchTasks = async () => {
-    try {
-      const response = await apiClient.getTasks(1, 100);
-      setTasks(response.data.data || []);
-    } catch (err) {
-      console.error('Failed to fetch tasks:', err);
-    }
-  };
-
-  const fetchTimeLogs = async () => {
-    try {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
-      const endDate = new Date();
-      
-      const response = await apiClient.getTimeLogs(
-        startDate.toISOString().split('T')[0],
-        endDate.toISOString().split('T')[0]
-      );
-      setTimeLogs(response.data.data || []);
-    } catch (err) {
-      console.error('Failed to fetch time logs:', err);
-    }
-  };
-
-  const fetchTimeLogForDate = async () => {
-    try {
-      const response = await apiClient.getTimeLogForDate(date);
-      if (response.data.data) {
-        const log = response.data.data;
-        setHoursWorked(log.hours_worked.toString());
-        setTaskId(log.task_id || '');
-        setDescription(log.description || '');
-      } else {
-        setHoursWorked('');
-        setTaskId('');
-        setDescription('');
-      }
-    } catch (err) {
-      // No log for this date yet
+    if (success) {
+      setLocalSuccess('Time logged successfully');
       setHoursWorked('');
       setTaskId('');
       setDescription('');
+      refetchTimeLogs();
+      const timer = setTimeout(() => setLocalSuccess(''), 3000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [success, refetchTimeLogs]);
+
+  useEffect(() => {
+    if (error) {
+      setLocalError((error as any)?.data?.message || 'Failed to log time');
+      const timer = setTimeout(() => setLocalError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setLocalError('');
+    setLocalSuccess('');
 
     if (!hoursWorked || parseFloat(hoursWorked) <= 0) {
-      setError('Please enter valid hours worked');
+      setLocalError('Hours worked must be greater than 0');
       return;
     }
 
-    setLoading(true);
     try {
-      await apiClient.logTime({
+      await logTime({
         date,
         hours_worked: parseFloat(hoursWorked),
-        task_id: taskId || null,
-        description: description || null
-      });
-
-      setSuccess('Time logged successfully!');
-      fetchTimeLogs();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to log time');
-    } finally {
-      setLoading(false);
+        task_id: taskId || undefined,
+        description: description || undefined
+      }).unwrap();
+    } catch (err) {
+      // Error handled by useEffect
     }
   };
 
@@ -134,8 +106,8 @@ export const TimeLogger: React.FC = () => {
   );
 
   const formatDay = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const dateObj = new Date(dateString);
+    return dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   return (
@@ -169,8 +141,8 @@ export const TimeLogger: React.FC = () => {
             <p className="panel-sub">Capture the date, hours, task, and a short note.</p>
           </div>
 
-          {error && <div className="alert alert-error">{error}</div>}
-          {success && <div className="alert alert-success">{success}</div>}
+          {localError && <div className="alert alert-error">{localError}</div>}
+          {localSuccess && <div className="alert alert-success">{localSuccess}</div>}
 
           <form onSubmit={handleSubmit} className="time-form">
             <div className="form-row">

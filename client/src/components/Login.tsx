@@ -1,20 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLoginMutation } from '../services/api';
+import { useAppDispatch } from '../hooks/redux';
+import { setCredentials } from '../store/slices/authSlice';
+import { useNavigate } from 'react-router-dom';
 import '../styles/Auth.css';
 
 interface LoginProps {
-  onLogin: (email: string, password: string) => void;
   onSwitchToRegister: () => void;
-  loading: boolean;
-  error: string | null;
 }
 
-export default function Login({ onLogin, onSwitchToRegister, loading, error }: LoginProps) {
+export default function Login({ onSwitchToRegister }: LoginProps) {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const [login, { isLoading: loading, error }] = useLoginMutation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState<string>('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (error && 'data' in error) {
+      setLocalError((error.data as any)?.message || 'Login failed');
+    } else if (error) {
+      setLocalError('Login failed');
+    }
+  }, [error]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email, password);
+    setLocalError('');
+    
+    if (!email || !password) {
+      setLocalError('Please enter both email and password');
+      return;
+    }
+
+    try {
+      const result = await login({ email, password }).unwrap();
+      dispatch(setCredentials(result));
+      // Let App.tsx handle the redirect based on user role via useEffect
+    } catch (err: any) {
+      setLocalError(err?.data?.message || 'Login failed');
+    }
   };
 
   return (
@@ -32,45 +58,39 @@ export default function Login({ onLogin, onSwitchToRegister, loading, error }: L
             <p className="auth-subtitle">Welcome Back</p>
           </div>
 
-          {error && (
+          {localError && (
             <div className="auth-error">
-              <span>⚠️ {error}</span>
+              <span>⚠️ {localError}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="email">Email Address</label>
-              <div className="input-wrapper">
-                <span className="input-icon">📧</span>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="form-input"
-                />
-              </div>
+              <label htmlFor="email">📧 Email Address</label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                className="form-input"
+              />
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="form-input"
-                />
-              </div>
+              <label htmlFor="password">🔒 Password</label>
+              <input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className="form-input"
+              />
             </div>
 
             <button type="submit" disabled={loading} className="submit-btn">

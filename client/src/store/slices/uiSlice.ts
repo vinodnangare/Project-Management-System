@@ -1,11 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
-/**
- * UI Slice
- * Manages UI state (loading, modals, notifications, etc.)
- */
-
 interface UIState {
   selectedTaskId: string | null;
   showTaskForm: boolean;

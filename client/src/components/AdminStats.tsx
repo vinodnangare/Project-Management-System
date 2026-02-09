@@ -1,49 +1,32 @@
-import { useEffect, useState } from 'react';
-import apiClient from '../api/client';
+import { useState } from 'react';
+import { useGetTaskStatsQuery, useGetTasksQuery, useDeleteEmployeeMutation } from '../services/api';
 import '../styles/AdminStats.css';
 
-interface EmployeeStats {
-  employee_id: string;
-  employee_name: string;
-  employee_email: string;
-  todo: number;
-  in_progress: number;
-  review: number;
-  done: number;
-  total: number;
-}
-
-interface OverallStats {
-  total_tasks: number;
-  todo_tasks: number;
-  in_progress_tasks: number;
-  review_tasks: number;
-  done_tasks: number;
-  total_employees: number;
-}
-
 export const AdminStats: React.FC = () => {
-  const [overallStats, setOverallStats] = useState<OverallStats | null>(null);
-  const [employeeStats, setEmployeeStats] = useState<EmployeeStats[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: stats, isLoading: loading, error, refetch } = useGetTaskStatsQuery();
+  const { data: tasksData } = useGetTasksQuery({ page: 1, limit: 100 });
+  const [deleteEmployee, { isLoading: isDeleting }] = useDeleteEmployeeMutation();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [deleteError, setDeleteError] = useState<string>('');
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  const handleRetry = () => {
+    refetch();
+  };
 
-  const fetchStats = async () => {
+  const handleDeleteEmployee = async () => {
+    if (!deleteConfirm) return;
+
+    setDeletingId(deleteConfirm.id);
+    setDeleteError('');
     try {
-      setLoading(true);
-      setError('');
-      const response = await apiClient.getTaskStats();
-      setOverallStats(response.data.data.overall);
-      setEmployeeStats(response.data.data.employees);
+      await deleteEmployee(deleteConfirm.id).unwrap();
+      setDeleteConfirm(null);
+      refetch();
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch statistics');
-      console.error('Error fetching stats:', err);
+      setDeleteError(err?.data?.error || 'Failed to delete employee');
     } finally {
-      setLoading(false);
+      setDeletingId(null);
     }
   };
 
@@ -54,53 +37,63 @@ export const AdminStats: React.FC = () => {
   if (error) {
     return (
       <div className="stats-container">
-        <div className="error-message">{error}</div>
-        <button onClick={fetchStats} className="retry-btn">Retry</button>
+        <div className="error-message">{(error as any)?.data?.message || 'Failed to load statistics'}</div>
+        <button onClick={handleRetry} className="retry-btn">Retry</button>
       </div>
     );
   }
 
+  const { overall, employees } = stats || { overall: {}, employees: [] };
+  const fallbackTasks = tasksData?.tasks || [];
+  const fallbackOverall = {
+    total_tasks: fallbackTasks.length,
+    todo_tasks: fallbackTasks.filter((t) => t.status === 'TODO').length,
+    in_progress_tasks: fallbackTasks.filter((t) => t.status === 'IN_PROGRESS').length,
+    review_tasks: fallbackTasks.filter((t) => t.status === 'REVIEW').length,
+    done_tasks: fallbackTasks.filter((t) => t.status === 'DONE').length,
+  };
+  const totalTasks = Number((overall as any)?.total_tasks ?? 0);
+  const effectiveOverall = totalTasks > 0 ? overall : fallbackOverall;
+
   return (
     <div className="stats-container">
       <h2 className="stats-title">📊 Task Management Dashboard</h2>
-
-      {/* Overall Statistics */}
       <div className="overall-stats">
         <h3>Overall Statistics</h3>
         <div className="stats-grid">
           <div className="stat-card total">
-            <div className="stat-value">{overallStats?.total_tasks || 0}</div>
+            <div className="stat-value">{effectiveOverall?.total_tasks || 0}</div>
             <div className="stat-label">Total Tasks</div>
           </div>
           <div className="stat-card todo">
-            <div className="stat-value">{overallStats?.todo_tasks || 0}</div>
+            <div className="stat-value">{effectiveOverall?.todo_tasks || 0}</div>
             <div className="stat-label">To Do</div>
           </div>
           <div className="stat-card in-progress">
-            <div className="stat-value">{overallStats?.in_progress_tasks || 0}</div>
+            <div className="stat-value">{effectiveOverall?.in_progress_tasks || 0}</div>
             <div className="stat-label">In Progress</div>
           </div>
           <div className="stat-card review">
-            <div className="stat-value">{overallStats?.review_tasks || 0}</div>
+            <div className="stat-value">{effectiveOverall?.review_tasks || 0}</div>
             <div className="stat-label">In Review</div>
           </div>
           <div className="stat-card done">
-            <div className="stat-value">{overallStats?.done_tasks || 0}</div>
+            <div className="stat-value">{effectiveOverall?.done_tasks || 0}</div>
             <div className="stat-label">Done</div>
           </div>
         </div>
       </div>
 
-      {/* Employee-wise Statistics */}
       <div className="employee-stats">
         <h3>Employee-wise Task Distribution</h3>
-        {employeeStats.length === 0 ? (
+        {!employees || employees.length === 0 ? (
           <div className="no-data">No employee data available</div>
         ) : (
           <div className="employee-table-wrapper">
             <table className="employee-table">
               <thead>
                 <tr>
+                  <th>Photo</th>
                   <th>Employee Name</th>
                   <th>Email</th>
                   <th>Total Tasks</th>
@@ -108,11 +101,27 @@ export const AdminStats: React.FC = () => {
                   <th className="in-progress">In Progress</th>
                   <th className="review">In Review</th>
                   <th className="done">Done</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {employeeStats.map((emp) => (
+                {employees.map((emp: any) => (
                   <tr key={emp.employee_id} className="employee-row">
+                    <td className="employee-photo">
+                      <div className="employee-avatar">
+                        {emp.profile_image_url ? (
+                          <img
+                            src={emp.profile_image_url}
+                            alt={emp.employee_name}
+                            className="employee-avatar-image"
+                          />
+                        ) : (
+                          <span className="employee-avatar-text">
+                            {emp.employee_name?.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="employee-name">{emp.employee_name}</td>
                     <td className="employee-email">{emp.employee_email}</td>
                     <td className="total-col">{emp.total}</td>
@@ -120,6 +129,16 @@ export const AdminStats: React.FC = () => {
                     <td className="in-progress-col">{emp.in_progress}</td>
                     <td className="review-col">{emp.review}</td>
                     <td className="done-col">{emp.done}</td>
+                    <td className="actions-col">
+                      <button
+                        className="delete-btn"
+                        onClick={() => setDeleteConfirm({ id: emp.employee_id, name: emp.employee_name })}
+                        disabled={deletingId === emp.employee_id}
+                        title="Delete employee"
+                      >
+                        {deletingId === emp.employee_id ? '⏳' : '🗑️'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -128,11 +147,38 @@ export const AdminStats: React.FC = () => {
         )}
       </div>
 
-      {/* Summary Info */}
       <div className="stats-summary">
-        <p>Total Employees: <strong>{overallStats?.total_employees || 0}</strong></p>
+        <p>Total Employees: <strong>{overall?.total_employees || 0}</strong></p>
         <p>Last Updated: <strong>{new Date().toLocaleString()}</strong></p>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <div className="confirmation-overlay">
+          <div className="confirmation-dialog">
+            <h3>Confirm Delete Employee</h3>
+            <p>Are you sure you want to delete the employee <strong>"{deleteConfirm.name}"</strong>?</p>
+            <p className="warning-text">This action cannot be undone. The employee will be deactivated and their account will no longer be accessible.</p>
+            {deleteError && <div className="error-message">{deleteError}</div>}
+            <div className="confirmation-actions">
+              <button 
+                className="btn-cancel"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-delete"
+                onClick={handleDeleteEmployee}
+                disabled={isDeleting}
+              >
+                {isDeleting ? '⏳ Deleting...' : '🗑️ Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

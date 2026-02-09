@@ -36,7 +36,7 @@
 .header-title-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   margin-bottom: 10px;
 }
@@ -49,23 +49,43 @@
   flex: 1;
 }
 
-.delete-btn {
-  padding: 8px 12px;
-  background: rgba(248, 113, 113, 0.1);
-  color: #fca5a5;
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  border-radius: var(--radius-sm);
+.delete-task-btn {
+  padding: 10px 18px;
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.22), rgba(248, 113, 113, 0.08));
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  border-radius: 999px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all var(--transition);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 24px rgba(248, 113, 113, 0.2);
 }
 
-.delete-btn:hover {
-  background: rgba(248, 113, 113, 0.2);
-  border-color: rgba(248, 113, 113, 0.5);
+.delete-task-btn:hover {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.35), rgba(248, 113, 113, 0.15));
+  border-color: rgba(248, 113, 113, 0.85);
   transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(248, 113, 113, 0.28);
+}
+
+.delete-task-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 18px rgba(248, 113, 113, 0.2);
+}
+
+.delete-task-icon {
+  font-size: 14px;
+}
+
+.delete-task-text {
+  text-transform: uppercase;
+  font-size: 11px;
 }
 
 .task-meta {
@@ -234,6 +254,157 @@
   font-size: 14px;
   color: var(--text);
   line-height: 1.5;
+}
+
+.docs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--text);
+}
+
+.docs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.docs-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.docs-subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.docs-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.docs-action-group {
+  display: flex;
+  gap: 8px;
+}
+
+.docs-btn {
+  padding: 8px 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #0b1224;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  transition: all var(--transition);
+}
+
+.docs-btn.secondary {
+  background: transparent;
+  border: var(--border);
+  color: var(--text);
+}
+
+.docs-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.docs-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.docs-editor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.docs-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.docs-toolbar button {
+  padding: 6px 10px;
+  background: var(--card);
+  color: var(--text);
+  border: var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.docs-toolbar button:hover {
+  border-color: rgba(79, 134, 255, 0.7);
+  color: var(--accent);
+}
+
+.docs-editor textarea {
+  min-height: 240px;
+  padding: 12px;
+  background: var(--card);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.docs-preview {
+  padding: 12px;
+  background: var(--card);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.preview-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.markdown-body {
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 20px;
+}
+
+.markdown-body code {
+  background: rgba(79, 134, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.markdown-body pre {
+  background: #0b1224;
+  padding: 12px;
+  border-radius: 10px;
+  overflow-x: auto;
 }
 
 .activity-section {
@@ -569,6 +740,17 @@
   cursor: not-allowed;
 }
 
+.disabled-btn {
+  background: rgba(100, 100, 100, 0.1);
+  border-color: rgba(100, 100, 100, 0.3);
+  color: var(--muted);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  cursor: not-allowed !important;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .confirmation-overlay {
   position: fixed;
   inset: 0;
@@ -798,6 +980,16 @@
 }
 
 @media (max-width: 768px) {
+  .header-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .delete-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   .task-detail-header h1 {
     font-size: 20px;
   }

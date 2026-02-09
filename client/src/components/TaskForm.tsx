@@ -1,13 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '../hooks/redux';
-import { createTask } from '../store/thunks';
+import React, { useState } from 'react';
+import { useGetAssignableUsersQuery, useCreateTaskMutation } from '../services/api';
 import '../styles/TaskForm.css';
-import apiClient from '../api/client';
-
-/**
- * TaskForm Component
- * Handles creation and editing of tasks
- */
 
 interface TaskFormProps {
   onTaskCreated?: (taskId: string) => void;
@@ -17,12 +10,9 @@ interface TaskFormProps {
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
 export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) => {
-  const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.tasks);
-  const { user } = useAppSelector((state) => state.auth);
-
-  const [employees, setEmployees] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
-  const [employeesError, setEmployeesError] = useState('');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { data: employees = [], error: employeesError } = useGetAssignableUsersQuery();
+  const [createTask, { isLoading: loading, error }] = useCreateTaskMutation();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -35,20 +25,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
   });
 
   const [formError, setFormError] = useState('');
-
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      if (user?.role !== 'admin') return;
-      try {
-        const response = await apiClient.getAssignableUsers();
-        setEmployees(response.data.data || []);
-      } catch (err) {
-        setEmployeesError('Failed to load employees');
-      }
-    };
-
-    fetchEmployees();
-  }, [user?.role]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -80,7 +56,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
     }
 
     try {
-      const result = await dispatch(createTask({
+      const result = await createTask({
         title: formData.title,
         description: formData.description || undefined,
         priority: formData.priority,
@@ -89,21 +65,18 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
         due_date: formData.due_date ? new Date(formData.due_date).toISOString() : undefined,
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : undefined,
         created_by: user?.id || ''
-      }));
-
-      // Check if the thunk was fulfilled
-      if (createTask.fulfilled.match(result)) {
-        onTaskCreated?.(result.payload.id);
-        setFormData({
-          title: '',
-          description: '',
-          priority: 'MEDIUM',
-          assignees: [],
-          due_date: '',
-          estimated_hours: '',
-          created_by: user?.id || ''
-        });
-      }
+      }).unwrap();
+      
+      onTaskCreated?.(result.id);
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'MEDIUM',
+        assignees: [],
+        due_date: '',
+        estimated_hours: '',
+        created_by: user?.id || ''
+      });
     } catch (err) {
       setFormError('Failed to create task');
     }
@@ -117,7 +90,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
       </div>
 
       {formError && <div className="alert alert-error">{formError}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error">{(error as any)?.data?.message || 'Failed to create task'}</div>}
 
       <form onSubmit={handleSubmit} className="task-form">
         <label className="field">
@@ -157,7 +130,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
 
           <label className="field">
             <span>👥 Assign to (multi-select)</span>
-            {employeesError && <div className="alert alert-error">{employeesError}</div>}
             <div className="multi-select-container">
               {employees.length === 0 ? (
                 <div className="multi-select-empty">No employees available</div>

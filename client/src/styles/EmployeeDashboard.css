@@ -30,9 +30,17 @@
     var(--bg);
   color: var(--text);
   padding: 28px 18px 48px;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans, 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif);
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .employee-dashboard {
+    height: auto;
+    min-height: calc(100vh - 60px);
+    overflow: visible;
+  }
 }
 
 .dashboard-hero {
@@ -313,13 +321,22 @@
 }
 
 @media (max-width: 768px) {
+  .employee-dashboard {
+    height: auto;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
   .hero-content { flex-direction: column; align-items: flex-start; }
   .hero-summary { width: 100%; grid-template-columns: repeat(3, 1fr); }
   .deadline-card { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
 
 @media (max-width: 520px) {
-  .employee-dashboard { padding: 20px 14px 40px; }
+  .employee-dashboard { 
+    padding: 20px 14px 100px;
+    height: auto;
+    min-height: 100vh;
+  }
   .hero-summary { grid-template-columns: repeat(2, 1fr); }
   .cards-section { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 }
