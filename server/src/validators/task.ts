@@ -1,19 +1,6 @@
 import { z } from 'zod';
 import { TaskStatus, TaskPriority } from '../types/index.js';
 
-/**
- * Validation Schemas using Zod
- * 
- * Why validation matters:
- * - Prevents invalid data from entering the database
- * - Provides clear error messages to frontend
- * - Defines data contracts for the API
- * - Type-safe parsing with TypeScript
- * 
- * These schemas are used in controllers to validate request data
- */
-
-// Status enum validation
 const StatusEnum = z.enum([
   TaskStatus.TODO,
   TaskStatus.IN_PROGRESS,
@@ -21,17 +8,12 @@ const StatusEnum = z.enum([
   TaskStatus.DONE
 ]);
 
-// Priority enum validation
 const PriorityEnum = z.enum([
   TaskPriority.LOW,
   TaskPriority.MEDIUM,
   TaskPriority.HIGH
 ]);
 
-/**
- * Create Task Schema
- * Validates data when creating a new task
- */
 export const createTaskSchema = z.object({
   title: z
     .string()
@@ -58,11 +40,6 @@ export const createTaskSchema = z.object({
   created_by: z.string().min(1, 'Created by is required')
 });
 
-/**
- * Update Task Schema
- * Validates data when updating a task
- * All fields are optional for PATCH requests
- */
 export const updateTaskSchema = z.object({
   title: z
     .string()
@@ -84,10 +61,6 @@ export const updateTaskSchema = z.object({
     .optional()
 });
 
-/**
- * Add Comment Schema
- * Validates comment creation requests
- */
 export const addCommentSchema = z.object({
   comment: z
     .string()
@@ -96,7 +69,6 @@ export const addCommentSchema = z.object({
   created_by: z.string().min(1, 'Created by is required')
 });
 
-// Export inferred types for TypeScript usage
 export type CreateTaskRequest = z.infer<typeof createTaskSchema>;
 export type UpdateTaskRequest = z.infer<typeof updateTaskSchema>;
 export type AddCommentRequest = z.infer<typeof addCommentSchema>;

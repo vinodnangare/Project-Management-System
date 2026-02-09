@@ -3,13 +3,6 @@ import { ZodError } from 'zod';
 import * as timeLogService from '../services/timeLogService.js';
 import { ApiResponse } from '../types/index.js';
 
-/**
- * Time Log Controller
- * 
- * Handles HTTP requests for time logging functionality.
- * All business logic is delegated to the service layer.
- */
-
 export const logTime = async (
   req: Request,
   res: Response<ApiResponse<any>>
@@ -22,7 +15,6 @@ export const logTime = async (
 
     const { date, hours_worked, task_id, description } = req.body;
 
-    // Basic validation
     if (!date || hours_worked === undefined) {
       res.status(400).json({
         success: false,
@@ -146,7 +138,6 @@ export const getTimeLogsByDate = async (
       return;
     }
 
-    // Only admins can view all users' time logs
     if (req.user.role !== 'admin') {
       res.status(403).json({
         success: false,

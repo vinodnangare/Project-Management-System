@@ -4,18 +4,6 @@ import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/**
- * MySQL Database Configuration
- * 
- * Why MySQL:
- * - Reliable relational database for production
- * - Better for distributed systems than SQLite
- * - Easy to scale and backup
- * - Industry standard for task/project management systems
- * - Connection pooling for optimal performance
- */
-
-// MySQL connection pool configuration
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306'),
@@ -27,15 +15,10 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-/**
- * Initialize database schema
- * Creates tables for tasks, comments, and activity logs if they don't exist
- */
 export const initializeDatabase = async (): Promise<void> => {
   try {
     const connection = await pool.getConnection();
 
-    // Users table - authentication and user management
     await connection.execute(
       `CREATE TABLE IF NOT EXISTS users (
         id VARCHAR(36) PRIMARY KEY,
@@ -51,7 +34,28 @@ export const initializeDatabase = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
 
-    // Tasks table - main task data
+    try {
+      await connection.execute(
+        `ALTER TABLE users ADD COLUMN mobile_number VARCHAR(20) NULL`
+      );
+      console.log('✓ Added mobile_number column to users table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.log('⚠ mobile_number column already exists or error:', error.message);
+      }
+    }
+
+    try {
+      await connection.execute(
+        `ALTER TABLE users ADD COLUMN profile_image_url VARCHAR(500) NULL`
+      );
+      console.log('✓ Added profile_image_url column to users table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.log('⚠ profile_image_url column already exists or error:', error.message);
+      }
+    }
+
     await connection.execute(
       `CREATE TABLE IF NOT EXISTS tasks (
         id VARCHAR(36) PRIMARY KEY,
@@ -73,7 +77,6 @@ export const initializeDatabase = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
 
-    // Add estimated_hours column if it doesn't exist (for existing databases)
     try {
       await connection.execute(
         `ALTER TABLE tasks ADD COLUMN estimated_hours DECIMAL(10,2) DEFAULT NULL`
@@ -81,12 +84,10 @@ export const initializeDatabase = async (): Promise<void> => {
       console.log('✓ Added estimated_hours column to tasks table');
     } catch (error: any) {
       if (error.code !== 'ER_DUP_FIELDNAME') {
-        // Only log if it's not a "column already exists" error
         console.log('⚠ estimated_hours column already exists or error:', error.message);
       }
     }
 
-    // Comments table - stores task discussions
     await connection.execute(
       `CREATE TABLE IF NOT EXISTS task_comments (
         id VARCHAR(36) PRIMARY KEY,
@@ -100,7 +101,6 @@ export const initializeDatabase = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
 
-    // Activity logs table - audit trail of all changes
     await connection.execute(
       `CREATE TABLE IF NOT EXISTS task_activities (
         id VARCHAR(36) PRIMARY KEY,
@@ -117,7 +117,6 @@ export const initializeDatabase = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
 
-    // Time Logs table - daily time tracking for employees
     await connection.execute(
       `CREATE TABLE IF NOT EXISTS time_logs (
         id VARCHAR(36) PRIMARY KEY,
@@ -137,7 +136,6 @@ export const initializeDatabase = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
 
-    // Task Assignees Junction Table - supports multiple assignees per task
     await connection.execute(
       `CREATE TABLE IF NOT EXISTS task_assignees (
         id VARCHAR(36) PRIMARY KEY,
@@ -153,6 +151,37 @@ export const initializeDatabase = async (): Promise<void> => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
 
+    await connection.execute(
+      `CREATE TABLE IF NOT EXISTS subtasks (
+        id VARCHAR(36) PRIMARY KEY,
+        task_id VARCHAR(36) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        description LONGTEXT,
+        status ENUM('TODO', 'DONE') NOT NULL DEFAULT 'TODO',
+        created_by VARCHAR(255) NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+        INDEX idx_task_id (task_id),
+        INDEX idx_status (status),
+        INDEX idx_created_at (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    );
+
+    await connection.execute(
+      `CREATE TABLE IF NOT EXISTS task_docs (
+        id VARCHAR(36) PRIMARY KEY,
+        task_id VARCHAR(36) NOT NULL,
+        content LONGTEXT NULL,
+        created_by VARCHAR(36) NOT NULL,
+        updated_by VARCHAR(36) NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_task_docs_task_id (task_id),
+        INDEX idx_task_docs_updated_at (updated_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    );
+
     connection.release();
     console.log('Database schema initialized successfully');
   } catch (error) {
@@ -161,20 +190,9 @@ export const initializeDatabase = async (): Promise<void> => {
   }
 };
 
-/**
- * Get a connection from the pool
- * @returns Promise<PoolConnection>
- */
 export const getConnection = async () => {
   return pool.getConnection();
 };
-
-/**
- * Execute a query with parameters
- * @param query SQL query string
- * @param params Query parameters
- * @returns Promise<[rows, fields]>
- */
 export const executeQuery = async (query: string, params: any[] = []) => {
   const connection = await getConnection();
   try {

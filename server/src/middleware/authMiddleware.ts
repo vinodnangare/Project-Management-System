@@ -13,10 +13,6 @@ declare global {
   }
 }
 
-/**
- * JWT verification middleware
- * Expects Authorization: Bearer <token>
- */
 export const verifyJwt = (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization || '';

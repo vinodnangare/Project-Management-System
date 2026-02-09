@@ -12,17 +12,14 @@ const createAdmin = async () => {
   });
 
   try {
-    // Admin credentials - change these as needed
     const email = 'admin@example.com';
     const password = 'admin123';
     const fullName = 'Admin User';
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = uuidv4();
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    // Insert admin user
     await connection.execute(
       `INSERT INTO users (id, email, password, full_name, role, is_active, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'admin', 1, ?, ?)`,

@@ -2,36 +2,11 @@ import { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import * as taskService from '../services/taskService.js';
 import { createTaskSchema, updateTaskSchema, addCommentSchema } from '../validators/task.js';
-import { ApiResponse } from '../types/index.js';
 
-/**
- * Task Controller
- * 
- * Why separate controllers:
- * - Handles HTTP request/response lifecycle
- * - Validates request data using schemas
- * - Calls service layer for business logic
- * - Returns properly formatted responses
- * - Makes it easy to explain API flow to seniors
- */
-
-/**
- * GET /tasks
- * Retrieve all tasks with optional filtering and pagination
- * 
- * Query Parameters:
- * - page: Page number (default: 1)
- * - limit: Items per page (default: 10)
- * - status: Filter by status (TODO, IN_PROGRESS, REVIEW, DONE)
- * - priority: Filter by priority (LOW, MEDIUM, HIGH)
- * - assigned_to: Filter by assignee
- * 
- * Response: Array of tasks + pagination metadata
- */
 export const getAllTasks = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     if (!req.user) {
       res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -44,7 +19,6 @@ export const getAllTasks = async (
     const priority = req.query.priority as string | undefined;
     const assigned_to = req.query.assigned_to as string | undefined;
 
-    // Validate pagination params
     if (page < 1 || limit < 1 || limit > 100) {
       res.status(400).json({
         success: false,
@@ -75,8 +49,8 @@ export const getAllTasks = async (
 
 export const getAssignableUsers = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     if (!req.user) {
       res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -97,16 +71,10 @@ export const getAssignableUsers = async (
   }
 };
 
-/**
- * GET /tasks/:id
- * Retrieve a single task with its details
- * 
- * Response: Task object with full details
- */
 export const getTaskById = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     const { id } = req.params;
 
@@ -133,26 +101,10 @@ export const getTaskById = async (
   }
 };
 
-/**
- * POST /tasks
- * Create a new task
- * 
- * Request Body:
- * {
- *   title: string (required)
- *   description?: string
- *   priority?: LOW | MEDIUM | HIGH (default: MEDIUM)
- *   assigned_to?: string (user ID)
- *   due_date?: ISO datetime string
- *   created_by: string (user ID, required)
- * }
- * 
- * Response: Created task object
- */
 export const createTask = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     if (!req.user) {
       res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -167,10 +119,8 @@ export const createTask = async (
       return;
     }
 
-    // Validate request body against schema
     const validatedData = createTaskSchema.parse(req.body);
 
-    // Use the first assignee as the primary assigned_to for backward compatibility
     const primaryAssignee = validatedData.assignees?.[0] || validatedData.assigned_to || null;
 
     const task = await taskService.createTask({
@@ -178,7 +128,6 @@ export const createTask = async (
       assigned_to: primaryAssignee
     });
 
-    // Add all provided assignees (including primary) to the junction table
     if (validatedData.assignees && validatedData.assignees.length > 0) {
       const uniqueAssignees = Array.from(new Set(validatedData.assignees));
       await Promise.all(
@@ -187,7 +136,6 @@ export const createTask = async (
         )
       );
     } else if (primaryAssignee) {
-      // Ensure primary assignee is added to junction as well
       await taskService.addAssignee(task.id, primaryAssignee, req.user.id);
     }
 
@@ -214,27 +162,10 @@ export const createTask = async (
   }
 };
 
-/**
- * PATCH /tasks/:id
- * Update a task (partial update)
- * 
- * Request Body: Any subset of task fields
- * - title?: string
- * - description?: string
- * - status?: TODO | IN_PROGRESS | REVIEW | DONE
- * - priority?: LOW | MEDIUM | HIGH
- * - assigned_to?: string
- * - due_date?: ISO datetime string
- * 
- * Query Parameters:
- * - performed_by: User ID performing the update (required)
- * 
- * Response: Updated task object
- */
 export const updateTask = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     const { id } = req.params;
     const performedBy = req.query.performed_by as string;
@@ -247,7 +178,6 @@ export const updateTask = async (
       return;
     }
 
-    // Validate request body against schema
     const validatedData = updateTaskSchema.parse(req.body);
 
     const task = await taskService.updateTask(id, validatedData, performedBy);
@@ -278,19 +208,10 @@ export const updateTask = async (
   }
 };
 
-/**
- * DELETE /tasks/:id
- * Delete a task (soft delete)
- * 
- * Query Parameters:
- * - performed_by: User ID performing the deletion (required)
- * 
- * Response: Success message
- */
 export const deleteTask = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     const { id } = req.params;
     const performedBy = req.query.performed_by as string;
@@ -326,30 +247,17 @@ export const deleteTask = async (
   }
 };
 
-/**
- * POST /tasks/:id/comments
- * Add a comment to a task
- * 
- * Request Body:
- * {
- *   comment: string (required)
- *   created_by: string (user ID, required)
- * }
- * 
- * Response: Created comment object
- */
 export const addComment = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
-    const { id } = req.params;
+    const { taskId } = req.params;
 
-    // Validate request body
     const validatedData = addCommentSchema.parse(req.body);
 
     const comment = await taskService.addComment(
-      id,
+      taskId,
       validatedData.comment,
       validatedData.created_by
     );
@@ -380,21 +288,14 @@ export const addComment = async (
   }
 };
 
-/**
- * GET /tasks/:id/comments
- * Retrieve all comments for a task
- * 
- * Response: Array of comments ordered by newest first
- */
 export const getTaskComments = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
-    const { id } = req.params;
+    const { taskId } = req.params;
 
-    // Verify task exists
-    const task = await taskService.getTaskById(id);
+    const task = await taskService.getTaskById(taskId);
     if (!task) {
       res.status(404).json({
         success: false,
@@ -403,7 +304,7 @@ export const getTaskComments = async (
       return;
     }
 
-    const comments = await taskService.getTaskComments(id);
+    const comments = await taskService.getTaskComments(taskId);
 
     res.status(200).json({
       success: true,
@@ -418,21 +319,14 @@ export const getTaskComments = async (
   }
 };
 
-/**
- * GET /tasks/:id/activities
- * Retrieve all activities (change log) for a task
- * 
- * Response: Array of activities ordered by newest first
- */
 export const getTaskActivities = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
-    const { id } = req.params;
+    const { taskId } = req.params;
 
-    // Verify task exists
-    const task = await taskService.getTaskById(id);
+    const task = await taskService.getTaskById(taskId);
     if (!task) {
       res.status(404).json({
         success: false,
@@ -441,7 +335,7 @@ export const getTaskActivities = async (
       return;
     }
 
-    const activities = await taskService.getTaskActivities(id);
+    const activities = await taskService.getTaskActivities(taskId);
 
     res.status(200).json({
       success: true,
@@ -456,25 +350,16 @@ export const getTaskActivities = async (
   }
 };
 
-/**
- * GET /tasks/stats
- * Retrieve task statistics for admin dashboard
- * 
- * Returns:
- * - Overall stats: Total tasks, counts by status
- * - Employee-wise stats: Task counts for each employee
- */
 export const getTaskStats = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     if (!req.user) {
       res.status(401).json({ success: false, error: 'Unauthorized' });
       return;
     }
 
-    // Only admins can view stats
     if (req.user.role !== 'admin') {
       res.status(403).json({ success: false, error: 'Forbidden' });
       return;
@@ -494,19 +379,143 @@ export const getTaskStats = async (
     });
   }
 };
-/**
- * POST /tasks/:id/assignees
- * Add an assignee to a task (group task support)
- * 
- * Request Body:
- * {
- *   user_id: string (required)
- * }
- */
+
+export const getReportSummary = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      res.status(403).json({ success: false, error: 'Forbidden' });
+      return;
+    }
+
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+
+    const report = await taskService.getReportSummary(startDate, endDate);
+    res.status(200).json({ success: true, data: report });
+  } catch (error) {
+    console.error('Error generating report:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate report' });
+  }
+};
+
+export const getEmployeePerformanceReport = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      res.status(403).json({ success: false, error: 'Forbidden' });
+      return;
+    }
+
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+
+    const report = await taskService.getEmployeePerformanceReport(startDate, endDate);
+    res.status(200).json({ success: true, data: report });
+  } catch (error) {
+    console.error('Error generating employee report:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate employee report' });
+  }
+};
+
+export const getTaskCompletionReport = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      res.status(403).json({ success: false, error: 'Forbidden' });
+      return;
+    }
+
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    const groupBy = req.query.groupBy as string || 'day';
+
+    const report = await taskService.getTaskCompletionReport(startDate, endDate, groupBy);
+    res.status(200).json({ success: true, data: report });
+  } catch (error) {
+    console.error('Error generating completion report:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate completion report' });
+  }
+};
+
+export const exportReport = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      res.status(403).json({ success: false, error: 'Forbidden' });
+      return;
+    }
+
+    const reportType = req.query.type as string;
+    const format = req.query.format as string || 'json';
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+
+    const data = await taskService.exportReportData(reportType, startDate, endDate);
+    
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=report-${reportType}-${Date.now()}.csv`);
+      res.send(taskService.convertToCSV(data));
+    } else {
+      res.status(200).json({ success: true, data });
+    }
+  } catch (error) {
+    console.error('Error exporting report:', error);
+    res.status(500).json({ success: false, error: 'Failed to export report' });
+  }
+};
+
+export const getTaskDoc = async (req: Request, res: Response) => {
+  try {
+    const { taskId } = req.params as { taskId: string };
+    const doc = await taskService.getTaskDoc(taskId);
+
+    if (!doc) {
+      res.status(200).json({
+        success: true,
+        data: {
+          id: null,
+          task_id: taskId,
+          content: '',
+          created_by: null,
+          updated_by: null,
+          created_at: null,
+          updated_at: null
+        }
+      });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: doc });
+  } catch (error) {
+    console.error('Error fetching task doc:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch task docs' });
+  }
+};
+
+export const upsertTaskDoc = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    if (req.user.role !== 'admin') {
+      res.status(403).json({ success: false, error: 'Only admins can edit docs' });
+      return;
+    }
+
+    const { taskId } = req.params as { taskId: string };
+    const content = req.body?.content ?? '';
+
+    const doc = await taskService.upsertTaskDoc(taskId, content, req.user.id);
+    res.status(200).json({ success: true, data: doc });
+  } catch (error) {
+    console.error('Error saving task doc:', error);
+    res.status(500).json({ success: false, error: 'Failed to save task docs' });
+  }
+};
 export const addTaskAssignee = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     if (!req.user) {
       res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -518,7 +527,7 @@ export const addTaskAssignee = async (
       return;
     }
 
-    const { id } = req.params;
+    const { taskId } = req.params;
     const { user_id } = req.body;
 
     if (!user_id) {
@@ -529,8 +538,7 @@ export const addTaskAssignee = async (
       return;
     }
 
-    // Verify task exists
-    const task = await taskService.getTaskById(id);
+    const task = await taskService.getTaskById(taskId);
     if (!task) {
       res.status(404).json({
         success: false,
@@ -539,9 +547,9 @@ export const addTaskAssignee = async (
       return;
     }
 
-    await taskService.addAssignee(id, user_id, req.user.id);
+    await taskService.addAssignee(taskId, user_id, req.user.id);
 
-    const assignees = await taskService.getTaskAssignees(id);
+    const assignees = await taskService.getTaskAssignees(taskId);
 
     res.status(201).json({
       success: true,
@@ -563,14 +571,10 @@ export const addTaskAssignee = async (
   }
 };
 
-/**
- * DELETE /tasks/:id/assignees/:userId
- * Remove an assignee from a task
- */
 export const removeTaskAssignee = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     if (!req.user) {
       res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -582,10 +586,9 @@ export const removeTaskAssignee = async (
       return;
     }
 
-    const { id, userId } = req.params;
+    const { taskId, userId } = req.params;
 
-    // Verify task exists
-    const task = await taskService.getTaskById(id);
+    const task = await taskService.getTaskById(taskId);
     if (!task) {
       res.status(404).json({
         success: false,
@@ -594,9 +597,9 @@ export const removeTaskAssignee = async (
       return;
     }
 
-    await taskService.removeAssignee(id, userId, req.user.id);
+    await taskService.removeAssignee(taskId, userId, req.user.id);
 
-    const assignees = await taskService.getTaskAssignees(id);
+    const assignees = await taskService.getTaskAssignees(taskId);
 
     res.status(200).json({
       success: true,
@@ -611,19 +614,14 @@ export const removeTaskAssignee = async (
   }
 };
 
-/**
- * GET /tasks/:id/assignees
- * Get all assignees for a task
- */
 export const getTaskAssignees = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
-    const { id } = req.params;
+    const { taskId } = req.params;
 
-    // Verify task exists
-    const task = await taskService.getTaskById(id);
+    const task = await taskService.getTaskById(taskId);
     if (!task) {
       res.status(404).json({
         success: false,
@@ -632,7 +630,7 @@ export const getTaskAssignees = async (
       return;
     }
 
-    const assignees = await taskService.getTaskAssignees(id);
+    const assignees = await taskService.getTaskAssignees(taskId);
 
     res.status(200).json({
       success: true,
@@ -647,14 +645,10 @@ export const getTaskAssignees = async (
   }
 };
 
-/**
- * GET /tasks/my-assigned
- * Get all tasks assigned to current user (including group tasks)
- */
 export const getMyAssignedTasks = async (
   req: Request,
-  res: Response<ApiResponse<any>>
-): Promise<void> => {
+  res: Response
+) => {
   try {
     if (!req.user) {
       res.status(401).json({ success: false, error: 'Unauthorized' });

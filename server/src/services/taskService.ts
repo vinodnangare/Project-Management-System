@@ -7,33 +7,24 @@ import {
   TaskComment,
   TaskActivity,
   ActivityAction,
-  PaginationMeta
+  PaginationMeta,
+  TaskDoc
 } from '../types/index.js';
 import {
   CreateTaskRequest,
   UpdateTaskRequest
 } from '../validators/task.js';
 
-/**
- * Convert ISO date string to MySQL datetime format (YYYY-MM-DD HH:MM:SS)
- */
 const toMySQLDateTime = (isoString: string | null): string | null => {
   if (!isoString) return null;
   return new Date(isoString).toISOString().slice(0, 19).replace('T', ' ');
 };
 
-/**
- * Task Service
- * 
- * Why use a service layer:
- * - Separates business logic from route handlers (Single Responsibility)
- * - Reusable across different endpoints
- * - Easier to test
- * - Centralized data access patterns
- * - Makes it easy to explain "where is the logic" to seniors
- * 
- * All database operations and business logic go here.
- */
+const withTimeBounds = (date?: string, isEnd?: boolean): string | null => {
+  if (!date) return null;
+  if (date.includes(' ')) return date;
+  return `${date} ${isEnd ? '23:59:59' : '00:00:00'}`;
+};
 
 interface QueryOptions {
   page?: number;
@@ -45,7 +36,7 @@ interface QueryOptions {
 
 export const getAssignableUsers = async (): Promise<Array<{ id: string; full_name: string; email: string }>> => {
   const [rows]: any = await executeQuery(
-    'SELECT id, full_name, email FROM users WHERE role = "employee" AND is_active = 1'
+    'SELECT id, full_name, email FROM users WHERE LOWER(role) = "employee" AND is_active = 1'
   );
 
   return (rows || []).map((row: any) => ({
@@ -55,12 +46,6 @@ export const getAssignableUsers = async (): Promise<Array<{ id: string; full_nam
   }));
 };
 
-/**
- * Add an assignee to a task (supports multiple assignees)
- * @param taskId Task identifier
- * @param userId User to assign
- * @param assignedBy User performing the assignment
- */
 export const addAssignee = async (
   taskId: string,
   userId: string,
@@ -75,7 +60,6 @@ export const addAssignee = async (
     [assigneeId, taskId, userId, assignedBy, now]
   );
 
-  // Log activity
   await logActivity({
     task_id: taskId,
     action: ActivityAction.ASSIGNED,
@@ -85,12 +69,6 @@ export const addAssignee = async (
   }).catch(console.error);
 };
 
-/**
- * Remove an assignee from a task
- * @param taskId Task identifier
- * @param userId User to unassign
- * @param unassignedBy User performing the unassignment
- */
 export const removeAssignee = async (
   taskId: string,
   userId: string,
@@ -101,7 +79,6 @@ export const removeAssignee = async (
     [taskId, userId]
   );
 
-  // Log activity
   await logActivity({
     task_id: taskId,
     action: ActivityAction.UNASSIGNED,
@@ -111,11 +88,6 @@ export const removeAssignee = async (
   }).catch(console.error);
 };
 
-/**
- * Get all assignees for a task
- * @param taskId Task identifier
- * @returns Array of assignee users with assignment details
- */
 export const getTaskAssignees = async (
   taskId: string
 ): Promise<
@@ -141,11 +113,6 @@ export const getTaskAssignees = async (
   return rows || [];
 };
 
-/**
- * Get all tasks assigned to a user (including group tasks)
- * @param userId User identifier
- * @returns Array of tasks assigned to this user
- */
 export const getUserAssignedTasks = async (userId: string): Promise<Task[]> => {
   const [tasks]: any = await executeQuery(
     `SELECT DISTINCT
@@ -154,22 +121,17 @@ export const getUserAssignedTasks = async (userId: string): Promise<Task[]> => {
       cu.email AS created_by_email
      FROM tasks t
      LEFT JOIN users cu ON cu.id = t.created_by
-     WHERE t.id IN (
+     WHERE (t.assigned_to = ? OR t.id IN (
        SELECT task_id FROM task_assignees WHERE user_id = ?
-     )
+     ))
      AND t.is_deleted = 0
      ORDER BY t.created_at DESC`,
-    [userId]
+    [userId, userId]
   );
 
   return (tasks || []) as Task[];
 };
 
-/**
- * Get all tasks with filtering and pagination
- * @param options Query parameters for filtering
- * @returns Tasks array and pagination metadata
- */
 export const getAllTasks = async (
   options: QueryOptions,
   userId: string,
@@ -182,11 +144,9 @@ export const getAllTasks = async (
   const limit = Number(options.limit || 10);
   const offset = (page - 1) * limit;
 
-  // Build WHERE clause with proper parameter handling
   let whereClause = 't.is_deleted = 0';
   const params: (string | number)[] = [];
 
-  // Employees: tasks directly assigned OR in task_assignees
   if (userRole !== 'admin') {
     whereClause += ' AND (t.assigned_to = ? OR EXISTS (SELECT 1 FROM task_assignees ta WHERE ta.task_id = t.id AND ta.user_id = ?))';
     params.push(userId, userId);
@@ -207,7 +167,6 @@ export const getAllTasks = async (
     params.push(options.assigned_to, options.assigned_to);
   }
 
-  // Get total count for pagination
   const [countResult]: any = await executeQuery(
     `SELECT COUNT(*) as total FROM tasks t WHERE ${whereClause}`,
     params
@@ -215,7 +174,6 @@ export const getAllTasks = async (
 
   const total = countResult[0].total;
 
-  // Get paginated tasks - LIMIT and OFFSET must be part of query string, not parameters
   const [tasks]: any = await executeQuery(
     `SELECT 
       t.*, 
@@ -243,11 +201,6 @@ export const getAllTasks = async (
   };
 };
 
-/**
- * Get a single task by ID
- * @param taskId Task identifier
- * @returns Task object or null if not found
- */
 export const getTaskById = async (taskId: string): Promise<Task | null> => {
   const [tasks]: any = await executeQuery(
     `SELECT 
@@ -266,11 +219,6 @@ export const getTaskById = async (taskId: string): Promise<Task | null> => {
   return tasks?.[0] || null;
 };
 
-/**
- * Create a new task (Admin/Manager only)
- * @param data Task creation data
- * @returns Created task object
- */
 export const createTask = async (data: CreateTaskRequest): Promise<Task> => {
   const taskId = uuidv4();
   const now = toMySQLDateTime(new Date().toISOString());
@@ -312,7 +260,6 @@ export const createTask = async (data: CreateTaskRequest): Promise<Task> => {
     ]
   );
 
-  // Log the task creation activity
   await logActivity({
     task_id: taskId,
     action: ActivityAction.CREATED,
@@ -325,13 +272,6 @@ export const createTask = async (data: CreateTaskRequest): Promise<Task> => {
   return (created || task) as Task;
 };
 
-/**
- * Update a task
- * @param taskId Task identifier
- * @param data Partial task data to update
- * @param performedBy User performing the update
- * @returns Updated task object
- */
 export const updateTask = async (
   taskId: string,
   data: UpdateTaskRequest,
@@ -346,7 +286,6 @@ export const updateTask = async (
   const updates: string[] = [];
   const values: (string | number | boolean)[] = [];
 
-  // Helper function to track changes
   const trackChange = (
     field: string,
     oldValue: string | null,
@@ -364,7 +303,6 @@ export const updateTask = async (
     }
   };
 
-  // Build dynamic UPDATE query based on provided fields
   if (data.title !== undefined) {
     updates.push('title = ?');
     values.push(data.title as any);
@@ -436,7 +374,6 @@ export const updateTask = async (
     );
   }
 
-  // Always update the updated_at timestamp
   updates.push('updated_at = ?');
   values.push(now!);
   values.push(taskId);
@@ -446,17 +383,10 @@ export const updateTask = async (
     values
   );
 
-  // Fetch and return updated task
   const updatedTask = await getTaskById(taskId);
   return updatedTask!;
 };
 
-/**
- * Soft delete a task (mark as deleted but keep in database)
- * @param taskId Task identifier
- * @param performedBy User performing the deletion
- * @returns Success status
- */
 export const deleteTask = async (
   taskId: string,
   performedBy: string
@@ -473,7 +403,6 @@ export const deleteTask = async (
     [now, taskId]
   );
 
-  // Log deletion activity
   await logActivity({
     task_id: taskId,
     action: ActivityAction.DELETED,
@@ -485,19 +414,11 @@ export const deleteTask = async (
   return true;
 };
 
-/**
- * Add a comment to a task
- * @param taskId Task identifier
- * @param comment Comment text
- * @param createdBy User creating the comment
- * @returns Created comment object
- */
 export const addComment = async (
   taskId: string,
   comment: string,
   createdBy: string
 ): Promise<TaskComment> => {
-  // Verify task exists
   const task = await getTaskById(taskId);
   if (!task) {
     throw new Error('Task not found');
@@ -526,7 +447,6 @@ export const addComment = async (
     ]
   );
 
-  // Log comment activity
   await logActivity({
     task_id: taskId,
     action: ActivityAction.COMMENTED,
@@ -535,14 +455,20 @@ export const addComment = async (
     performed_by: createdBy
   }).catch(console.error);
 
-  return taskComment;
+  const [comments]: any = await executeQuery(
+    `SELECT 
+      tc.*,
+      u.full_name AS created_by_name,
+      u.email AS created_by_email
+     FROM task_comments tc
+     LEFT JOIN users u ON u.id = tc.created_by
+     WHERE tc.id = ?`,
+    [commentId]
+  );
+
+  return comments?.[0] || taskComment;
 };
 
-/**
- * Get all comments for a task
- * @param taskId Task identifier
- * @returns Comments array sorted by newest first
- */
 export const getTaskComments = async (taskId: string): Promise<TaskComment[]> => {
   const [comments]: any = await executeQuery(
     `SELECT 
@@ -559,11 +485,6 @@ export const getTaskComments = async (taskId: string): Promise<TaskComment[]> =>
   return (comments || []) as TaskComment[];
 };
 
-/**
- * Log an activity (change) for a task
- * @param data Activity data
- * @returns Created activity object
- */
 export const logActivity = async (data: {
   task_id: string;
   action: ActivityAction;
@@ -602,11 +523,6 @@ export const logActivity = async (data: {
   return activity;
 };
 
-/**
- * Get all activities for a task
- * @param taskId Task identifier
- * @returns Activities array sorted by newest first
- */
 export const getTaskActivities = async (
   taskId: string
 ): Promise<TaskActivity[]> => {
@@ -625,10 +541,6 @@ export const getTaskActivities = async (
   return (activities || []) as TaskActivity[];
 };
 
-/**
- * Get task statistics for admin dashboard
- * Returns overall stats and employee-wise breakdown
- */
 export const getTaskStats = async (): Promise<{
   overall: {
     total_tasks: number;
@@ -642,6 +554,7 @@ export const getTaskStats = async (): Promise<{
     employee_id: string;
     employee_name: string;
     employee_email: string;
+    profile_image_url?: string | null;
     todo: number;
     in_progress: number;
     review: number;
@@ -649,7 +562,6 @@ export const getTaskStats = async (): Promise<{
     total: number;
   }>;
 }> => {
-  // Get overall stats
   const [overallResult]: any = await executeQuery(
     `SELECT 
       COUNT(*) as total_tasks,
@@ -662,22 +574,29 @@ export const getTaskStats = async (): Promise<{
      WHERE is_deleted = 0`
   );
 
-  // Get employee-wise stats
   const [employeeResults]: any = await executeQuery(
     `SELECT 
       u.id as employee_id,
       u.full_name as employee_name,
       u.email as employee_email,
-      COUNT(t.id) as total,
+      u.profile_image_url as profile_image_url,
+      u.is_active as is_active,
+      COUNT(DISTINCT t.id) as total,
       SUM(CASE WHEN t.status = 'TODO' THEN 1 ELSE 0 END) as todo,
       SUM(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 ELSE 0 END) as in_progress,
       SUM(CASE WHEN t.status = 'REVIEW' THEN 1 ELSE 0 END) as review,
       SUM(CASE WHEN t.status = 'DONE' THEN 1 ELSE 0 END) as done
      FROM users u
-     LEFT JOIN tasks t ON u.id = t.assigned_to AND t.is_deleted = 0
-     WHERE u.role = 'employee'
-     GROUP BY u.id, u.full_name, u.email
+     LEFT JOIN tasks t ON (u.id = t.assigned_to OR u.id IN (
+       SELECT user_id FROM task_assignees WHERE task_id = t.id
+     )) AND t.is_deleted = 0
+    WHERE LOWER(u.role) = 'employee' AND u.is_active = 1
+     GROUP BY u.id, u.full_name, u.email, u.profile_image_url, u.is_active
      ORDER BY total DESC, u.full_name ASC`
+  );
+
+  const activeEmployees = (employeeResults || []).filter((emp: any) =>
+    emp.is_active === 1 || emp.is_active === true || emp.is_active === '1'
   );
 
   return {
@@ -689,6 +608,232 @@ export const getTaskStats = async (): Promise<{
       done_tasks: overallResult[0]?.done_tasks || 0,
       total_employees: overallResult[0]?.total_employees || 0
     },
-    employees: employeeResults || []
+    employees: activeEmployees
   };
+};
+
+export const getReportSummary = async (
+  startDate?: string,
+  endDate?: string
+): Promise<any> => {
+  const startBound = withTimeBounds(startDate, false);
+  const endBound = withTimeBounds(endDate, true);
+  const dateFilter = startBound && endBound
+    ? `AND created_at BETWEEN '${startBound}' AND '${endBound}'`
+    : '';
+
+  const [summaryResult]: any = await executeQuery(
+    `SELECT 
+      COUNT(*) as total_tasks,
+      SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completed_tasks,
+      SUM(CASE WHEN status IN ('TODO', 'IN_PROGRESS', 'REVIEW') THEN 1 ELSE 0 END) as pending_tasks,
+      AVG(CASE WHEN status = 'DONE' AND created_at IS NOT NULL 
+        THEN TIMESTAMPDIFF(HOUR, created_at, updated_at) END) as avg_completion_hours,
+      COUNT(DISTINCT assigned_to) as active_employees,
+      SUM(CASE WHEN priority = 'HIGH' THEN 1 ELSE 0 END) as high_priority_tasks,
+      SUM(CASE WHEN due_date < NOW() AND status != 'DONE' THEN 1 ELSE 0 END) as overdue_tasks
+     FROM tasks t
+     WHERE is_deleted = 0 ${dateFilter}`
+  );
+
+  const [tasksByStatus]: any = await executeQuery(
+    `SELECT 
+      status,
+      COUNT(*) as count
+     FROM tasks
+     WHERE is_deleted = 0 ${dateFilter}
+     GROUP BY status`
+  );
+
+  const [tasksByPriority]: any = await executeQuery(
+    `SELECT 
+      priority,
+      COUNT(*) as count,
+      SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completed
+     FROM tasks
+     WHERE is_deleted = 0 ${dateFilter}
+     GROUP BY priority`
+  );
+
+  return {
+    summary: summaryResult[0] || {},
+    by_status: tasksByStatus || [],
+    by_priority: tasksByPriority || [],
+    period: { start: startDate, end: endDate }
+  };
+};
+
+export const getEmployeePerformanceReport = async (
+  startDate?: string,
+  endDate?: string
+): Promise<any> => {
+  const dateFilter = '';
+
+  const [employeePerformance]: any = await executeQuery(
+    `SELECT 
+      u.id as employee_id,
+      u.full_name as employee_name,
+      u.email as employee_email,
+      u.profile_image_url as profile_image_url,
+      COUNT(DISTINCT t.id) as total_assigned,
+      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') THEN 1 ELSE 0 END), 0) as completed,
+      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('IN_PROGRESS', 'INPROGRESS') THEN 1 ELSE 0 END), 0) as in_progress,
+      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('TODO', 'PENDING') THEN 1 ELSE 0 END), 0) as pending,
+      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('TODO', 'PENDING') THEN 1 ELSE 0 END), 0) as todo,
+      COALESCE(SUM(CASE WHEN UPPER(t.status) = 'REVIEW' THEN 1 ELSE 0 END), 0) as review,
+      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') THEN 1 ELSE 0 END), 0) as done,
+      COALESCE(SUM(CASE WHEN t.due_date < NOW() AND UPPER(t.status) NOT IN ('DONE', 'COMPLETED') THEN 1 ELSE 0 END), 0) as overdue,
+      ROUND(AVG(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') 
+        THEN TIMESTAMPDIFF(HOUR, t.created_at, t.updated_at) END), 2) as avg_completion_hours,
+      ROUND((SUM(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') THEN 1 ELSE 0 END) / NULLIF(COUNT(t.id), 0)) * 100, 2) as completion_rate
+     FROM users u
+     LEFT JOIN tasks t ON (u.id = t.assigned_to OR u.id IN (
+       SELECT user_id FROM task_assignees WHERE task_id = t.id
+     )) AND t.is_deleted = 0 ${dateFilter}
+      WHERE LOWER(u.role) = 'employee' AND u.is_active = 1
+     GROUP BY u.id, u.full_name, u.email, u.profile_image_url
+     ORDER BY completion_rate DESC, completed DESC`
+  );
+
+  const [topPerformers]: any = await executeQuery(
+    `SELECT 
+      u.id,
+      u.full_name,
+      COUNT(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') THEN 1 END) as completed_tasks
+     FROM users u
+     LEFT JOIN tasks t ON (u.id = t.assigned_to OR u.id IN (
+       SELECT user_id FROM task_assignees WHERE task_id = t.id
+     )) AND t.is_deleted = 0 ${dateFilter}
+      WHERE LOWER(u.role) = 'employee' AND u.is_active = 1
+     GROUP BY u.id, u.full_name
+     ORDER BY completed_tasks DESC
+     LIMIT 5`
+  );
+
+  return {
+    employees: employeePerformance || [],
+    top_performers: topPerformers || [],
+    period: { start: startDate, end: endDate }
+  };
+};
+
+export const getTaskCompletionReport = async (
+  startDate?: string,
+  endDate?: string,
+  groupBy: string = 'day'
+): Promise<any> => {
+  const startBound = withTimeBounds(startDate, false);
+  const endBound = withTimeBounds(endDate, true);
+  const dateFilter = startBound && endBound
+    ? `AND updated_at BETWEEN '${startBound}' AND '${endBound}'`
+    : `AND updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`;
+
+  let dateFormat = '%Y-%m-%d';
+  if (groupBy === 'week') dateFormat = '%Y-%u';
+  if (groupBy === 'month') dateFormat = '%Y-%m';
+
+  const [completionTrend]: any = await executeQuery(
+    `SELECT 
+      DATE_FORMAT(updated_at, '${dateFormat}') as period,
+      COUNT(*) as tasks_completed,
+      AVG(TIMESTAMPDIFF(HOUR, created_at, updated_at)) as avg_hours_to_complete
+     FROM tasks
+     WHERE status = 'DONE' AND is_deleted = 0 ${dateFilter}
+     GROUP BY period
+     ORDER BY period ASC`
+  );
+
+  const [taskCreationTrend]: any = await executeQuery(
+    `SELECT 
+      DATE_FORMAT(created_at, '${dateFormat}') as period,
+      COUNT(*) as tasks_created
+     FROM tasks
+     WHERE is_deleted = 0 ${dateFilter}
+     GROUP BY period
+     ORDER BY period ASC`
+  );
+
+  return {
+    completion_trend: completionTrend || [],
+    creation_trend: taskCreationTrend || [],
+    group_by: groupBy,
+    period: { start: startDate, end: endDate }
+  };
+};
+
+export const getTaskDoc = async (taskId: string): Promise<TaskDoc | null> => {
+  const [rows]: any = await executeQuery(
+    `SELECT * FROM task_docs WHERE task_id = ? ORDER BY updated_at DESC LIMIT 1`,
+    [taskId]
+  );
+
+  return rows?.[0] || null;
+};
+
+export const upsertTaskDoc = async (
+  taskId: string,
+  content: string,
+  userId: string
+): Promise<TaskDoc> => {
+  const now = toMySQLDateTime(new Date().toISOString());
+  const existing = await getTaskDoc(taskId);
+
+  if (!existing) {
+    const docId = uuidv4();
+    await executeQuery(
+      `INSERT INTO task_docs (id, task_id, content, created_by, updated_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [docId, taskId, content, userId, userId, now, now]
+    );
+  } else {
+    await executeQuery(
+      `UPDATE task_docs SET content = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [content, userId, now, existing.id]
+    );
+  }
+
+  const updated = await getTaskDoc(taskId);
+  if (!updated) {
+    throw new Error('Failed to save task doc');
+  }
+  return updated;
+};
+
+export const exportReportData = async (
+  reportType: string,
+  startDate?: string,
+  endDate?: string
+): Promise<any> => {
+  switch (reportType) {
+    case 'summary':
+      return await getReportSummary(startDate, endDate);
+    case 'employee-performance':
+      return await getEmployeePerformanceReport(startDate, endDate);
+    case 'task-completion':
+      return await getTaskCompletionReport(startDate, endDate);
+    default:
+      throw new Error('Invalid report type');
+  }
+};
+
+export const convertToCSV = (data: any): string => {
+  if (!data || typeof data !== 'object') return '';
+
+  let csv = '';
+  
+  if (data.employees && Array.isArray(data.employees)) {
+    const headers = Object.keys(data.employees[0] || {});
+    csv = headers.join(',') + '\n';
+    data.employees.forEach((row: any) => {
+      csv += headers.map(h => row[h] ?? '').join(',') + '\n';
+    });
+  } else if (data.completion_trend && Array.isArray(data.completion_trend)) {
+    const headers = Object.keys(data.completion_trend[0] || {});
+    csv = headers.join(',') + '\n';
+    data.completion_trend.forEach((row: any) => {
+      csv += headers.map(h => row[h] ?? '').join(',') + '\n';
+    });
+  }
+
+  return csv;
 };
