@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { useGetSubtasksQuery, useCreateSubtaskMutation, useUpdateSubtaskStatusMutation, useDeleteSubtaskMutation } from '../services/api';
 import '../styles/Subtasks.css';
 
+/*This component handles:
+-fetching subtasks
+-creating a subtask
+-marking subtask DONE / TODO
+-deleting a subtask
+-showing progress bar*/
 export const Subtasks: React.FC<{ taskId: string; taskStatus: string }> = ({ taskId, taskStatus }) => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const { data: subtasksData = [], isLoading: loading } = useGetSubtasksQuery(taskId, {
