@@ -20,7 +20,7 @@ export const createSubtask = async (
     id: subtaskId,
     task_id: taskId,
     title,
-    description: description || null,
+    description: description ?? null,
     status: 'TODO',
     created_by: createdBy,
     created_at: now!,
