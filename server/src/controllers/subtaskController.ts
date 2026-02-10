@@ -52,7 +52,6 @@ export const createSubtask = async (
         data: error.errors
       });
     } else {
-      console.error('Error creating subtask:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to create subtask'
@@ -84,7 +83,6 @@ export const getSubtasks = async (
       data: subtasks
     });
   } catch (error) {
-    console.error('Error fetching subtasks:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch subtasks'
@@ -157,7 +155,6 @@ export const updateSubtaskStatus = async (
         data: error.errors
       });
     } else {
-      console.error('Error updating subtask status:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update subtask status'
@@ -207,7 +204,6 @@ export const deleteSubtask = async (
       data: { message: 'Subtask deleted successfully' }
     });
   } catch (error) {
-    console.error('Error deleting subtask:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete subtask'
