@@ -458,6 +458,41 @@ export const api = createApi({
       query: ({ startDate, endDate, groupBy }) => `/tasks/reports/task-completion/?startDate=${startDate}&endDate=${endDate}&groupBy=${groupBy}`,
       transformResponse: (response: { success: boolean; data: any }) => response.data,
     }),
+
+    // Lead Stats
+    getLeadStats: builder.query<any, void>({
+      query: () => '/leads/stats',
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      providesTags: ['Stats'],
+    }),
+
+    getLeads: builder.query<{ leads: any[]; meta: any }, { page?: number; limit?: number; stage?: string; source?: string; owner?: string }>({
+      query: ({ page = 1, limit = 100, stage, source, owner }) => {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+          ...(stage && { stage }),
+          ...(source && { source }),
+          ...(owner && { owner }),
+        });
+        return `/leads?${params}`;
+      },
+      transformResponse: (response: { success: boolean; data: any[]; meta: any }) => ({
+        leads: response.data,
+        meta: response.meta,
+      }),
+      providesTags: ['Task'],
+    }),
+
+    updateLeadStage: builder.mutation<any, { leadId: string; stage: string }>({
+      query: ({ leadId, stage }) => ({
+        url: `/leads/${leadId}/stage`,
+        method: 'PATCH',
+        body: { stage },
+      }),
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      invalidatesTags: ['Task', 'Stats'],
+    }),
   }),
 });
 
@@ -513,4 +548,9 @@ export const {
   useGetReportSummaryQuery,
   useGetEmployeePerformanceQuery,
   useGetTaskCompletionQuery,
+  
+  // Leads
+  useGetLeadStatsQuery,
+  useGetLeadsQuery,
+  useUpdateLeadStageMutation,
 } = api;
