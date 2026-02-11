@@ -9,6 +9,8 @@ import TimeLogger from './components/TimeLogger';
 import AdminStats from './components/AdminStats.tsx';
 import Reports from './components/Reports.tsx';
 import EmployeeDashboard from './components/EmployeeDashboard.tsx';
+import LeadDashboard from './pages/LeadDashboard';
+import LeadPipeline from './pages/LeadPipeline';
 import ProfileModal from './components/ProfileModal';
 import { useAppDispatch, useAppSelector } from './hooks/redux';
 import { openTaskForm, closeTaskForm, setSelectedTask } from './store/slices/uiSlice';
@@ -150,6 +152,12 @@ function AuthenticatedLayout({
           {user?.role === 'admin' ? (
             <>
               <button
+                className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
+                onClick={() => navigate('/leads')}
+              >
+                🎯 Leads
+              </button>
+              <button
                 className={`nav-btn ${currentPath === '/admin/analytics' ? 'active' : ''}`}
                 onClick={() => navigate('/admin/analytics')}
               >
@@ -221,7 +229,9 @@ function AuthenticatedLayout({
           {user?.role === 'admin' && (
             <>
               <Route path="/admin/analytics" element={<AdminStats />} />
-              <Route path="/admin/reports" element={<Reports />} />
+              <Route path="/leads" element={<LeadDashboard />} />
+              <Route path="/leads/pipeline" element={<LeadPipeline />} />
+              <Route path="/admin/reports" element={<Reports />} /> 
               <Route path="/tasks" element={
                 <div className="app-layout">
                   <aside className="task-list-panel">
