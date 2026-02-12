@@ -25,7 +25,7 @@ export const LeadDetail: React.FC = () => {
   const [updateLead] = useUpdateLeadMutation();
   const [deleteLead] = useDeleteLeadMutation();
 
-  const [activeTab, setActiveTab] = useState<'info' | 'notes' | 'activity' | 'tasks' | 'docs'>('info');
+  const [activeTab, setActiveTab] = useState<'info'>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [editedLead, setEditedLead] = useState<Partial<Lead>>({});
 
@@ -176,30 +176,6 @@ export const LeadDetail: React.FC = () => {
               onClick={() => setActiveTab('info')}
             >
               📋 Information
-            </button>
-            <button
-              className={`lead-tab ${activeTab === 'notes' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notes')}
-            >
-              📝 Notes
-            </button>
-            <button
-              className={`lead-tab ${activeTab === 'activity' ? 'active' : ''}`}
-              onClick={() => setActiveTab('activity')}
-            >
-              📊 Activity
-            </button>
-            <button
-              className={`lead-tab ${activeTab === 'tasks' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tasks')}
-            >
-              ✓ Tasks
-            </button>
-            <button
-              className={`lead-tab ${activeTab === 'docs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('docs')}
-            >
-              📎 Documents
             </button>
           </div>
 
@@ -357,41 +333,6 @@ export const LeadDetail: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'notes' && (
-              <div className="lead-notes-tab">
-                <div className="empty-state-tab">
-                  <p>📝 Notes</p>
-                  <p className="empty-subtitle">Add notes and comments about this lead</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'activity' && (
-              <div className="lead-activity-tab">
-                <div className="empty-state-tab">
-                  <p>📊 Activity Timeline</p>
-                  <p className="empty-subtitle">Track all changes and interactions with this lead</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'tasks' && (
-              <div className="lead-tasks-tab">
-                <div className="empty-state-tab">
-                  <p>✓ Related Tasks</p>
-                  <p className="empty-subtitle">View and manage tasks associated with this lead</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'docs' && (
-              <div className="lead-docs-tab">
-                <div className="empty-state-tab">
-                  <p>📎 Documents</p>
-                  <p className="empty-subtitle">Upload and manage documents related to this lead</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
