@@ -13,11 +13,13 @@ export const useAuth = () => {
     username: string; 
     email: string; 
     password: string;
+    password_confirm?: string;
     mobile_number?: string;
   }) => {
     const result = await registerMutation({
       email: data.email,
       password: data.password,
+      password_confirm: data.password_confirm ?? data.password,
       full_name: data.username
     }).unwrap();
     return result;
