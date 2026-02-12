@@ -1,4 +1,4 @@
-import { useGetLeadsQuery, useGetLeadByIdQuery, useCreateLeadMutation, useUpdateLeadMutation, useDeleteLeadMutation } from '../services/api';
+import { useGetLeadsQuery, useUpdateLeadStageMutation } from '../services/api';
 
 interface UseLeadsOptions {
   page?: number;
@@ -8,10 +8,7 @@ interface UseLeadsOptions {
   owner?: string;
 }
 
-/**
- * Custom hook for managing lead data with RTK Query
- * Provides CRUD operations and pagination
- */
+
 export const useLeads = (options?: UseLeadsOptions) => {
   const {
     data,
@@ -27,9 +24,7 @@ export const useLeads = (options?: UseLeadsOptions) => {
     owner: options?.owner,
   });
 
-  const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
-  const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
-  const [deleteLead, { isLoading: isDeleting }] = useDeleteLeadMutation();
+  const [updateLeadStage, { isLoading: isUpdatingStage }] = useUpdateLeadStageMutation();
 
   const leads = data?.leads || [];
   const meta = data?.meta || { total: 0, page: 1, limit: 20, pages: 1 };
@@ -42,39 +37,14 @@ export const useLeads = (options?: UseLeadsOptions) => {
     // Loading states
     isLoading,
     isFetching,
-    isCreating,
-    isUpdating,
-    isDeleting,
+    isUpdatingStage,
     
     // Error
     error,
     
     // Actions
     refetch,
-    createLead,
-    updateLead,
-    deleteLead,
-  };
-};
-
-/**
- * Custom hook for fetching a single lead by ID
- */
-export const useLead = (leadId: string | undefined) => {
-  const {
-    data: lead,
-    isLoading,
-    error,
-    refetch,
-  } = useGetLeadByIdQuery(leadId!, {
-    skip: !leadId,
-  });
-
-  return {
-    lead,
-    isLoading,
-    error,
-    refetch,
+    updateLeadStage,
   };
 };
 
