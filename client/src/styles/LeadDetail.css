@@ -290,37 +290,6 @@
   white-space: nowrap;
 }
 
-/* Empty State Tab */
-.empty-state-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
-  color: #94a3b8;
-  text-align: center;
-  gap: 0.5rem;
-}
-
-.empty-state-tab p {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 500;
-}
-
-.empty-subtitle {
-  font-size: 0.9375rem !important;
-  font-weight: 400 !important;
-  color: #cbd5e1 !important;
-}
-
-/* Notes Tab */
-.lead-notes-tab,
-.lead-activity-tab,
-.lead-tasks-tab,
-.lead-docs-tab {
-  min-height: 300px;
-}
 
 /* Animations */
 @keyframes fadeIn {
@@ -334,8 +303,7 @@
   }
 }
 
-.info-section,
-.empty-state-tab {
+.info-section {
   animation: fadeIn 0.3s ease-out;
 }
 
