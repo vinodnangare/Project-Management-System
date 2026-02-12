@@ -121,7 +121,7 @@ export const Subtasks: React.FC<{ taskId: string; taskStatus: string }> = ({ tas
                 )}
                 <div className="subtask-meta">
                   <span className="created-by">
-                    By {subtask.created_by_user?.full_name || subtask.created_by_user?.email || subtask.created_by}
+                    By {subtask.created_by_name || subtask.created_by_email || 'Unknown'}
                   </span>
                   <span className="created-date">
                     {new Date(subtask.created_at).toLocaleDateString()}
