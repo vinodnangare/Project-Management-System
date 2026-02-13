@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { login, registerEmployee, updateUserProfile, deleteEmployee, updateProfileImage } from '../services/authService.js';
+import { login, registerEmployee, updateUserProfile, deleteEmployee, updateProfileImage, getUserById } from '../services/authService.js';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -29,6 +29,27 @@ export const signIn = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: { user, token } });
   } catch (error: any) {
     res.status(401).json({ success: false, error: error.message });
+  }
+};
+
+export const getProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    const user = await getUserById(userId);
+    if (!user) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: user });
+  } catch (error: any) {
+    console.error('Get profile error:', error.message);
+    res.status(400).json({ success: false, error: error.message });
   }
 };
 
