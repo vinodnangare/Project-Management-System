@@ -46,8 +46,15 @@ export const LeadDetail: React.FC = () => {
       await updateLead({ leadId: id, updates: editedLead }).unwrap();
       setIsEditing(false);
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update lead:', error);
+      
+      // Handle duplicate company name error
+      if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
+        alert(error?.data?.error || 'A lead with this company name already exists.');
+      } else {
+        alert('Failed to update lead. Please try again.');
+      }
     }
   };
 

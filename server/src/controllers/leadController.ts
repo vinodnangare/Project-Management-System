@@ -110,6 +110,15 @@ export const createLead = async (
       return;
     }
 
+    // Handle duplicate company name error
+    if (error instanceof Error && error.message.includes('already exists')) {
+      res.status(409).json({
+        success: false,
+        error: error.message
+      });
+      return;
+    }
+
     console.error('Error creating lead:', error);
     res.status(500).json({
       success: false,
@@ -163,6 +172,15 @@ export const updateLead = async (
         success: false,
         error: 'Validation error',
         details: error.errors
+      });
+      return;
+    }
+
+    // Handle duplicate company name error
+    if (error instanceof Error && error.message.includes('already exists')) {
+      res.status(409).json({
+        success: false,
+        error: error.message
       });
       return;
     }

@@ -11,6 +11,8 @@ import Reports from './components/Reports.tsx';
 import EmployeeDashboard from './components/EmployeeDashboard.tsx';
 import LeadDashboard from './pages/LeadDashboard';
 import LeadPipeline from './pages/LeadPipeline';
+import LeadList from './pages/LeadList';
+import LeadDetail from './pages/LeadDetail';
 import ProfileModal from './components/ProfileModal';
 import { useAppDispatch, useAppSelector } from './hooks/redux';
 import { openTaskForm, closeTaskForm, setSelectedTask } from './store/slices/uiSlice';
@@ -75,7 +77,7 @@ function App() {
     // 2. User has a role AND
     // 3. They're on a public route
     if (isAuthenticated && user && (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register')) {
-      const defaultRoute = user.role === 'admin' ? '/admin/analytics' : '/dashboard';
+      const defaultRoute = user.role === 'admin' ? '/admin/analytics' : user.role === 'manager' ? '/leads' : '/dashboard';
       navigate(defaultRoute, { replace: true });
     }
   }, [isAuthenticated, user, navigate, location.pathname]);
@@ -89,8 +91,8 @@ function App() {
     dispatch(closeTaskForm());
   };
 
-  const roleLabel = user?.role === 'admin' ? 'Admin' : 'Developer';
-  const roleEmoji = user?.role === 'admin' ? '🛠️' : '💻';
+  const roleLabel = user?.role === 'admin' ? 'Admin' : user?.role === 'manager' ? 'Manager' : 'Employee';
+  const roleEmoji = user?.role === 'admin' ? '🛠️' : user?.role === 'manager' ? '👔' : '💻';
 
   // Public routes (no authentication required)
   if (!isAuthenticated) {
@@ -143,12 +145,14 @@ function AuthenticatedLayout({
         </div>
 
         <nav className="app-nav">
-          <button
-            className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
-            onClick={() => navigate('/tasks')}
-          >
-            📋 Tasks
-          </button>
+          {currentPath !== '/leads' && (
+            <button
+              className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
+              onClick={() => navigate('/tasks')}
+            >
+              📋 Tasks
+            </button>
+          )}
           {user?.role === 'admin' ? (
             <>
               <button
@@ -166,6 +170,21 @@ function AuthenticatedLayout({
               <button
                 className={`nav-btn ${currentPath === '/admin/reports' ? 'active' : ''}`}
                 onClick={() => navigate('/admin/reports')}
+              >
+                📈 Reports
+              </button>
+            </>
+          ) : user?.role === 'manager' ? (
+            <>
+              <button
+                className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
+                onClick={() => navigate('/leads')}
+              >
+                🎯 Leads
+              </button>
+              <button
+                className={`nav-btn ${currentPath === '/reports' ? 'active' : ''}`}
+                onClick={() => navigate('/reports')}
               >
                 📈 Reports
               </button>
@@ -231,6 +250,8 @@ function AuthenticatedLayout({
               <Route path="/admin/analytics" element={<AdminStats />} />
               <Route path="/leads" element={<LeadDashboard />} />
               <Route path="/leads/pipeline" element={<LeadPipeline />} />
+              <Route path="/leads/list" element={<LeadList />} />
+              <Route path="/leads/:id" element={<LeadDetail />} />
               <Route path="/admin/reports" element={<Reports />} /> 
               <Route path="/tasks" element={
                 <div className="app-layout">
@@ -258,6 +279,38 @@ function AuthenticatedLayout({
               } />
               <Route path="/" element={<Navigate to="/admin/analytics" replace />} />
               <Route path="*" element={<Navigate to="/admin/analytics" replace />} />
+            </>
+          )}
+
+          {/* Manager routes */}
+          {user?.role === 'manager' && (
+            <>
+              <Route path="/leads" element={<LeadDashboard />} />
+              <Route path="/leads/pipeline" element={<LeadPipeline />} />
+              <Route path="/leads/list" element={<LeadList />} />
+              <Route path="/leads/:id" element={<LeadDetail />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/tasks" element={
+                <div className="app-layout">
+                  <aside className="task-list-panel">
+                    <TaskList
+                      onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
+                      selectedTaskId={selectedTaskId || undefined}
+                    />
+                  </aside>
+                  <section className="task-detail-panel">
+                    {selectedTaskId ? (
+                      <TaskDetail taskId={selectedTaskId} />
+                    ) : (
+                      <div className="empty-state">
+                        <p>Select a task to view details</p>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              } />
+              <Route path="/" element={<Navigate to="/leads" replace />} />
+              <Route path="*" element={<Navigate to="/leads" replace />} />
             </>
           )}
           

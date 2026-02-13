@@ -134,9 +134,15 @@ export const LeadList: React.FC = () => {
       await createLead(formData).unwrap();
       setShowLeadForm(false);
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create lead:', error);
-      alert('Failed to create lead. Please try again.');
+      
+      // Handle duplicate company name error
+      if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
+        alert(error?.data?.error || 'A lead with this company name already exists.');
+      } else {
+        alert('Failed to create lead. Please try again.');
+      }
     }
   };
 
