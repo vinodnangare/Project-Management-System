@@ -61,11 +61,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       return;
     }
 
-    console.log('Update profile request:', { userId, body: req.body });
-
     const user = await updateUserProfile(userId, req.body);
-    
-    console.log('Profile updated successfully:', user);
     
     res.status(200).json({ success: true, data: user });
   } catch (error: any) {

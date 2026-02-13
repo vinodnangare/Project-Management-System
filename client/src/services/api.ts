@@ -195,7 +195,7 @@ export const api = createApi({
 
     deleteEmployee: builder.mutation<void, string>({
       query: (employeeId) => ({
-        url: `/auth/users/${employeeId}/delete`,
+        url: `/auth/employees/${employeeId}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Stats'],

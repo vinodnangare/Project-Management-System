@@ -145,69 +145,89 @@ function AuthenticatedLayout({
         </div>
 
         <nav className="app-nav">
-          {currentPath !== '/leads' && (
-            <button
-              className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
-              onClick={() => navigate('/tasks')}
-            >
-              📋 Tasks
-            </button>
-          )}
-          {user?.role === 'admin' ? (
-            <>
-              <button
-                className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
-                onClick={() => navigate('/leads')}
-              >
-                🎯 Leads
-              </button>
-              <button
-                className={`nav-btn ${currentPath === '/admin/analytics' ? 'active' : ''}`}
-                onClick={() => navigate('/admin/analytics')}
-              >
-                📊 Analytics
-              </button>
-              <button
-                className={`nav-btn ${currentPath === '/admin/reports' ? 'active' : ''}`}
-                onClick={() => navigate('/admin/reports')}
-              >
-                📈 Reports
-              </button>
-            </>
-          ) : user?.role === 'manager' ? (
-            <>
-              <button
-                className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
-                onClick={() => navigate('/leads')}
-              >
-                🎯 Leads
-              </button>
-              <button
-                className={`nav-btn ${currentPath === '/reports' ? 'active' : ''}`}
-                onClick={() => navigate('/reports')}
-              >
-                📈 Reports
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className={`nav-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
-                onClick={() => navigate('/dashboard')}
-              >
-                🎯 Dashboard
-              </button>
-              <button
-                className={`nav-btn ${currentPath === '/time-log' ? 'active' : ''}`}
-                onClick={() => navigate('/time-log')}
-              >
-                ⏱️ Time
-              </button>
-            </>
-          )}
+          <div className="nav-container">
+            {/* Admin Navigation */}
+            {user?.role === 'admin' && (
+              <>
+                <button
+                  className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
+                  onClick={() => navigate('/tasks')}
+                >
+                  📋 Tasks
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
+                  onClick={() => navigate('/leads')}
+                >
+                  🎯 Leads
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/admin/analytics' ? 'active' : ''}`}
+                  onClick={() => navigate('/admin/analytics')}
+                >
+                  📊 Analytics
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/admin/reports' ? 'active' : ''}`}
+                  onClick={() => navigate('/admin/reports')}
+                >
+                  📈 Reports
+                </button>
+              </>
+            )}
+
+            {/* Manager Navigation */}
+            {user?.role === 'manager' && (
+              <>
+                <button
+                  className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
+                  onClick={() => navigate('/leads')}
+                >
+                  🎯 Leads
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/reports' ? 'active' : ''}`}
+                  onClick={() => navigate('/reports')}
+                >
+                  📈 Reports
+                </button>
+              </>
+            )}
+
+            {/* Employee Navigation */}
+            {user?.role === 'employee' && (
+              <>
+                <button
+                  className={`nav-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
+                  onClick={() => navigate('/dashboard')}
+                >
+                  🎯 Dashboard
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
+                  onClick={() => navigate('/tasks')}
+                >
+                  📋 Tasks
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/time-log' ? 'active' : ''}`}
+                  onClick={() => navigate('/time-log')}
+                >
+                  ⏱️ Time
+                </button>
+              </>
+            )}
+          </div>
         </nav>
 
         <div className="header-actions">
+          <button
+            className={`btn-create-task ${user?.role !== 'admin' || currentPath !== '/tasks' ? 'btn-hidden' : ''}`}
+            onClick={() => dispatch(openTaskForm())}
+            disabled={user?.role !== 'admin' || currentPath !== '/tasks'}
+          >
+            ✚ New Task
+          </button>
           <button
             className="btn-profile"
             onClick={() => dispatch(openProfileModal())}
@@ -226,14 +246,6 @@ function AuthenticatedLayout({
               )}
             </span>
           </button>
-          {user?.role === 'admin' && currentPath === '/tasks' && (
-            <button
-              className="btn-create-task"
-              onClick={() => dispatch(openTaskForm())}
-            >
-              ✚ New Task
-            </button>
-          )}
           <button className="btn-logout" onClick={handleLogout}>
             ⎇ Logout
           </button>
