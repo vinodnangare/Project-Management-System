@@ -55,6 +55,40 @@ export const LeadDashboard: React.FC = () => {
     );
   }
 
+  const rawTotal = Number(stats.totalLeads ?? stats.total ?? 0) || 0;
+  const rawWon = Number(stats.wonLeads ?? stats.byStage?.won ?? 0) || 0;
+  const rawLost = Number(stats.lostLeads ?? stats.byStage?.lost ?? 0) || 0;
+  const rawConversionRate = Number(stats.conversionRate ?? 0) || 0;
+  const normalizedConversionRate = rawConversionRate > 1 ? rawConversionRate / 100 : rawConversionRate;
+
+  const safeStats: DashboardStats = {
+    totalLeads: rawTotal,
+    activeLeads: Number(stats.activeLeads ?? Math.max(0, rawTotal - rawWon - rawLost)) || 0,
+    wonLeads: rawWon,
+    lostLeads: rawLost,
+    newLeadsThisWeek: Number(stats.newLeadsThisWeek ?? 0) || 0,
+    newLeadsThisMonth: Number(stats.newLeadsThisMonth ?? 0) || 0,
+    conversionRate: normalizedConversionRate,
+    averageTimeToConvert: Number(stats.averageTimeToConvert ?? 0) || 0,
+    lastWeekConversionTrend: Number(stats.lastWeekConversionTrend ?? 0) || 0,
+    lastMonthConversionTrend: Number(stats.lastMonthConversionTrend ?? 0) || 0,
+  };
+
+  const stageCounts = stats.byStage || {};
+  const funnelStages = [
+    { key: 'new', label: 'New', color: '#3b82f6' },
+    { key: 'in_discussion', label: 'In Discussion', color: '#8b5cf6' },
+    { key: 'quoted', label: 'Quoted', color: '#f59e0b' },
+    { key: 'won', label: 'Won', color: '#10b981' },
+    { key: 'lost', label: 'Lost', color: '#ef4444' },
+  ];
+  const maxStageCount = Math.max(
+    1,
+    ...funnelStages.map((stage) => Number(stageCounts[stage.key]) || 0)
+  );
+  const maxNewLeads = Math.max(1, safeStats.newLeadsThisWeek, safeStats.newLeadsThisMonth);
+  const avgTimeScale = Math.max(30, safeStats.averageTimeToConvert || 0);
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
@@ -62,9 +96,17 @@ export const LeadDashboard: React.FC = () => {
           <h1>Lead Dashboard</h1>
           <p className="welcome-text">Welcome back, {user?.full_name || user?.email || 'User'}!</p>
         </div>
-        <button className="btn-view-pipeline" onClick={() => navigate('/leads/pipeline')}>
-          📊 View Pipeline
-        </button>
+        <div className="dashboard-actions">
+          <button
+            className="btn-add-lead"
+            onClick={() => navigate('/leads/list?new=1')}
+          >
+            ➕ Add Lead
+          </button>
+          <button className="btn-view-pipeline" onClick={() => navigate('/leads/pipeline')}>
+            📊 View Pipeline
+          </button>
+        </div>
       </div>
 
       <section className="kpi-section">
@@ -75,10 +117,10 @@ export const LeadDashboard: React.FC = () => {
               <span className="kpi-icon">📋</span>
               <h3 className="kpi-label">Total Leads</h3>
             </div>
-            <div className="kpi-value">{stats.totalLeads}</div>
-            {stats.lastMonthConversionTrend !== 0 && (
-              <div className={`kpi-trend ${stats.lastMonthConversionTrend >= 0 ? 'up' : 'down'}`}>
-                {stats.lastMonthConversionTrend >= 0 ? '↑' : '↓'} {Math.abs(stats.lastMonthConversionTrend)}% from last month
+            <div className="kpi-value">{safeStats.totalLeads}</div>
+            {safeStats.lastMonthConversionTrend !== 0 && (
+              <div className={`kpi-trend ${safeStats.lastMonthConversionTrend >= 0 ? 'up' : 'down'}`}>
+                {safeStats.lastMonthConversionTrend >= 0 ? '↑' : '↓'} {Math.abs(safeStats.lastMonthConversionTrend)}% from last month
               </div>
             )}
           </div>
@@ -88,7 +130,7 @@ export const LeadDashboard: React.FC = () => {
               <span className="kpi-icon">⚡</span>
               <h3 className="kpi-label">Active Leads</h3>
             </div>
-            <div className="kpi-value">{stats.activeLeads}</div>
+            <div className="kpi-value">{safeStats.activeLeads}</div>
           </div>
 
           <div className="kpi-card" style={{ backgroundColor: '#ecfdf5' }}>
@@ -96,10 +138,10 @@ export const LeadDashboard: React.FC = () => {
               <span className="kpi-icon">✅</span>
               <h3 className="kpi-label">Won Leads</h3>
             </div>
-            <div className="kpi-value">{stats.wonLeads}</div>
-            {stats.lastWeekConversionTrend !== 0 && (
+            <div className="kpi-value">{safeStats.wonLeads}</div>
+            {safeStats.lastWeekConversionTrend !== 0 && (
               <div className="kpi-trend up">
-                ↑ {stats.lastWeekConversionTrend}% from last week
+                ↑ {safeStats.lastWeekConversionTrend}% from last week
               </div>
             )}
           </div>
@@ -109,7 +151,7 @@ export const LeadDashboard: React.FC = () => {
               <span className="kpi-icon">❌</span>
               <h3 className="kpi-label">Lost Leads</h3>
             </div>
-            <div className="kpi-value">{stats.lostLeads}</div>
+            <div className="kpi-value">{safeStats.lostLeads}</div>
           </div>
         </div>
       </section>
@@ -122,7 +164,7 @@ export const LeadDashboard: React.FC = () => {
               <span className="kpi-icon">📈</span>
               <h3 className="kpi-label">Conversion Rate</h3>
             </div>
-            <div className="kpi-value">{Math.round(stats.conversionRate * 100)}%</div>
+            <div className="kpi-value">{Math.round(safeStats.conversionRate * 100)}%</div>
           </div>
 
           <div className="kpi-card" style={{ backgroundColor: '#f3e8ff' }}>
@@ -130,7 +172,7 @@ export const LeadDashboard: React.FC = () => {
               <span className="kpi-icon">⏱️</span>
               <h3 className="kpi-label">Avg Time to Convert</h3>
             </div>
-            <div className="kpi-value">{Math.round(stats.averageTimeToConvert)}</div>
+            <div className="kpi-value">{Math.round(safeStats.averageTimeToConvert)}</div>
             <div className="kpi-meta">days</div>
           </div>
 
@@ -139,7 +181,7 @@ export const LeadDashboard: React.FC = () => {
               <span className="kpi-icon">⭐</span>
               <h3 className="kpi-label">New This Week</h3>
             </div>
-            <div className="kpi-value">{stats.newLeadsThisWeek}</div>
+            <div className="kpi-value">{safeStats.newLeadsThisWeek}</div>
           </div>
 
           <div className="kpi-card" style={{ backgroundColor: '#dcfce7' }}>
@@ -147,21 +189,86 @@ export const LeadDashboard: React.FC = () => {
               <span className="kpi-icon">📅</span>
               <h3 className="kpi-label">New This Month</h3>
             </div>
-            <div className="kpi-value">{stats.newLeadsThisMonth}</div>
+            <div className="kpi-value">{safeStats.newLeadsThisMonth}</div>
           </div>
         </div>
       </section>
 
       <section className="charts-section">
         <div className="chart-container">
-          <div className="chart-placeholder">
-            <p>🎯 Funnel Chart Component (Coming Soon - Created by Person B)</p>
+          <div className="chart-title">🎯 Funnel Overview</div>
+          <div className="funnel-chart">
+            {funnelStages.map((stage) => {
+              const count = Number(stageCounts[stage.key]) || 0;
+              const width = Math.max(12, Math.round((count / maxStageCount) * 100));
+              return (
+                <div key={stage.key} className="funnel-stage">
+                  <div className="funnel-label">{stage.label}</div>
+                  <div className="funnel-bar-wrap">
+                    <div
+                      className="funnel-bar"
+                      style={{ width: `${width}%`, backgroundColor: stage.color }}
+                    />
+                  </div>
+                  <div className="funnel-count">{count}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <div className="chart-container">
-          <div className="chart-placeholder">
-            <p>📊 Conversion Velocity Chart Component (Coming Soon - Created by Person B)</p>
+          <div className="chart-title">📊 Conversion Velocity</div>
+          <div className="velocity-chart">
+            <div className="velocity-row">
+              <div className="velocity-label">Conversion Rate</div>
+              <div className="velocity-bar-wrap">
+                <div
+                  className="velocity-bar"
+                  style={{ width: `${Math.round(safeStats.conversionRate * 100)}%`, backgroundColor: '#3b82f6' }}
+                />
+              </div>
+              <div className="velocity-value">{Math.round(safeStats.conversionRate * 100)}%</div>
+            </div>
+            <div className="velocity-row">
+              <div className="velocity-label">Avg Days to Convert</div>
+              <div className="velocity-bar-wrap">
+                <div
+                  className="velocity-bar"
+                  style={{
+                    width: `${Math.min(100, Math.round((safeStats.averageTimeToConvert / avgTimeScale) * 100))}%`,
+                    backgroundColor: '#8b5cf6'
+                  }}
+                />
+              </div>
+              <div className="velocity-value">{Math.round(safeStats.averageTimeToConvert)} days</div>
+            </div>
+            <div className="velocity-row">
+              <div className="velocity-label">New Leads (Week)</div>
+              <div className="velocity-bar-wrap">
+                <div
+                  className="velocity-bar"
+                  style={{
+                    width: `${Math.round((safeStats.newLeadsThisWeek / maxNewLeads) * 100)}%`,
+                    backgroundColor: '#10b981'
+                  }}
+                />
+              </div>
+              <div className="velocity-value">{safeStats.newLeadsThisWeek}</div>
+            </div>
+            <div className="velocity-row">
+              <div className="velocity-label">New Leads (Month)</div>
+              <div className="velocity-bar-wrap">
+                <div
+                  className="velocity-bar"
+                  style={{
+                    width: `${Math.round((safeStats.newLeadsThisMonth / maxNewLeads) * 100)}%`,
+                    backgroundColor: '#f59e0b'
+                  }}
+                />
+              </div>
+              <div className="velocity-value">{safeStats.newLeadsThisMonth}</div>
+            </div>
           </div>
         </div>
       </section>
@@ -170,24 +277,24 @@ export const LeadDashboard: React.FC = () => {
         <h2 className="section-title">Quick Insights</h2>
         <div className="stats-text">
           <p>
-            You have <strong>{stats.activeLeads}</strong> active leads in your pipeline.
-            {stats.conversionRate > 0 && (
-              <> Your conversion rate is <strong>{(stats.conversionRate * 100).toFixed(1)}%</strong>.</>
+            You have <strong>{safeStats.activeLeads}</strong> active leads in your pipeline.
+            {safeStats.conversionRate > 0 && (
+              <> Your conversion rate is <strong>{(safeStats.conversionRate * 100).toFixed(1)}%</strong>.</>
             )}
           </p>
           <p>
-            {stats.newLeadsThisWeek > 0 ? (
+            {safeStats.newLeadsThisWeek > 0 ? (
               <>
-                You received <strong>{stats.newLeadsThisWeek}</strong> new leads this week.
+                You received <strong>{safeStats.newLeadsThisWeek}</strong> new leads this week.
                 Keep up the momentum!
               </>
             ) : (
               <>No new leads this week. Consider reaching out to prospects!</>
             )}
           </p>
-          {stats.averageTimeToConvert > 0 && (
+          {safeStats.averageTimeToConvert > 0 && (
             <p>
-              On average, it takes <strong>{Math.round(stats.averageTimeToConvert)} days</strong> to convert a lead.
+              On average, it takes <strong>{Math.round(safeStats.averageTimeToConvert)} days</strong> to convert a lead.
             </p>
           )}
         </div>
