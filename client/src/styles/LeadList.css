@@ -111,9 +111,10 @@
 }
 
 .lead-filters-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
+  align-items: center;
 }
 
 .lead-filter-select {
@@ -125,6 +126,9 @@
   outline: none;
   transition: all 0.3s ease;
   background: white;
+  color: #111827;
+  min-height: 42px;
+  width: 100%;
 }
 
 .lead-filter-select:focus {
@@ -436,12 +440,8 @@
     gap: 15px;
   }
 
-  .filters-row {
-    flex-direction: column;
-  }
-
-  .filter-select {
-    width: 100%;
+  .lead-filters-row {
+    grid-template-columns: 1fr;
   }
 
   .bulk-actions-bar {
