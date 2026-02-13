@@ -1,0 +1,88 @@
+/* Stage Selector */
+.stage-selector {
+  position: relative;
+  display: inline-block;
+}
+
+/* Stage Select */
+.stage-select {
+  padding: 0.5rem 2.5rem 0.5rem 1rem;
+  border: 2px solid;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.stage-select:hover:not(:disabled) {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+.stage-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.stage-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Stage Indicator (Dropdown Arrow) */
+.stage-indicator {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid;
+  pointer-events: none;
+}
+
+/* Size Variants */
+.stage-selector-small .stage-select {
+  padding: 0.375rem 2rem 0.375rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.stage-selector-medium .stage-select {
+  padding: 0.5rem 2.5rem 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.stage-selector-large .stage-select {
+  padding: 0.625rem 3rem 0.625rem 1.25rem;
+  font-size: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .stage-select {
+    padding: 0.5rem 2rem 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .stage-selector-large .stage-select {
+    padding: 0.5rem 2.5rem 0.5rem 1rem;
+    font-size: 0.9375rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stage-select {
+    width: 100%;
+  }
+
+  .stage-selector {
+    width: 100%;
+  }
+}
