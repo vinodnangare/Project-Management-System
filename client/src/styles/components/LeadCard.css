@@ -1,0 +1,159 @@
+/* Lead Card */
+.lead-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 4px solid transparent;
+}
+
+.lead-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.lead-card[draggable="true"] {
+  cursor: grab;
+}
+
+.lead-card[draggable="true"]:active {
+  cursor: grabbing;
+  opacity: 0.5;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.priority-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Card Content */
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.info-icon {
+  font-size: 0.875rem;
+  width: 18px;
+  flex-shrink: 0;
+}
+
+.info-text {
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.info-text.email {
+  color: #3b82f6;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+/* Card Footer */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.footer-left,
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.owner-badge {
+  font-size: 0.75rem;
+  color: #64748b;
+  padding: 0.25rem 0.5rem;
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.date-text {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* Priority Colors */
+.lead-card[data-priority="high"] {
+  border-left-color: #ef4444;
+}
+
+.lead-card[data-priority="medium"] {
+  border-left-color: #f59e0b;
+}
+
+.lead-card[data-priority="low"] {
+  border-left-color: #10b981;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .lead-card {
+    padding: 0.875rem;
+  }
+
+  .card-title {
+    font-size: 0.9375rem;
+  }
+
+  .priority-badge {
+    font-size: 0.625rem;
+    padding: 0.1875rem 0.4375rem;
+  }
+
+  .card-info-row {
+    font-size: 0.8125rem;
+  }
+
+  .info-icon {
+    font-size: 0.8125rem;
+  }
+
+  .owner-badge,
+  .date-text {
+    font-size: 0.6875rem;
+  }
+}
