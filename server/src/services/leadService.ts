@@ -91,7 +91,6 @@ export const createLead = async (
   if (existingLeads && existingLeads.length > 0) {
     throw new Error(`A lead with company name "${leadData.company_name}" already exists`);
   }
-
   const leadId = uuidv4();
   const now = toMySQLDateTime(new Date().toISOString());
 
@@ -130,7 +129,6 @@ export const updateLead = async (
 ): Promise<Lead> => {
   const fields: string[] = [];
   const values: any[] = [];
-
   // If company name is being updated, check for duplicates
   if (updates.company_name !== undefined) {
     const [existingLeads]: any = await executeQuery(
@@ -144,7 +142,6 @@ export const updateLead = async (
     if (existingLeads && existingLeads.length > 0) {
       throw new Error(`A lead with company name "${updates.company_name}" already exists`);
     }
-
     fields.push('company_name = ?');
     values.push(updates.company_name);
   }

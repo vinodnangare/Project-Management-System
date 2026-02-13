@@ -7,7 +7,7 @@ export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'manager' | 'employee';
   is_active: boolean;
   created_at: string;
   mobile_number?: string | null;
@@ -145,7 +145,7 @@ export const api = createApi({
       invalidatesTags: ['Task', 'TimeLog', 'Comment', 'Activity', 'Stats', 'Profile'],
     }),
     
-    register: builder.mutation<{ user: User; token: string }, { email: string; password: string; password_confirm: string; full_name: string }>({
+    register: builder.mutation<{ user: User; token: string }, { email: string; password: string; password_confirm: string; full_name: string; role?: 'manager' | 'employee' }>({
       query: (data) => ({
         url: '/auth/register',
         method: 'POST',
@@ -484,6 +484,12 @@ export const api = createApi({
       providesTags: ['Task'],
     }),
 
+    getLeadOwners: builder.query<any[], void>({
+      query: () => '/leads/owners',
+      transformResponse: (response: { success: boolean; data: any[] }) => response.data,
+      providesTags: ['Task'],
+    }),
+
     updateLeadStage: builder.mutation<any, { leadId: string; stage: string }>({
       query: ({ leadId, stage }) => ({
         url: `/leads/${leadId}/stage`,
@@ -491,6 +497,40 @@ export const api = createApi({
         body: { stage },
       }),
       transformResponse: (response: { success: boolean; data: any }) => response.data,
+      invalidatesTags: ['Task', 'Stats'],
+    }),
+
+    getLeadById: builder.query<any, string>({
+      query: (leadId) => `/leads/${leadId}`,
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      providesTags: ['Task'],
+    }),
+
+    createLead: builder.mutation<any, any>({
+      query: (leadData) => ({
+        url: '/leads',
+        method: 'POST',
+        body: leadData,
+      }),
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      invalidatesTags: ['Task', 'Stats'],
+    }),
+
+    updateLead: builder.mutation<any, { leadId: string; updates: any }>({
+      query: ({ leadId, updates }) => ({
+        url: `/leads/${leadId}`,
+        method: 'PUT',
+        body: updates,
+      }),
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      invalidatesTags: ['Task', 'Stats'],
+    }),
+
+    deleteLead: builder.mutation<void, string>({
+      query: (leadId) => ({
+        url: `/leads/${leadId}`,
+        method: 'DELETE',
+      }),
       invalidatesTags: ['Task', 'Stats'],
     }),
   }),
@@ -552,5 +592,10 @@ export const {
   // Leads
   useGetLeadStatsQuery,
   useGetLeadsQuery,
+  useGetLeadOwnersQuery,
+  useCreateLeadMutation,
   useUpdateLeadStageMutation,
+  useGetLeadByIdQuery,
+  useUpdateLeadMutation,
+  useDeleteLeadMutation,
 } = api;

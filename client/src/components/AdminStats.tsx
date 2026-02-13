@@ -1,14 +1,19 @@
 import { useState } from 'react';
-import { useGetTaskStatsQuery, useGetTasksQuery, useDeleteEmployeeMutation } from '../services/api';
+import { useGetTaskStatsQuery, useGetTasksQuery, useDeleteEmployeeMutation, useRegisterMutation } from '../services/api';
 import '../styles/AdminStats.css';
 
 export const AdminStats: React.FC = () => {
   const { data: stats, isLoading: loading, error, refetch } = useGetTaskStatsQuery();
   const { data: tasksData } = useGetTasksQuery({ page: 1, limit: 100 });
   const [deleteEmployee, { isLoading: isDeleting }] = useDeleteEmployeeMutation();
+  const [registerEmployee, { isLoading: isRegistering }] = useRegisterMutation();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [deleteError, setDeleteError] = useState<string>('');
+  const [showAddEmployee, setShowAddEmployee] = useState<boolean>(false);
+  const [newEmployee, setNewEmployee] = useState({ full_name: '', email: '', password: '', password_confirm: '', role: 'employee' });
+  const [registerError, setRegisterError] = useState<string>('');
+  const [registerSuccess, setRegisterSuccess] = useState<string>('');
 
   const handleRetry = () => {
     refetch();
@@ -27,6 +32,46 @@ export const AdminStats: React.FC = () => {
       setDeleteError(err?.data?.error || 'Failed to delete employee');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleAddEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegisterError('');
+    setRegisterSuccess('');
+
+    if (newEmployee.password !== newEmployee.password_confirm) {
+      setRegisterError('Passwords do not match');
+      return;
+    }
+
+    if (newEmployee.password.length < 6) {
+      setRegisterError('Password must be at least 6 characters');
+      return;
+    }
+
+    // Validate role
+    if (!newEmployee.role || !['employee', 'manager'].includes(newEmployee.role)) {
+      setRegisterError('Please select a valid role');
+      return;
+    }
+
+    try {
+      // Ensure role is cleaned up before sending
+      const employeeData = {
+        ...newEmployee,
+        role: newEmployee.role.trim().toLowerCase() as 'employee' | 'manager'
+      };
+      console.log('Submitting employee data:', employeeData);
+      await registerEmployee(employeeData).unwrap();
+      setRegisterSuccess(`Employee ${newEmployee.full_name} added successfully!`);
+      setNewEmployee({ full_name: '', email: '', password: '', password_confirm: '', role: 'employee' });
+      setShowAddEmployee(false);
+      refetch();
+      setTimeout(() => setRegisterSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setRegisterError(err?.data?.error || 'Failed to add employee');
     }
   };
 
@@ -58,6 +103,95 @@ export const AdminStats: React.FC = () => {
   return (
     <div className="stats-container">
       <h2 className="stats-title">📊 Task Management Dashboard</h2>
+
+      {registerSuccess && <div className="success-message">{registerSuccess}</div>}
+
+      {/* Add Employee Section */}
+      <div className="add-employee-section">
+        <div className="section-header">
+          <h3>👥 Employee Management</h3>
+          <button
+            className="btn-add-employee"
+            onClick={() => setShowAddEmployee(!showAddEmployee)}
+          >
+            {showAddEmployee ? '✕ Cancel' : '➕ Add New Employee'}
+          </button>
+        </div>
+
+        {showAddEmployee && (
+          <form className="add-employee-form" onSubmit={handleAddEmployee}>
+            {registerError && <div className="error-message">{registerError}</div>}
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="full_name">Full Name</label>
+                <input
+                  type="text"
+                  id="full_name"
+                  value={newEmployee.full_name}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, full_name: e.target.value })}
+                  required
+                  placeholder="Enter full name"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  value={newEmployee.email}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                  required
+                  placeholder="Enter email"
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <input
+                  type="password"
+                  id="password"
+                  value={newEmployee.password}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                  required
+                  placeholder="Enter password (min 6 characters)"
+                  minLength={6}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="password_confirm">Confirm Password</label>
+                <input
+                  type="password"
+                  id="password_confirm"
+                  value={newEmployee.password_confirm}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, password_confirm: e.target.value })}
+                  required
+                  placeholder="Re-enter password"
+                  minLength={6}
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="role">Role</label>
+                <select
+                  id="role"
+                  value={newEmployee.role}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                  required
+                >
+                  <option value="employee">Employee</option>
+                  <option value="manager">Manager</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" className="btn-submit-employee" disabled={isRegistering}>
+              {isRegistering ? '⏳ Adding...' : '✓ Add Employee'}
+            </button>
+          </form>
+        )}
+      </div>
+
       <div className="overall-stats">
         <h3>Overall Statistics</h3>
         <div className="stats-grid">
