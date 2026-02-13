@@ -1,0 +1,144 @@
+/* Lead Table Container */
+.lead-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Table */
+.lead-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+/* Table Header */
+.lead-table thead {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.lead-table th {
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.lead-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.lead-table th.sortable:hover {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+/* Checkbox Cell */
+.checkbox-cell {
+  width: 40px;
+  text-align: center;
+}
+
+.checkbox-cell input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+/* Table Body */
+.lead-table tbody tr {
+  border-bottom: 1px solid #e2e8f0;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.lead-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.lead-table tbody tr.selected {
+  background: #eff6ff;
+}
+
+.lead-table td {
+  padding: 1rem;
+  font-size: 0.9375rem;
+  color: #1e293b;
+}
+
+/* Specific Cells */
+.company-cell {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.email-cell {
+  color: #3b82f6;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+/* Badge */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #94a3b8;
+  font-size: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .lead-table {
+    min-width: 1000px;
+  }
+
+  .lead-table th,
+  .lead-table td {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .lead-table-container {
+    border-radius: 0;
+  }
+
+  .lead-table {
+    min-width: 900px;
+  }
+
+  .lead-table th,
+  .lead-table td {
+    padding: 0.625rem;
+    font-size: 0.8125rem;
+  }
+
+  .badge {
+    font-size: 0.6875rem;
+    padding: 0.1875rem 0.5rem;
+  }
+}

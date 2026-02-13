@@ -1,0 +1,249 @@
+/* Lead Timeline Container */
+.lead-timeline {
+  padding: 1rem 0;
+}
+
+/* Timeline Item */
+.timeline-item {
+  position: relative;
+  padding-left: 3rem;
+  padding-bottom: 2rem;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+/* Timeline Marker */
+.timeline-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+/* Timeline Line */
+.timeline-line {
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  width: 2px;
+  height: calc(100% - 20px);
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+/* Timeline Content */
+.timeline-content {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.timeline-content:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Timeline Header */
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+  gap: 1rem;
+}
+
+.timeline-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  flex: 1;
+}
+
+.timeline-timestamp {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* Timeline Description */
+.timeline-description {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* Timeline User */
+.timeline-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.user-icon {
+  font-size: 0.875rem;
+}
+
+.user-name {
+  font-weight: 500;
+}
+
+/* Timeline Metadata */
+.timeline-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.metadata-item {
+  padding: 0.25rem 0.625rem;
+  background: #f8fafc;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.metadata-item strong {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Loading State */
+.timeline-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 1rem;
+  color: #64748b;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty State */
+.timeline-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 0.5rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.timeline-empty p {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.empty-subtitle {
+  font-size: 0.875rem !important;
+  font-weight: 400 !important;
+  color: #cbd5e1 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .timeline-item {
+    padding-left: 2.5rem;
+  }
+
+  .timeline-marker {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .timeline-line {
+    left: 15px;
+    top: 32px;
+  }
+
+  .timeline-content {
+    padding: 0.875rem;
+  }
+
+  .timeline-title {
+    font-size: 0.9375rem;
+  }
+
+  .timeline-description {
+    font-size: 0.8125rem;
+  }
+
+  .timeline-metadata {
+    flex-direction: column;
+  }
+
+  .metadata-item {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .timeline-item {
+    padding-left: 2.25rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .timeline-marker {
+    width: 28px;
+    height: 28px;
+    font-size: 0.875rem;
+  }
+
+  .timeline-line {
+    left: 13px;
+    top: 28px;
+  }
+
+  .timeline-content {
+    padding: 0.75rem;
+  }
+
+  .timeline-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .timeline-timestamp {
+    align-self: flex-start;
+  }
+}
