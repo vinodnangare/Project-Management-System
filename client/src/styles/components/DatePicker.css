@@ -1,0 +1,114 @@
+/* Date Picker Container */
+.date-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Label */
+.date-picker-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 0.25rem;
+}
+
+/* Date Picker Wrapper */
+.date-picker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Date Picker Input */
+.date-picker-input {
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #1e293b;
+  transition: all 0.2s;
+  background: white;
+  cursor: pointer;
+}
+
+.date-picker-input:hover:not(:disabled) {
+  border-color: #cbd5e1;
+}
+
+.date-picker-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.date-picker-input:disabled {
+  background: #f8fafc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Date Picker Icon */
+.date-picker-icon {
+  position: absolute;
+  right: 1rem;
+  font-size: 1.125rem;
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+/* Error State */
+.date-picker.has-error .date-picker-input {
+  border-color: #ef4444;
+}
+
+.date-picker.has-error .date-picker-input:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.date-picker-error {
+  font-size: 0.875rem;
+  color: #ef4444;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .date-picker-input {
+    padding: 0.625rem 2.25rem 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+  }
+
+  .date-picker-icon {
+    font-size: 1rem;
+    right: 0.875rem;
+  }
+
+  .date-picker-label {
+    font-size: 0.875rem;
+  }
+
+  .date-picker-error {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .date-picker-input {
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .date-picker-icon {
+    font-size: 0.9375rem;
+    right: 0.75rem;
+  }
+
+  .date-picker-label {
+    font-size: 0.8125rem;
+  }
+}
