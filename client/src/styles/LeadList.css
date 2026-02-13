@@ -164,6 +164,35 @@
   gap: 10px;
 }
 
+.bulk-assign-panel {
+  background: #e0ecff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 15px;
+}
+
+.bulk-assign-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bulk-assign-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.bulk-assign-select {
+  padding: 8px 12px;
+  border: 1px solid #cbd5f5;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+}
+
 .btn-bulk {
   padding: 6px 14px;
   background: white;
