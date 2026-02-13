@@ -25,6 +25,10 @@
   --transition: 160ms ease;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -134,9 +138,15 @@ h1, h2, h3, .brand-title {
 
 .app-nav {
   display: flex;
-  gap: 8px;
   flex: 1;
   justify-content: center;
+  align-items: center;
+}
+
+.nav-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .nav-btn {
@@ -151,6 +161,10 @@ h1, h2, h3, .brand-title {
   letter-spacing: 0.02em;
   transition: all var(--transition);
   white-space: nowrap;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-btn:hover {
@@ -256,9 +270,14 @@ h1, h2, h3, .brand-title {
   border-color: transparent;
 }
 
-.btn-create-task:hover {
+.btn-create-task:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 16px rgba(79, 134, 255, 0.35);
+}
+
+.btn-create-task:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-logout {
@@ -271,6 +290,11 @@ h1, h2, h3, .brand-title {
   color: #fca5a5;
   background: rgba(248, 113, 113, 0.1);
   border-color: rgba(248, 113, 113, 0.3);
+}
+
+.btn-hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 

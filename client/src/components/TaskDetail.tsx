@@ -165,7 +165,7 @@ export const TaskDetail: React.FC<{ taskId: string }> = ({ taskId }) => {
           className={`tab ${activeTab === 'activity' ? 'active' : ''}`}
           onClick={() => setActiveTab('activity')}
         >
-          Activity ({activities.length})
+          Activity ({Math.max(0, activities.length - 1)})
         </button>
       </div>
 
