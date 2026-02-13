@@ -206,6 +206,7 @@ export const initializeDatabase = async (): Promise<void> => {
         source ENUM('web', 'referral', 'campaign', 'manual') NOT NULL DEFAULT 'manual',
         owner_id VARCHAR(36) NULL,
         created_by VARCHAR(36) NOT NULL,
+        notes LONGTEXT NULL,
         is_deleted BOOLEAN DEFAULT 0,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -219,6 +220,17 @@ export const initializeDatabase = async (): Promise<void> => {
         INDEX idx_email (email)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
+
+    try {
+      await connection.execute(
+        `ALTER TABLE leads ADD COLUMN notes LONGTEXT DEFAULT NULL`
+      );
+      console.log('✓ Added notes column to leads table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.log('⚠ notes column already exists or error:', error.message);
+      }
+    }
 
     try {
       await connection.execute(

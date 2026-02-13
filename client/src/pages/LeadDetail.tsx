@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useGetLeadByIdQuery, useUpdateLeadMutation, useDeleteLeadMutation } from '../services/api';
+import { useGetLeadByIdQuery, useUpdateLeadMutation, useDeleteLeadMutation, useGetAssignableUsersQuery } from '../services/api';
 import '../styles/LeadDetail.css';
 
 interface Lead {
@@ -14,6 +14,7 @@ interface Lead {
   priority: string;
   owner_id?: string;
   owner_name?: string;
+  notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -22,12 +23,22 @@ export const LeadDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: lead, isLoading, error, refetch } = useGetLeadByIdQuery(id!);
+  const { data: availableUsers = [] } = useGetAssignableUsersQuery();
   const [updateLead] = useUpdateLeadMutation();
   const [deleteLead] = useDeleteLeadMutation();
 
   const [activeTab, setActiveTab] = useState<'info'>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [editedLead, setEditedLead] = useState<Partial<Lead>>({});
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notes, setNotes] = useState<string>('');
+
+  // Initialize notes from lead data when it loads
+  useEffect(() => {
+    if (lead) {
+      setNotes(lead.notes || '');
+    }
+  }, [lead?.id]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -37,6 +48,24 @@ export const LeadDetail: React.FC = () => {
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditedLead({});
+  };
+
+  const handleSaveNotes = async () => {
+    if (!id) return;
+    
+    try {
+      await updateLead({ leadId: id, updates: { notes } }).unwrap();
+      setIsEditingNotes(false);
+      refetch();
+    } catch (error: any) {
+      console.error('Failed to update notes:', error);
+      alert('Failed to save notes. Please try again.');
+    }
+  };
+
+  const handleCancelEditNotes = () => {
+    setNotes(lead?.notes || '');
+    setIsEditingNotes(false);
   };
 
   const handleSave = async () => {
@@ -58,11 +87,17 @@ export const LeadDetail: React.FC = () => {
     }
   };
 
-  const handleQuickUpdate = async (field: 'stage' | 'priority', value: string) => {
+  const handleQuickUpdate = async (field: 'stage' | 'priority' | 'owner_id', value: string) => {
     if (!id) return;
 
     try {
-      await updateLead({ leadId: id, updates: { [field]: value } }).unwrap();
+      const updateObj: any = {};
+      if (field === 'owner_id') {
+        updateObj[field] = value || null;
+      } else {
+        updateObj[field] = value;
+      }
+      await updateLead({ leadId: id, updates: updateObj }).unwrap();
       refetch();
     } catch (error: any) {
       console.error('Failed to update lead:', error);
@@ -344,7 +379,33 @@ export const LeadDetail: React.FC = () => {
 
                     <div className="info-item">
                       <label>Owner</label>
-                      <p>{lead.owner_name || 'Unassigned'}</p>
+                      {isEditing ? (
+                        <select
+                          value={editedLead.owner_id || ''}
+                          onChange={(e) => setEditedLead({ ...editedLead, owner_id: e.target.value || undefined })}
+                          className="select-edit"
+                        >
+                          <option value="">Unassigned</option>
+                          {availableUsers?.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.full_name || user.email}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <select
+                          value={lead.owner_id || ''}
+                          onChange={(e) => handleQuickUpdate('owner_id', e.target.value)}
+                          className="select-edit"
+                        >
+                          <option value="">Unassigned</option>
+                          {availableUsers?.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.full_name || user.email}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -361,6 +422,54 @@ export const LeadDetail: React.FC = () => {
                       <p>{formatDate(lead.updated_at)}</p>
                     </div>
                   </div>
+                </div>
+
+                <div className="info-section notes-section">
+                  <div className="notes-header">
+                    <h3>Notes</h3>
+                    {!isEditingNotes && (
+                      <button 
+                        className="btn-edit-notes"
+                        onClick={() => setIsEditingNotes(true)}
+                        title="Edit notes"
+                      >
+                        ✎ Edit
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditingNotes ? (
+                    <div className="notes-edit-area">
+                      <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add notes about this lead..."
+                        className="notes-textarea"
+                      />
+                      <div className="notes-actions">
+                        <button
+                          className="btn-save-notes"
+                          onClick={handleSaveNotes}
+                        >
+                          ✓ Save
+                        </button>
+                        <button
+                          className="btn-cancel-notes"
+                          onClick={handleCancelEditNotes}
+                        >
+                          ✕ Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="notes-display">
+                      {notes ? (
+                        <div className="note-text">{notes}</div>
+                      ) : (
+                        <div className="no-notes">No notes added yet</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

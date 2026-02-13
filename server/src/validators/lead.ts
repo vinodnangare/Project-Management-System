@@ -40,6 +40,11 @@ export const createLeadSchema = z.object({
     .max(20, 'Phone must be less than 20 characters')
     .nullable()
     .optional(),
+  notes: z
+    .string()
+    .max(65535, 'Notes must be less than 65535 characters')
+    .nullable()
+    .optional(),
   stage: StageEnum.default(LeadStage.NEW),
   priority: PriorityEnum.default(LeadPriority.MEDIUM),
   source: SourceEnum.default(LeadSource.MANUAL),
@@ -65,6 +70,11 @@ export const updateLeadSchema = z.object({
   phone: z
     .string()
     .max(20, 'Phone must be less than 20 characters')
+    .nullable()
+    .optional(),
+  notes: z
+    .string()
+    .max(65535, 'Notes must be less than 65535 characters')
     .nullable()
     .optional(),
   stage: StageEnum.optional(),
