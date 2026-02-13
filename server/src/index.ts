@@ -12,6 +12,7 @@ import taskRoutes from './routes/taskRoutes.js';
 import subtaskRoutes from './routes/subtaskRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import timeLogRoutes from './routes/timeLogRoutes.js';
+import leadRoutes from './routes/leadRoutes.js';
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
@@ -35,6 +36,8 @@ app.use('/api/auth', authRoutes);
 app.post('/api/auth/register', authController.register);
 
 app.post('/api/auth/login', authController.signIn);
+
+app.get('/api/auth/profile', verifyJwt, authController.getProfile);
 
 app.patch('/api/auth/profile', verifyJwt, authController.updateProfile);
 
@@ -92,6 +95,8 @@ app.post('/api/time-logs', verifyJwt, timeLogController.logTime);
 app.get('/api/time-logs/range', verifyJwt, timeLogController.getUserTimeLogs);
 
 app.get('/api/time-logs', verifyJwt, timeLogController.getUserTimeLogs);
+
+app.use('/api/leads', verifyJwt, leadRoutes);
 
 app.use(errorHandler);
 

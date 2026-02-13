@@ -7,7 +7,7 @@ export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'manager' | 'employee';
   is_active: boolean;
   created_at: string;
   mobile_number?: string | null;
@@ -18,6 +18,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   full_name: string;
+  role?: 'manager' | 'employee';
 }
 
 export interface LoginRequest {
@@ -28,6 +29,22 @@ export interface LoginRequest {
 export const registerEmployee = async (data: RegisterRequest): Promise<User> => {
   const userId = uuidv4();
   const hashedPassword = await bcrypt.hash(data.password, 10);
+  
+  console.log('RegisterEmployee received data:', {
+    email: data.email,
+    full_name: data.full_name,
+    role: data.role,
+    roleType: typeof data.role
+  });
+
+  const role = String(data.role || 'employee').trim().toLowerCase();
+
+  console.log('Processed role:', { original: data.role, processed: role });
+
+  // Validate role value
+  if (!['manager', 'employee'].includes(role)) {
+    throw new Error(`Invalid role: "${role}". Must be either "manager" or "employee"`);
+  }
 
   const [existingUsers]: any = await executeQuery(
     'SELECT id FROM users WHERE email = ?',
@@ -38,17 +55,19 @@ export const registerEmployee = async (data: RegisterRequest): Promise<User> => 
     throw new Error('User with this email already exists');
   }
 
+  console.log('Inserting user with role:', role);
+
   await executeQuery(
     `INSERT INTO users (id, email, password, full_name, role, is_active, mobile_number)
-     VALUES (?, ?, ?, ?, 'employee', 1, NULL)`,
-    [userId, data.email, hashedPassword, data.full_name]
+     VALUES (?, ?, ?, ?, ?, 1, NULL)`,
+    [userId, data.email, hashedPassword, data.full_name, role]
   );
 
   return {
     id: userId,
     email: data.email,
     full_name: data.full_name,
-    role: 'employee',
+    role: role as 'admin' | 'manager' | 'employee',
     is_active: true,
     created_at: new Date().toISOString(),
     mobile_number: null,
