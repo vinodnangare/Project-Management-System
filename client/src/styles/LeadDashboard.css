@@ -14,6 +14,12 @@
   animation: slideDown 0.5s ease-out;
 }
 
+.dashboard-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .dashboard-header > div {
   flex: 1;
 }
@@ -47,6 +53,25 @@
   background: #2563eb;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-add-lead {
+  padding: 10px 20px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-add-lead:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 /* Loading and Error States */
@@ -174,6 +199,91 @@
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   animation: fadeIn 0.6s ease-out;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.funnel-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.funnel-stage {
+  display: grid;
+  grid-template-columns: 140px 1fr 48px;
+  align-items: center;
+  gap: 12px;
+}
+
+.funnel-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.funnel-bar-wrap {
+  width: 100%;
+  background: #f3f4f6;
+  border-radius: 999px;
+  height: 14px;
+  overflow: hidden;
+}
+
+.funnel-bar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.funnel-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  text-align: right;
+}
+
+.velocity-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.velocity-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 90px;
+  align-items: center;
+  gap: 12px;
+}
+
+.velocity-label {
+  font-size: 14px;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.velocity-bar-wrap {
+  width: 100%;
+  background: #f3f4f6;
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.velocity-bar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.velocity-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  text-align: right;
 }
 
 .chart-placeholder {
