@@ -58,6 +58,23 @@ export const LeadDetail: React.FC = () => {
     }
   };
 
+  const handleQuickUpdate = async (field: 'stage' | 'priority', value: string) => {
+    if (!id) return;
+
+    try {
+      await updateLead({ leadId: id, updates: { [field]: value } }).unwrap();
+      refetch();
+    } catch (error: any) {
+      console.error('Failed to update lead:', error);
+
+      if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
+        alert(error?.data?.error || 'A lead with this company name already exists.');
+      } else {
+        alert('Failed to update lead. Please try again.');
+      }
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     
@@ -268,12 +285,17 @@ export const LeadDetail: React.FC = () => {
                           <option value="lost">Lost</option>
                         </select>
                       ) : (
-                        <span
-                          className="lead-badge"
-                          style={{ backgroundColor: getStageColor(lead.stage) }}
+                        <select
+                          value={lead.stage || ''}
+                          onChange={(e) => handleQuickUpdate('stage', e.target.value)}
+                          className="select-edit"
                         >
-                          {formatStageLabel(lead.stage)}
-                        </span>
+                          <option value="new">New</option>
+                          <option value="in_discussion">In Discussion</option>
+                          <option value="quoted">Quoted</option>
+                          <option value="won">Won</option>
+                          <option value="lost">Lost</option>
+                        </select>
                       )}
                     </div>
 
@@ -290,12 +312,15 @@ export const LeadDetail: React.FC = () => {
                           <option value="low">Low</option>
                         </select>
                       ) : (
-                        <span
-                          className="lead-badge"
-                          style={{ backgroundColor: getPriorityColor(lead.priority) }}
+                        <select
+                          value={lead.priority || ''}
+                          onChange={(e) => handleQuickUpdate('priority', e.target.value)}
+                          className="select-edit"
                         >
-                          {lead.priority}
-                        </span>
+                          <option value="high">High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
+                        </select>
                       )}
                     </div>
 
