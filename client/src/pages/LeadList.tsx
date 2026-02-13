@@ -67,9 +67,11 @@ export const LeadList: React.FC = () => {
         lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
       : true;
 
+    const matchesStage = stageFilter ? lead.stage === stageFilter : true;
+    const matchesSource = sourceFilter ? lead.source === sourceFilter : true;
     const matchesPriority = priorityFilter ? lead.priority === priorityFilter : true;
 
-    return matchesSearch && matchesPriority;
+    return matchesSearch && matchesStage && matchesSource && matchesPriority;
   });
 
   const sortedLeads = [...filteredLeads].sort((a, b) => {
