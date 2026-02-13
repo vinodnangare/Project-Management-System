@@ -569,7 +569,11 @@ export const getTaskStats = async (): Promise<{
       SUM(CASE WHEN status = 'IN_PROGRESS' THEN 1 ELSE 0 END) as in_progress_tasks,
       SUM(CASE WHEN status = 'REVIEW' THEN 1 ELSE 0 END) as review_tasks,
       SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as done_tasks,
-      COUNT(DISTINCT assigned_to) as total_employees
+      (
+        SELECT COUNT(*)
+        FROM users
+        WHERE LOWER(role) = 'employee' AND is_active = 1
+      ) as total_employees
      FROM tasks
      WHERE is_deleted = 0`
   );
