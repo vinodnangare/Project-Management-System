@@ -36,7 +36,7 @@ export const getAllLeads = async (
     
     const dataQuery = `
       SELECT id, company_name, contact_name, email, phone, stage, priority, source, 
-             owner_id, created_by, is_deleted, created_at, updated_at
+             owner_id, created_by, notes, is_deleted, created_at, updated_at
       FROM leads
       WHERE is_deleted = 0
       ORDER BY created_at DESC
@@ -97,8 +97,8 @@ export const createLead = async (
   await executeQuery(
     `INSERT INTO leads (
       id, company_name, contact_name, email, phone,
-      stage, priority, source, owner_id, created_by, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      stage, priority, source, owner_id, created_by, notes, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       leadId,
       leadData.company_name,
@@ -110,6 +110,7 @@ export const createLead = async (
       leadData.source,
       leadData.owner_id || null,
       createdBy,
+      leadData.notes || null,
       now,
       now
     ]
@@ -179,6 +180,11 @@ export const updateLead = async (
   if (updates.owner_id !== undefined) {
     fields.push('owner_id = ?');
     values.push(updates.owner_id);
+  }
+
+  if (updates.notes !== undefined) {
+    fields.push('notes = ?');
+    values.push(updates.notes);
   }
 
   if (fields.length === 0) {
