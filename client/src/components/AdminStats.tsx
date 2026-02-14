@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useGetTaskStatsQuery, useGetTasksQuery, useDeleteEmployeeMutation, useRegisterMutation } from '../services/api';
+import toast from 'react-hot-toast';
+import { useGetTaskStatsQuery, useGetTasksQuery, useDeleteEmployeeMutation, useRegisterMutation, useGetAssignableUsersQuery } from '../services/api';
 import '../styles/AdminStats.css';
 
 export const AdminStats: React.FC = () => {
   const { data: stats, isLoading: loading, error, refetch } = useGetTaskStatsQuery();
   const { data: tasksData } = useGetTasksQuery({ page: 1, limit: 100 });
+  const { data: assignableUsers = [] } = useGetAssignableUsersQuery();
   const [deleteEmployee, { isLoading: isDeleting }] = useDeleteEmployeeMutation();
   const [registerEmployee, { isLoading: isRegistering }] = useRegisterMutation();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -21,15 +23,22 @@ export const AdminStats: React.FC = () => {
 
   const handleDeleteEmployee = async () => {
     if (!deleteConfirm) return;
+    if (!deleteConfirm.id) {
+      toast.error('Missing employee id for this row');
+      return;
+    }
 
     setDeletingId(deleteConfirm.id);
     setDeleteError('');
     try {
       await deleteEmployee(deleteConfirm.id).unwrap();
       setDeleteConfirm(null);
+      toast.success('Employee deleted');
       refetch();
     } catch (err: any) {
-      setDeleteError(err?.data?.error || 'Failed to delete employee');
+      const message = err?.data?.error || 'Failed to delete employee';
+      setDeleteError(message);
+      toast.error(message);
     } finally {
       setDeletingId(null);
     }
@@ -41,18 +50,24 @@ export const AdminStats: React.FC = () => {
     setRegisterSuccess('');
 
     if (newEmployee.password !== newEmployee.password_confirm) {
-      setRegisterError('Passwords do not match');
+      const message = 'Passwords do not match';
+      setRegisterError(message);
+      toast.error(message);
       return;
     }
 
     if (newEmployee.password.length < 6) {
-      setRegisterError('Password must be at least 6 characters');
+      const message = 'Password must be at least 6 characters';
+      setRegisterError(message);
+      toast.error(message);
       return;
     }
 
     // Validate role
     if (!newEmployee.role || !['employee', 'manager'].includes(newEmployee.role)) {
-      setRegisterError('Please select a valid role');
+      const message = 'Please select a valid role';
+      setRegisterError(message);
+      toast.error(message);
       return;
     }
 
@@ -62,16 +77,19 @@ export const AdminStats: React.FC = () => {
         ...newEmployee,
         role: newEmployee.role.trim().toLowerCase() as 'employee' | 'manager'
       };
-      console.log('Submitting employee data:', employeeData);
       await registerEmployee(employeeData).unwrap();
-      setRegisterSuccess(`Employee ${newEmployee.full_name} added successfully!`);
+      const successMessage = `Employee ${newEmployee.full_name} added successfully!`;
+      setRegisterSuccess(successMessage);
+      toast.success(successMessage);
       setNewEmployee({ full_name: '', email: '', password: '', password_confirm: '', role: 'employee' });
       setShowAddEmployee(false);
       refetch();
       setTimeout(() => setRegisterSuccess(''), 3000);
     } catch (err: any) {
       console.error('Registration error:', err);
-      setRegisterError(err?.data?.error || 'Failed to add employee');
+      const message = err?.data?.error || 'Failed to add employee';
+      setRegisterError(message);
+      toast.error(message);
     }
   };
 
@@ -89,6 +107,12 @@ export const AdminStats: React.FC = () => {
   }
 
   const { overall, employees } = stats || { overall: {}, employees: [] };
+  const employeeIdByEmail = new Map(
+    (assignableUsers || []).map((user: any) => [String(user.email || '').toLowerCase(), user.id])
+  );
+  const employeeIdByName = new Map(
+    (assignableUsers || []).map((user: any) => [String(user.full_name || '').toLowerCase(), user.id])
+  );
   const fallbackTasks = tasksData?.tasks || [];
   const fallbackOverall = {
     total_tasks: fallbackTasks.length,
@@ -239,8 +263,12 @@ export const AdminStats: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {employees.map((emp: any) => (
-                  <tr key={emp.employee_id} className="employee-row">
+                {employees.map((emp: any) => {
+                  const emailKey = String(emp.employee_email || '').trim().toLowerCase();
+                  const nameKey = String(emp.employee_name || '').trim().toLowerCase();
+                  const employeeId = emp.employee_id || emp.id || employeeIdByEmail.get(emailKey) || employeeIdByName.get(nameKey) || emailKey || '';
+                  return (
+                    <tr key={employeeId || emp.employee_email} className="employee-row">
                     <td className="employee-photo">
                       <div className="employee-avatar">
                         {emp.profile_image_url ? (
@@ -266,15 +294,16 @@ export const AdminStats: React.FC = () => {
                     <td className="actions-col">
                       <button
                         className="delete-btn"
-                        onClick={() => setDeleteConfirm({ id: emp.employee_id, name: emp.employee_name })}
-                        disabled={deletingId === emp.employee_id}
-                        title="Delete employee"
+                        onClick={() => setDeleteConfirm({ id: employeeId, name: emp.employee_name })}
+                        disabled={!employeeId || deletingId === employeeId}
+                        title={employeeId ? 'Delete employee' : 'Missing employee id'}
                       >
-                        {deletingId === emp.employee_id ? '⏳' : '🗑️'}
+                        {deletingId === employeeId ? '⏳' : '🗑️'}
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGetLeadByIdQuery, useUpdateLeadMutation, useDeleteLeadMutation, useGetAssignableUsersQuery } from '../services/api';
 import '../styles/LeadDetail.css';
@@ -56,10 +57,11 @@ export const LeadDetail: React.FC = () => {
     try {
       await updateLead({ leadId: id, updates: { notes } }).unwrap();
       setIsEditingNotes(false);
+      toast.success('Notes updated');
       refetch();
     } catch (error: any) {
       console.error('Failed to update notes:', error);
-      alert('Failed to save notes. Please try again.');
+      toast.error('Failed to save notes. Please try again.');
     }
   };
 
@@ -74,15 +76,15 @@ export const LeadDetail: React.FC = () => {
     try {
       await updateLead({ leadId: id, updates: editedLead }).unwrap();
       setIsEditing(false);
+      toast.success('Lead updated');
       refetch();
     } catch (error: any) {
       console.error('Failed to update lead:', error);
-      
-      // Handle duplicate company name error
+
       if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
-        alert(error?.data?.error || 'A lead with this company name already exists.');
+        toast.error(error?.data?.error || 'A lead with this company name already exists.');
       } else {
-        alert('Failed to update lead. Please try again.');
+        toast.error('Failed to update lead. Please try again.');
       }
     }
   };
@@ -98,14 +100,15 @@ export const LeadDetail: React.FC = () => {
         updateObj[field] = value;
       }
       await updateLead({ leadId: id, updates: updateObj }).unwrap();
+      toast.success('Lead updated');
       refetch();
     } catch (error: any) {
       console.error('Failed to update lead:', error);
 
       if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
-        alert(error?.data?.error || 'A lead with this company name already exists.');
+        toast.error(error?.data?.error || 'A lead with this company name already exists.');
       } else {
-        alert('Failed to update lead. Please try again.');
+        toast.error('Failed to update lead. Please try again.');
       }
     }
   };
@@ -116,9 +119,11 @@ export const LeadDetail: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete lead "${lead?.company_name}"?`)) {
       try {
         await deleteLead(id).unwrap();
+        toast.success('Lead deleted');
         navigate('/leads/list');
       } catch (error) {
         console.error('Failed to delete lead:', error);
+        toast.error('Failed to delete lead. Please try again.');
       }
     }
   };

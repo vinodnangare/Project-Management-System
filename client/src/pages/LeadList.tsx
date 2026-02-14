@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useGetLeadsQuery, useCreateLeadMutation, useDeleteLeadMutation, useGetLeadOwnersQuery, useUpdateLeadStageMutation, useUpdateLeadMutation } from '../services/api';
 import BulkActions from '../components/BulkActions';
@@ -135,15 +136,15 @@ export const LeadList: React.FC = () => {
     try {
       await createLead(formData).unwrap();
       setShowLeadForm(false);
+      toast.success('Lead created successfully');
       refetch();
     } catch (error: any) {
       console.error('Failed to create lead:', error);
       
-      // Handle duplicate company name error
       if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
-        alert(error?.data?.error || 'A lead with this company name already exists.');
+        toast.error(error?.data?.error || 'A lead with this company name already exists.');
       } else {
-        alert('Failed to create lead. Please try again.');
+        toast.error('Failed to create lead. Please try again.');
       }
     }
   };
@@ -152,10 +153,11 @@ export const LeadList: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this lead?')) {
       try {
         await deleteLead(leadId).unwrap();
+        toast.success('Lead deleted successfully');
         refetch();
       } catch (error) {
         console.error('Failed to delete lead:', error);
-        alert('Failed to delete lead. Please try again.');
+        toast.error('Failed to delete lead. Please try again.');
       }
     }
   };
@@ -168,11 +170,12 @@ export const LeadList: React.FC = () => {
       await Promise.all(
         Array.from(selectedLeads).map((leadId) => deleteLead(leadId).unwrap())
       );
+      toast.success('Selected leads deleted');
       handleClearSelection();
       refetch();
     } catch (error) {
       console.error('Failed to delete leads:', error);
-      alert('Failed to delete selected leads. Please try again.');
+      toast.error('Failed to delete selected leads. Please try again.');
     }
   };
 
@@ -183,11 +186,12 @@ export const LeadList: React.FC = () => {
       await Promise.all(
         Array.from(selectedLeads).map((leadId) => updateLeadStage({ leadId, stage }).unwrap())
       );
+      toast.success('Lead stages updated');
       handleClearSelection();
       refetch();
     } catch (error) {
       console.error('Failed to update lead stages:', error);
-      alert('Failed to update lead stages. Please try again.');
+      toast.error('Failed to update lead stages. Please try again.');
     }
   };
 
@@ -198,11 +202,12 @@ export const LeadList: React.FC = () => {
       await Promise.all(
         Array.from(selectedLeads).map((leadId) => updateLead({ leadId, updates: { priority } }).unwrap())
       );
+      toast.success('Lead priorities updated');
       handleClearSelection();
       refetch();
     } catch (error) {
       console.error('Failed to update lead priorities:', error);
-      alert('Failed to update lead priorities. Please try again.');
+      toast.error('Failed to update lead priorities. Please try again.');
     }
   };
 
@@ -217,11 +222,12 @@ export const LeadList: React.FC = () => {
       await Promise.all(
         Array.from(selectedLeads).map((leadId) => updateLead({ leadId, updates: { owner_id: selectedOwnerId } }).unwrap())
       );
+      toast.success('Owner assigned to selected leads');
       handleClearSelection();
       refetch();
     } catch (error) {
       console.error('Failed to assign owner:', error);
-      alert('Failed to assign owner. Please try again.');
+      toast.error('Failed to assign owner. Please try again.');
     }
   };
 

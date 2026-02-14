@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import TaskList from './components/TaskList';
 import TaskDetail from './components/TaskDetail';
@@ -132,6 +133,7 @@ function AuthenticatedLayout({
   
   return (
     <div className="app-container">
+      <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
       <header className="app-header">
         <div className="header-brand">
           <div className="brand-left">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useGetLeadsQuery, useUpdateLeadStageMutation } from '../services/api';
 import '../styles/LeadPipeline.css';
@@ -82,9 +83,11 @@ export const LeadPipeline: React.FC = () => {
         leadId: draggedLead.id,
         stage: newStage
       }).unwrap();
+      toast.success('Lead stage updated');
       refetch();
     } catch (error) {
       console.error('Failed to update lead stage:', error);
+      toast.error('Failed to update lead stage');
     }
 
     setDraggedLead(null);
