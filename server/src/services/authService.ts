@@ -105,10 +105,10 @@ export const login = async (data: LoginRequest): Promise<User> => {
 };
 
 export const deleteEmployee = async (
-  employeeId: string,
+  employeeIdentifier: string,
   adminId: string
 ): Promise<void> => {
-  if (!employeeId || !adminId) {
+  if (!employeeIdentifier || !adminId) {
     throw new Error('Employee ID and Admin ID are required');
   }
 
@@ -121,9 +121,10 @@ export const deleteEmployee = async (
     throw new Error('Only admins can delete employees');
   }
 
+  const identifier = String(employeeIdentifier).trim();
   const [users]: any = await executeQuery(
-    'SELECT id, role FROM users WHERE id = ?',
-    [employeeId]
+    'SELECT id, role FROM users WHERE id = ? OR email = ?',
+    [identifier, identifier]
   );
 
   if (!users || users.length === 0) {
@@ -136,7 +137,7 @@ export const deleteEmployee = async (
 
   await executeQuery(
     'UPDATE users SET is_active = 0 WHERE id = ?',
-    [employeeId]
+    [users[0].id]
   );
 };
 
