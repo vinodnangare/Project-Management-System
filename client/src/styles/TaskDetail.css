@@ -1,14 +1,14 @@
 :root {
-  --bg: #0f172a;
-  --card: #0b1224;
-  --panel: #101a32;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
-  --accent: #4f86ff;
-  --accent-2: #22d3ee;
-  --success: #34d399;
+  --bg: #0b1324;
+  --card: #0c162b;
+  --panel: #0f1b33;
+  --text: #e6edf6;
+  --muted: #9aa7bd;
+  --accent: #0ea5e9;
+  --accent-2: #2dd4bf;
+  --success: #22c55e;
   --error: #f87171;
-  --warning: #fb923c;
+  --warning: #f59e0b;
   --border: 1px solid rgba(255, 255, 255, 0.05);
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   --radius-lg: 18px;
@@ -216,6 +216,30 @@
 .add-comment button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+html[data-theme='light'] .task-detail-container {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme='light'] .task-detail-header {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(20, 184, 166, 0.12));
+}
+
+html[data-theme='light'] .delete-task-btn {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  box-shadow: 0 10px 22px rgba(239, 68, 68, 0.18);
+}
+
+html[data-theme='light'] .delete-task-btn:hover {
+  background: #fecaca;
+  border-color: #fca5a5;
+  color: #991b1b;
+  box-shadow: 0 12px 26px rgba(239, 68, 68, 0.22);
 }
 
 .comments-list {
@@ -977,6 +1001,52 @@
 
 .btn-delete:active {
   transform: translateY(0);
+}
+
+html[data-theme='light'] .confirmation-overlay {
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+html[data-theme='light'] .confirmation-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.18);
+}
+
+html[data-theme='light'] .confirmation-dialog h3 {
+  color: #0f172a;
+}
+
+html[data-theme='light'] .confirmation-dialog p {
+  color: #475569;
+}
+
+html[data-theme='light'] .warning-text {
+  color: #b91c1c !important;
+}
+
+html[data-theme='light'] .btn-cancel {
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme='light'] .btn-cancel:hover {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.4);
+}
+
+html[data-theme='light'] .btn-delete {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 10px 22px rgba(239, 68, 68, 0.25);
+}
+
+html[data-theme='light'] .btn-delete:hover {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  box-shadow: 0 14px 28px rgba(239, 68, 68, 0.3);
 }
 
 @media (max-width: 768px) {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import TaskList from './components/TaskList';
@@ -130,6 +130,16 @@ function AuthenticatedLayout({
   selectedTaskId, showTaskForm, handleTaskCreated 
 }: any) {
   const currentPath = location.pathname;
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme ? savedTheme === 'dark' : true;
+  });
+
+  useEffect(() => {
+    const theme = isDarkMode ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [isDarkMode]);
   
   return (
     <div className="app-container">
@@ -229,6 +239,13 @@ function AuthenticatedLayout({
             disabled={user?.role !== 'admin' || currentPath !== '/tasks'}
           >
             ✚ New Task
+          </button>
+          <button
+            className="btn-theme"
+            onClick={() => setIsDarkMode((prev) => !prev)}
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDarkMode ? '🌙 Dark' : '☀️ Light'}
           </button>
           <button
             className="btn-profile"
