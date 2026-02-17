@@ -1,24 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useGetLeadByIdQuery, useUpdateLeadMutation, useDeleteLeadMutation, useGetAssignableUsersQuery } from '../services/api';
+import { useGetLeadByIdQuery, useUpdateLeadMutation, useDeleteLeadMutation, useGetAssignableUsersQuery, type Lead } from '../services/api';
 import '../styles/LeadDetail.css';
-
-interface Lead {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone?: string;
-  source: string;
-  stage: string;
-  priority: string;
-  owner_id?: string;
-  owner_name?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export const LeadDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,10 +15,10 @@ export const LeadDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'info'>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [editedLead, setEditedLead] = useState<Partial<Lead>>({});
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notes, setNotes] = useState<string>('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const notesTimeoutRef = useRef<number | null>(null);
 
-  // Initialize notes from lead data when it loads
   useEffect(() => {
     if (lead) {
       setNotes(lead.notes || '');
@@ -51,24 +35,36 @@ export const LeadDetail: React.FC = () => {
     setEditedLead({});
   };
 
-  const handleSaveNotes = async () => {
-    if (!id) return;
-    
-    try {
-      await updateLead({ leadId: id, updates: { notes } }).unwrap();
-      setIsEditingNotes(false);
-      toast.success('Notes updated');
-      refetch();
-    } catch (error: any) {
-      console.error('Failed to update notes:', error);
-      toast.error('Failed to save notes. Please try again.');
+  const handleNotesChange = (value: string) => {
+    setNotes(value);
+
+    if (notesTimeoutRef.current) {
+      clearTimeout(notesTimeoutRef.current);
     }
+    notesTimeoutRef.current = setTimeout(async () => {
+      if (!id) return;
+      
+      try {
+        setIsSavingNotes(true);
+        await updateLead({ leadId: id, updates: { notes: value } }).unwrap();
+        toast.success('Notes saved', { duration: 1500 });
+        refetch();
+      } catch (error: any) {
+        console.error('Failed to update notes:', error);
+        toast.error('Failed to save notes. Please try again.');
+      } finally {
+        setIsSavingNotes(false);
+      }
+    }, 1000);
   };
 
-  const handleCancelEditNotes = () => {
-    setNotes(lead?.notes || '');
-    setIsEditingNotes(false);
-  };
+  useEffect(() => {
+    return () => {
+      if (notesTimeoutRef.current) {
+        clearTimeout(notesTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSave = async () => {
     if (!id) return;
@@ -432,49 +428,19 @@ export const LeadDetail: React.FC = () => {
                 <div className="info-section notes-section">
                   <div className="notes-header">
                     <h3>Notes</h3>
-                    {!isEditingNotes && (
-                      <button 
-                        className="btn-edit-notes"
-                        onClick={() => setIsEditingNotes(true)}
-                        title="Edit notes"
-                      >
-                        ✎ Edit
-                      </button>
+                    {isSavingNotes && (
+                      <span className="saving-indicator">💾 Saving...</span>
                     )}
                   </div>
 
-                  {isEditingNotes ? (
-                    <div className="notes-edit-area">
-                      <textarea
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Add notes about this lead..."
-                        className="notes-textarea"
-                      />
-                      <div className="notes-actions">
-                        <button
-                          className="btn-save-notes"
-                          onClick={handleSaveNotes}
-                        >
-                          ✓ Save
-                        </button>
-                        <button
-                          className="btn-cancel-notes"
-                          onClick={handleCancelEditNotes}
-                        >
-                          ✕ Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="notes-display">
-                      {notes ? (
-                        <div className="note-text">{notes}</div>
-                      ) : (
-                        <div className="no-notes">No notes added yet</div>
-                      )}
-                    </div>
-                  )}
+                  <div className="notes-edit-area">
+                    <textarea
+                      value={notes}
+                      onChange={(e) => handleNotesChange(e.target.value)}
+                      placeholder="Add notes about this lead..."
+                      className="notes-textarea"
+                    />
+                  </div>
                 </div>
               </div>
             )}
