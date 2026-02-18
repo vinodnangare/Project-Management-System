@@ -74,6 +74,44 @@ export interface Subtask {
   created_at: string;
 }
 
+export interface LeadStats {
+  totalLeads: number;
+  total?: number;
+  activeLeads: number;
+  wonLeads: number;
+  lostLeads: number;
+  newLeadsThisWeek: number;
+  newLeadsThisMonth: number;
+  conversionRate: number;
+  averageTimeToConvert: number;
+  lastWeekConversionTrend: number;
+  lastMonthConversionTrend: number;
+  byStage?: {
+    new?: number;
+    in_discussion?: number;
+    quoted?: number;
+    won?: number;
+    lost?: number;
+    [key: string]: number | undefined;
+  };
+}
+
+export interface Lead {
+  id: string;
+  company_name: string;
+  contact_name: string;
+  email: string;
+  phone?: string;
+  source: string;
+  stage: string;
+  priority: string;
+  owner_id?: string;
+  owner_name?: string;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Activity {
   id: string;
   task_id: string;
@@ -460,13 +498,13 @@ export const api = createApi({
     }),
 
     // Lead Stats
-    getLeadStats: builder.query<any, void>({
+    getLeadStats: builder.query<LeadStats, void>({
       query: () => '/leads/stats',
-      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      transformResponse: (response: { success: boolean; data: LeadStats }) => response.data,
       providesTags: ['Stats'],
     }),
 
-    getLeads: builder.query<{ leads: any[]; meta: any }, { page?: number; limit?: number; stage?: string; source?: string; owner?: string }>({
+    getLeads: builder.query<{ leads: Lead[]; meta: any }, { page?: number; limit?: number; stage?: string; source?: string; owner?: string }>({
       query: ({ page = 1, limit = 100, stage, source, owner }) => {
         const params = new URLSearchParams({
           page: page.toString(),
@@ -477,7 +515,7 @@ export const api = createApi({
         });
         return `/leads?${params}`;
       },
-      transformResponse: (response: { success: boolean; data: any[]; meta: any }) => ({
+      transformResponse: (response: { success: boolean; data: Lead[]; meta: any }) => ({
         leads: response.data,
         meta: response.meta,
       }),
@@ -500,9 +538,9 @@ export const api = createApi({
       invalidatesTags: ['Task', 'Stats'],
     }),
 
-    getLeadById: builder.query<any, string>({
+    getLeadById: builder.query<Lead, string>({
       query: (leadId) => `/leads/${leadId}`,
-      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      transformResponse: (response: { success: boolean; data: Lead }) => response.data,
       providesTags: ['Task'],
     }),
 

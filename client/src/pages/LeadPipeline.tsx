@@ -1,22 +1,8 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { useGetLeadsQuery, useUpdateLeadStageMutation } from '../services/api';
+import { useGetLeadsQuery, useUpdateLeadStageMutation, type Lead } from '../services/api';
 import '../styles/LeadPipeline.css';
-
-interface Lead {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone?: string;
-  source: string;
-  stage: string;
-  priority: string;
-  owner_id?: string;
-  owner_name?: string;
-  created_at: string;
-}
 
 interface StageColumn {
   name: string;

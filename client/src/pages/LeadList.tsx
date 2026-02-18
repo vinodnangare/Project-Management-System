@@ -1,24 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useGetLeadsQuery, useCreateLeadMutation, useDeleteLeadMutation, useGetLeadOwnersQuery, useUpdateLeadStageMutation, useUpdateLeadMutation } from '../services/api';
+import { useGetLeadsQuery, useCreateLeadMutation, useDeleteLeadMutation, useGetLeadOwnersQuery, useUpdateLeadStageMutation, useUpdateLeadMutation, type Lead } from '../services/api';
 import BulkActions from '../components/BulkActions';
 import LeadForm from '../components/LeadForm';
 import '../styles/LeadList.css';
-
-interface Lead {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone?: string;
-  source: string;
-  stage: string;
-  priority: string;
-  owner_id?: string;
-  owner_name?: string;
-  created_at: string;
-}
 
 export const LeadList: React.FC = () => {
   const navigate = useNavigate();

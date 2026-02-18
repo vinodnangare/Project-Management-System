@@ -1,20 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGetLeadStatsQuery } from '../services/api';
+import { useGetLeadStatsQuery, type LeadStats } from '../services/api';
 import '../styles/LeadDashboard.css';
-
-interface DashboardStats {
-  totalLeads: number;
-  activeLeads: number;
-  wonLeads: number;
-  lostLeads: number;
-  newLeadsThisWeek: number;
-  newLeadsThisMonth: number;
-  conversionRate: number;
-  averageTimeToConvert: number;
-  lastWeekConversionTrend: number;
-  lastMonthConversionTrend: number;
-}
 
 export const LeadDashboard: React.FC = () => {
   const { data: stats, isLoading: loading, error } = useGetLeadStatsQuery();
@@ -61,7 +48,7 @@ export const LeadDashboard: React.FC = () => {
   const rawConversionRate = Number(stats.conversionRate ?? 0) || 0;
   const normalizedConversionRate = rawConversionRate > 1 ? rawConversionRate / 100 : rawConversionRate;
 
-  const safeStats: DashboardStats = {
+  const safeStats: LeadStats = {
     totalLeads: rawTotal,
     activeLeads: Number(stats.activeLeads ?? Math.max(0, rawTotal - rawWon - rawLost)) || 0,
     wonLeads: rawWon,
