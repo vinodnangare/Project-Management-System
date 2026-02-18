@@ -4,6 +4,7 @@ import * as subtaskService from '../services/subtaskService.js';
 import * as taskService from '../services/taskService.js';
 import { createSubtaskSchema, updateSubtaskStatusSchema } from '../validators/subtask.js';
 import { ActivityAction } from '../types/index.js';
+import { NotificationService } from '../services/notificationService.js';
 
 export const createSubtask = async (
   req: Request,
@@ -136,6 +137,22 @@ export const updateSubtaskStatus = async (
       const isAdmin = req.user?.role === 'admin';
       const targetStatus = isAdmin ? 'DONE' : 'REVIEW';
       await taskService.updateTask(taskId, { status: targetStatus as any }, req.user?.id || 'system');
+
+      // Send notification to admin (task creator) when all subtasks are completed
+      if (!isAdmin) {
+        try {
+          const task = await taskService.getTaskById(taskId);
+          if (task && task.created_by) {
+            const userName = req.user?.full_name || req.user?.email || 'A user';
+            await NotificationService.createNotification({
+              user_id: task.created_by,
+              message: `${userName} has completed all subtasks for task: "${task.title}". Task is ready for review.`
+            });
+          }
+        } catch (notificationError) {
+          console.error('Failed to send task completion notification:', notificationError);
+        }
+      }
     } else if (stats.completed < stats.total && subtask.task_id) {
       const currentTask = await taskService.getTaskById(taskId);
       if (currentTask && currentTask.status === 'DONE') {

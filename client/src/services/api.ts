@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../store';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export interface User {
   id: string;
@@ -156,6 +156,14 @@ export interface TimeLog {
   created_at: string;
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
@@ -174,11 +182,11 @@ export const api = createApi({
   endpoints: (builder) => ({
     // Notifications
     getNotifications: builder.query<
-      { data: any[]; unread_count: number; total: number },
+      { data: Notification[]; unread_count: number; total: number },
       void
     >({
       query: () => '/notifications',
-      transformResponse: (response: { success: boolean; data: any[]; unread_count: number; total: number }) => ({
+      transformResponse: (response: { success: boolean; data: Notification[]; unread_count: number; total: number }) => ({
         data: response.data,
         unread_count: response.unread_count,
         total: response.total,

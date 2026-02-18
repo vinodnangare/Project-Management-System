@@ -58,7 +58,7 @@ export class NotificationService {
       SELECT * FROM notifications
       WHERE user_id = ?
       ORDER BY created_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT ${Number(limit)} OFFSET ${Number(offset)}
     `;
 
     try {
@@ -66,9 +66,9 @@ export class NotificationService {
       
       const [countResult]: any = await connection.execute(countQuery, [user_id]);
       const total = countResult[0]?.total || 0;
-      const unread_count = countResult[0]?.unread || 0;
+      const unread_count = Number(countResult[0]?.unread) || 0;
 
-      const [notifications]: any = await connection.execute(query, [user_id, limit, offset]);
+      const [notifications]: any = await connection.execute(query, [user_id]);
       
       connection.release();
 

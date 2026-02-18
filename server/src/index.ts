@@ -1,7 +1,7 @@
-import dotenv from 'dotenv';
+import 'dotenv/config'; // Load environment variables FIRST, before importing anything else
 
-// Load environment variables FIRST, before importing anything else
-dotenv.config();
+
+console.log(process.env.DB_HOST)
 
 import express, { Express } from 'express';
 import cors from 'cors';
@@ -13,6 +13,7 @@ import subtaskRoutes from './routes/subtaskRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import timeLogRoutes from './routes/timeLogRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
@@ -97,6 +98,9 @@ app.get('/api/time-logs/range', verifyJwt, timeLogController.getUserTimeLogs);
 app.get('/api/time-logs', verifyJwt, timeLogController.getUserTimeLogs);
 
 app.use('/api/leads', verifyJwt, leadRoutes);
+
+// Notification routes
+app.use('/api/notifications', verifyJwt, notificationRoutes);
 
 app.use(errorHandler);
 
