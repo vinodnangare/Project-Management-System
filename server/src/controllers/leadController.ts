@@ -59,7 +59,7 @@ export const getLeadById = async (
   try {
     const { id } = req.params;
 
-    const lead = await leadService.getLeadById(id);
+    const lead = await leadService.getLeadById(Array.isArray(id) ? id[0] : id);
 
     if (!lead) {
       res.status(404).json({
@@ -105,7 +105,7 @@ export const createLead = async (
       res.status(400).json({
         success: false,
         error: 'Validation error',
-        details: error.errors
+        details: (error instanceof ZodError) ? error.issues : undefined
       });
       return;
     }
@@ -139,7 +139,7 @@ export const updateLead = async (
 
     const { id } = req.params;
 
-    const existingLead = await leadService.getLeadById(id);
+    const existingLead = await leadService.getLeadById(Array.isArray(id) ? id[0] : id);
     if (!existingLead) {
       res.status(404).json({
         success: false,
@@ -160,7 +160,7 @@ export const updateLead = async (
 
     const validatedData = updateLeadSchema.parse(req.body);
 
-    const lead = await leadService.updateLead(id, validatedData);
+    const lead = await leadService.updateLead(Array.isArray(id) ? id[0] : id, validatedData);
 
     res.status(200).json({
       success: true,
@@ -171,7 +171,7 @@ export const updateLead = async (
       res.status(400).json({
         success: false,
         error: 'Validation error',
-        details: error.errors
+        details: (error instanceof ZodError) ? error.issues : undefined
       });
       return;
     }
@@ -205,7 +205,7 @@ export const updateLeadStage = async (
 
     const { id } = req.params;
 
-    const existingLead = await leadService.getLeadById(id);
+    const existingLead = await leadService.getLeadById(Array.isArray(id) ? id[0] : id);
     if (!existingLead) {
       res.status(404).json({
         success: false,
@@ -226,7 +226,7 @@ export const updateLeadStage = async (
 
     const validatedData = updateLeadStageSchema.parse(req.body);
 
-    const lead = await leadService.updateLeadStage(id, validatedData.stage);
+    const lead = await leadService.updateLeadStage(Array.isArray(id) ? id[0] : id, validatedData.stage);
 
     res.status(200).json({
       success: true,
@@ -237,7 +237,7 @@ export const updateLeadStage = async (
       res.status(400).json({
         success: false,
         error: 'Validation error',
-        details: error.errors
+        details: (error instanceof ZodError) ? error.issues : undefined
       });
       return;
     }
@@ -262,7 +262,7 @@ export const deleteLead = async (
 
     const { id } = req.params;
 
-    const existingLead = await leadService.getLeadById(id);
+    const existingLead = await leadService.getLeadById(Array.isArray(id) ? id[0] : id);
     if (!existingLead) {
       res.status(404).json({
         success: false,
@@ -279,7 +279,7 @@ export const deleteLead = async (
       return;
     }
 
-    await leadService.deleteLead(id);
+    await leadService.deleteLead(Array.isArray(id) ? id[0] : id);
 
     res.status(200).json({
       success: true,
