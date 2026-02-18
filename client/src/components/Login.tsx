@@ -19,7 +19,12 @@ export default function Login({ onSwitchToRegister }: LoginProps) {
 
   useEffect(() => {
     if (error && 'data' in error) {
-      setLocalError((error.data as any)?.message || 'Login failed');
+      const msg = (error.data as any)?.error || (error.data as any)?.message || 'Login failed';
+      if (msg.includes('Too many login attempts')) {
+        setLocalError('Too many login attempts. Please try again later.');
+      } else {
+        setLocalError(msg);
+      }
     } else if (error) {
       setLocalError('Login failed');
     }

@@ -1,3 +1,4 @@
+// ...existing code...
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../store';
 
@@ -503,6 +504,18 @@ export const api = createApi({
       transformResponse: (response: { success: boolean; data: TimeLog | null }) => response.data,
       providesTags: ['TimeLog'],
     }),
+     // Admin: Get all employees' time logs for a date
+    getAdminTimeLogs: builder.query<any[], string>({
+      query: (date) => `/time-logs/all?date=${date}`,
+      transformResponse: (response: { success: boolean; data: any[] }) => response.data,
+      providesTags: ['TimeLog'],
+    }),
+    // Admin: Get time logs for any user by userId and date range
+    getUserTimeLogsAdmin: builder.query<TimeLog[], { userId: string; startDate: string; endDate: string }>({
+      query: ({ userId, startDate, endDate }) => `/time-logs/user/${userId}?startDate=${startDate}&endDate=${endDate}`,
+      transformResponse: (response: { success: boolean; data: TimeLog[] }) => response.data,
+      providesTags: ['TimeLog'],
+    }),
 
     // Stats
     getTaskStats: builder.query<any, void>({
@@ -648,6 +661,8 @@ export const {
   useLogTimeMutation,
   useGetTimeLogsQuery,
   useGetTimeLogForDateQuery,
+  useGetAdminTimeLogsQuery,
+  useGetUserTimeLogsAdminQuery,
   
   // Stats
   useGetTaskStatsQuery,
