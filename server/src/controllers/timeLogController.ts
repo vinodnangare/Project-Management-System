@@ -12,8 +12,11 @@ export const getTimeLogsByUserId = async (
       res.status(403).json({ success: false, error: 'Only admins can view other users\' time logs' });
       return;
     }
-    const { userId } = req.params;
-    const { startDate, endDate } = req.query;
+    let { userId } = req.params;
+    let { startDate, endDate } = req.query;
+    if (Array.isArray(userId)) userId = userId[0];
+    if (Array.isArray(startDate)) startDate = startDate[0];
+    if (Array.isArray(endDate)) endDate = endDate[0];
     if (!userId || !startDate || !endDate) {
       res.status(400).json({ success: false, error: 'userId, startDate, and endDate are required' });
       return;
