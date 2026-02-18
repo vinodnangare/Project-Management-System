@@ -2,6 +2,8 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useGetTaskStatsQuery, useGetTasksQuery, useDeleteEmployeeMutation, useRegisterMutation, useGetAssignableUsersQuery } from '../services/api';
 import '../styles/AdminStats.css';
+import AdminTimeLogs from './AdminTimeLogs'; // Add import for AdminTimeLogs
+import EmployeeTimeLogModal from './EmployeeTimeLogModal';
 
 export const AdminStats: React.FC = () => {
   const { data: stats, isLoading: loading, error, refetch } = useGetTaskStatsQuery();
@@ -16,6 +18,8 @@ export const AdminStats: React.FC = () => {
   const [newEmployee, setNewEmployee] = useState({ full_name: '', email: '', password: '', password_confirm: '', role: 'employee' });
   const [registerError, setRegisterError] = useState<string>('');
   const [registerSuccess, setRegisterSuccess] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'timelogs'>('dashboard');
+  const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; name: string } | null>(null);
 
   const handleRetry = () => {
     refetch();
@@ -126,221 +130,250 @@ export const AdminStats: React.FC = () => {
 
   return (
     <div className="stats-container">
-      <h2 className="stats-title">📊 Task Management Dashboard</h2>
-
-      {registerSuccess && <div className="success-message">{registerSuccess}</div>}
-
-      {/* Add Employee Section */}
-      <div className="add-employee-section">
-        <div className="section-header">
-          <h3>👥 Employee Management</h3>
-          <button
-            className="btn-add-employee"
-            onClick={() => setShowAddEmployee(!showAddEmployee)}
-          >
-            {showAddEmployee ? '✕ Cancel' : '➕ Add New Employee'}
-          </button>
-        </div>
-
-        {showAddEmployee && (
-          <form className="add-employee-form" onSubmit={handleAddEmployee}>
-            {registerError && <div className="error-message">{registerError}</div>}
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="full_name">Full Name</label>
-                <input
-                  type="text"
-                  id="full_name"
-                  value={newEmployee.full_name}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, full_name: e.target.value })}
-                  required
-                  placeholder="Enter full name"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="email">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  value={newEmployee.email}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
-                  required
-                  placeholder="Enter email"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="password">Password</label>
-                <input
-                  type="password"
-                  id="password"
-                  value={newEmployee.password}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                  required
-                  placeholder="Enter password (min 6 characters)"
-                  minLength={6}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="password_confirm">Confirm Password</label>
-                <input
-                  type="password"
-                  id="password_confirm"
-                  value={newEmployee.password_confirm}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, password_confirm: e.target.value })}
-                  required
-                  placeholder="Re-enter password"
-                  minLength={6}
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="role">Role</label>
-                <select
-                  id="role"
-                  value={newEmployee.role}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                  required
-                >
-                  <option value="employee">Employee</option>
-                  <option value="manager">Manager</option>
-                </select>
-              </div>
-            </div>
-            <button type="submit" className="btn-submit-employee" disabled={isRegistering}>
-              {isRegistering ? '⏳ Adding...' : '✓ Add Employee'}
-            </button>
-          </form>
-        )}
+      <div className="admin-tabs">
+        <button
+          className={activeTab === 'dashboard' ? 'active' : ''}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          📊 Dashboard
+        </button>
+        <button
+          className={activeTab === 'timelogs' ? 'active' : ''}
+          onClick={() => setActiveTab('timelogs')}
+        >
+          ⏱️ Time Logs
+        </button>
       </div>
-
-      <div className="overall-stats">
-        <h3>Overall Statistics</h3>
-        <div className="stats-grid">
-          <div className="stat-card total">
-            <div className="stat-value">{effectiveOverall?.total_tasks || 0}</div>
-            <div className="stat-label">Total Tasks</div>
-          </div>
-          <div className="stat-card todo">
-            <div className="stat-value">{effectiveOverall?.todo_tasks || 0}</div>
-            <div className="stat-label">To Do</div>
-          </div>
-          <div className="stat-card in-progress">
-            <div className="stat-value">{effectiveOverall?.in_progress_tasks || 0}</div>
-            <div className="stat-label">In Progress</div>
-          </div>
-          <div className="stat-card review">
-            <div className="stat-value">{effectiveOverall?.review_tasks || 0}</div>
-            <div className="stat-label">In Review</div>
-          </div>
-          <div className="stat-card done">
-            <div className="stat-value">{effectiveOverall?.done_tasks || 0}</div>
-            <div className="stat-label">Done</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="employee-stats">
-        <h3>Employee-wise Task Distribution</h3>
-        {!employees || employees.length === 0 ? (
-          <div className="no-data">No employee data available</div>
-        ) : (
-          <div className="employee-table-wrapper">
-            <table className="employee-table">
-              <thead>
-                <tr>
-                  <th>Photo</th>
-                  <th>Employee Name</th>
-                  <th>Email</th>
-                  <th>Total Tasks</th>
-                  <th className="todo">To Do</th>
-                  <th className="in-progress">In Progress</th>
-                  <th className="review">In Review</th>
-                  <th className="done">Done</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((emp: any) => {
-                  const emailKey = String(emp.employee_email || '').trim().toLowerCase();
-                  const nameKey = String(emp.employee_name || '').trim().toLowerCase();
-                  const employeeId = emp.employee_id || emp.id || employeeIdByEmail.get(emailKey) || employeeIdByName.get(nameKey) || emailKey || '';
-                  return (
-                    <tr key={employeeId || emp.employee_email} className="employee-row">
-                    <td className="employee-photo">
-                      <div className="employee-avatar">
-                        {emp.profile_image_url ? (
-                          <img
-                            src={emp.profile_image_url}
-                            alt={emp.employee_name}
-                            className="employee-avatar-image"
-                          />
-                        ) : (
-                          <span className="employee-avatar-text">
-                            {emp.employee_name?.charAt(0).toUpperCase() || '?'}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="employee-name">{emp.employee_name}</td>
-                    <td className="employee-email">{emp.employee_email}</td>
-                    <td className="total-col">{emp.total}</td>
-                    <td className="todo-col">{emp.todo}</td>
-                    <td className="in-progress-col">{emp.in_progress}</td>
-                    <td className="review-col">{emp.review}</td>
-                    <td className="done-col">{emp.done}</td>
-                    <td className="actions-col">
-                      <button
-                        className="delete-btn"
-                        onClick={() => setDeleteConfirm({ id: employeeId, name: emp.employee_name })}
-                        disabled={!employeeId || deletingId === employeeId}
-                        title={employeeId ? 'Delete employee' : 'Missing employee id'}
-                      >
-                        {deletingId === employeeId ? '⏳' : '🗑️'}
-                      </button>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <div className="stats-summary">
-        <p>Total Employees: <strong>{overall?.total_employees || 0}</strong></p>
-        <p>Last Updated: <strong>{new Date().toLocaleString()}</strong></p>
-      </div>
-
-      {/* Delete Confirmation Dialog */}
-      {deleteConfirm && (
-        <div className="confirmation-overlay">
-          <div className="confirmation-dialog">
-            <h3>Confirm Delete Employee</h3>
-            <p>Are you sure you want to delete the employee <strong>"{deleteConfirm.name}"</strong>?</p>
-            <p className="warning-text">This action cannot be undone. The employee will be deactivated and their account will no longer be accessible.</p>
-            {deleteError && <div className="error-message">{deleteError}</div>}
-            <div className="confirmation-actions">
-              <button 
-                className="btn-cancel"
-                onClick={() => setDeleteConfirm(null)}
-                disabled={isDeleting}
+      {activeTab === 'dashboard' ? (
+        <>
+          <h2 className="stats-title">📊 Task Management Dashboard</h2>
+          {registerSuccess && <div className="success-message">{registerSuccess}</div>}
+          {/* Add Employee Section */}
+          <div className="add-employee-section">
+            <div className="section-header">
+              <h3>👥 Employee Management</h3>
+              <button
+                className="btn-add-employee"
+                onClick={() => setShowAddEmployee(!showAddEmployee)}
               >
-                Cancel
-              </button>
-              <button 
-                className="btn-delete"
-                onClick={handleDeleteEmployee}
-                disabled={isDeleting}
-              >
-                {isDeleting ? '⏳ Deleting...' : '🗑️ Delete'}
+                {showAddEmployee ? '✕ Cancel' : '➕ Add New Employee'}
               </button>
             </div>
+            {showAddEmployee && (
+              <form className="add-employee-form" onSubmit={handleAddEmployee}>
+                {registerError && <div className="error-message">{registerError}</div>}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="full_name">Full Name</label>
+                    <input
+                      type="text"
+                      id="full_name"
+                      value={newEmployee.full_name}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, full_name: e.target.value })}
+                      required
+                      placeholder="Enter full name"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="email">Email</label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={newEmployee.email}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                      required
+                      placeholder="Enter email"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="password">Password</label>
+                    <input
+                      type="password"
+                      id="password"
+                      value={newEmployee.password}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                      required
+                      placeholder="Enter password (min 6 characters)"
+                      minLength={6}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="password_confirm">Confirm Password</label>
+                    <input
+                      type="password"
+                      id="password_confirm"
+                      value={newEmployee.password_confirm}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, password_confirm: e.target.value })}
+                      required
+                      placeholder="Re-enter password"
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="role">Role</label>
+                    <select
+                      id="role"
+                      value={newEmployee.role}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                      required
+                    >
+                      <option value="employee">Employee</option>
+                      <option value="manager">Manager</option>
+                    </select>
+                  </div>
+                </div>
+                <button type="submit" className="btn-submit-employee" disabled={isRegistering}>
+                  {isRegistering ? '⏳ Adding...' : '✓ Add Employee'}
+                </button>
+              </form>
+            )}
           </div>
-        </div>
+          <div className="overall-stats">
+            <h3>Overall Statistics</h3>
+            <div className="stats-grid">
+              <div className="stat-card total">
+                <div className="stat-value">{effectiveOverall?.total_tasks || 0}</div>
+                <div className="stat-label">Total Tasks</div>
+              </div>
+              <div className="stat-card todo">
+                <div className="stat-value">{effectiveOverall?.todo_tasks || 0}</div>
+                <div className="stat-label">To Do</div>
+              </div>
+              <div className="stat-card in-progress">
+                <div className="stat-value">{effectiveOverall?.in_progress_tasks || 0}</div>
+                <div className="stat-label">In Progress</div>
+              </div>
+              <div className="stat-card review">
+                <div className="stat-value">{effectiveOverall?.review_tasks || 0}</div>
+                <div className="stat-label">In Review</div>
+              </div>
+              <div className="stat-card done">
+                <div className="stat-value">{effectiveOverall?.done_tasks || 0}</div>
+                <div className="stat-label">Done</div>
+              </div>
+            </div>
+          </div>
+          <div className="employee-stats">
+            <h3>Employee-wise Task Distribution</h3>
+            {!employees || employees.length === 0 ? (
+              <div className="no-data">No employee data available</div>
+            ) : (
+              <div className="employee-table-wrapper">
+                <table className="employee-table">
+                  <thead>
+                    <tr>
+                      <th>Photo</th>
+                      <th>Employee Name</th>
+                      <th>Email</th>
+                      <th>Total Tasks</th>
+                      <th className="todo">To Do</th>
+                      <th className="in-progress">In Progress</th>
+                      <th className="review">In Review</th>
+                      <th className="done">Done</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employees.map((emp: any) => {
+                      const emailKey = String(emp.employee_email || '').trim().toLowerCase();
+                      const nameKey = String(emp.employee_name || '').trim().toLowerCase();
+                      const employeeId = emp.employee_id || emp.id || employeeIdByEmail.get(emailKey) || employeeIdByName.get(nameKey) || emailKey || '';
+                      return (
+                        <tr
+                          key={employeeId || emp.employee_email}
+                          className="employee-row"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setSelectedEmployee({ id: employeeId, name: emp.employee_name })}
+                        >
+                          <td className="employee-photo">
+                            <div className="employee-avatar">
+                              {emp.profile_image_url ? (
+                                <img
+                                  src={emp.profile_image_url}
+                                  alt={emp.employee_name}
+                                  className="employee-avatar-image"
+                                />
+                              ) : (
+                                <span className="employee-avatar-text">
+                                  {emp.employee_name?.charAt(0).toUpperCase() || '?'}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="employee-name">{emp.employee_name}</td>
+                          <td className="employee-email">{emp.employee_email}</td>
+                          <td className="total-col">{emp.total}</td>
+                          <td className="todo-col">{emp.todo}</td>
+                          <td className="in-progress-col">{emp.in_progress}</td>
+                          <td className="review-col">{emp.review}</td>
+                          <td className="done-col">{emp.done}</td>
+                          <td className="actions-col">
+                            <button
+                              className="delete-btn"
+                              onClick={e => {
+                                e.stopPropagation();
+                                setDeleteConfirm({ id: employeeId, name: emp.employee_name });
+                              }}
+                              disabled={!employeeId || deletingId === employeeId}
+                              title={employeeId ? 'Delete employee' : 'Missing employee id'}
+                            >
+                              {deletingId === employeeId ? '⏳' : '🗑️'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <div className="stats-summary">
+            <p>Total Employees: <strong>{overall?.total_employees || 0}</strong></p>
+            <p>Last Updated: <strong>{new Date().toLocaleString()}</strong></p>
+          </div>
+          {/* Delete Confirmation Dialog */}
+          {deleteConfirm && (
+            <div className="confirmation-overlay">
+              <div className="confirmation-dialog">
+                <h3>Confirm Delete Employee</h3>
+                <p>Are you sure you want to delete the employee <strong>"{deleteConfirm.name}"</strong>?</p>
+                <p className="warning-text">This action cannot be undone. The employee will be deactivated and their account will no longer be accessible.</p>
+                {deleteError && <div className="error-message">{deleteError}</div>}
+                <div className="confirmation-actions">
+                  <button 
+                    className="btn-cancel"
+                    onClick={() => setDeleteConfirm(null)}
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="btn-delete"
+                    onClick={handleDeleteEmployee}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? '⏳ Deleting...' : '🗑️ Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        {selectedEmployee && (
+          <EmployeeTimeLogModal
+            employeeId={selectedEmployee.id}
+            employeeName={selectedEmployee.name}
+            open={!!selectedEmployee}
+            onClose={() => setSelectedEmployee(null)}
+          />
+        )}
+        </>
+      ) : (
+        <AdminTimeLogs />
       )}
     </div>
   );

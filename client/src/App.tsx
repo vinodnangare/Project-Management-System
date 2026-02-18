@@ -32,13 +32,10 @@ function App() {
   const showTaskForm = useAppSelector((state) => state.ui.showTaskForm);
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  // Clear old Express tokens on app initialization
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     
-    // If there's a token but no valid user data, it's likely an old Express token
-    // Clear it and let user re-login with Django
     if (storedToken && !storedUser) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -46,7 +43,6 @@ function App() {
     }
   }, [dispatch]);
 
-  // Validate token once on app load to avoid stale/invalid tokens causing 403s
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (!storedToken) return;
@@ -67,17 +63,12 @@ function App() {
         }
       })
       .catch(() => {
-        // Ignore network errors on startup
       });
 
     return () => controller.abort();
   }, [apiBaseUrl, dispatch]);
 
   useEffect(() => {
-    // Only redirect if:
-    // 1. User is authenticated AND
-    // 2. User has a role AND
-    // 3. They're on a public route
     if (isAuthenticated && user && (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register')) {
       const defaultRoute = user.role === 'admin' ? '/admin/analytics' : user.role === 'manager' ? '/leads' : '/dashboard';
       navigate(defaultRoute, { replace: true });
@@ -96,7 +87,6 @@ function App() {
   const roleLabel = user?.role === 'admin' ? 'Admin' : user?.role === 'manager' ? 'Manager' : 'Employee';
   const roleEmoji = user?.role === 'admin' ? '🛠️' : user?.role === 'manager' ? '👔' : '💻';
 
-  // Public routes (no authentication required)
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -107,7 +97,6 @@ function App() {
     );
   }
 
-  // Protected routes (authentication required)
   return (
     <Routes>
       <Route path="*" element={<AuthenticatedLayout 
@@ -241,6 +230,7 @@ function AuthenticatedLayout({
           >
             ✚ New Task
           </button>
+          <NotificationBell />
           <button
             className="btn-theme"
             onClick={() => setIsDarkMode((prev) => !prev)}
@@ -248,7 +238,6 @@ function AuthenticatedLayout({
           >
             {isDarkMode ? '🌙 Dark' : '☀️ Light'}
           </button>
-          <NotificationBell />
           <button
             className="btn-profile"
             onClick={() => dispatch(openProfileModal())}
