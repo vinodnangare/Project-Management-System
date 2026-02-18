@@ -106,6 +106,8 @@ h1, h2, h3, .brand-title {
   box-shadow: var(--shadow);
   gap: 24px;
   backdrop-filter: blur(14px);
+  position: relative;
+  z-index: 1000;
 }
 
 html[data-theme='light'] .app-header {

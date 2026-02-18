@@ -7,7 +7,7 @@ const createAdmin = async () => {
     host: 'localhost',
     port: 3306,
     user: 'root',
-    password: 'root',
+    password: 'Aditya96#',
     database: 'task_management'
   });
 

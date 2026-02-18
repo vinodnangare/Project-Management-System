@@ -15,6 +15,7 @@ import LeadPipeline from './pages/LeadPipeline';
 import LeadList from './pages/LeadList';
 import LeadDetail from './pages/LeadDetail';
 import ProfileModal from './components/ProfileModal';
+import NotificationBell from './components/NotificationBell';
 import { useAppDispatch, useAppSelector } from './hooks/redux';
 import { openTaskForm, closeTaskForm, setSelectedTask } from './store/slices/uiSlice';
 import { logout, setCredentials } from './store/slices/authSlice';
@@ -247,6 +248,7 @@ function AuthenticatedLayout({
           >
             {isDarkMode ? '🌙 Dark' : '☀️ Light'}
           </button>
+          <NotificationBell />
           <button
             className="btn-profile"
             onClick={() => dispatch(openProfileModal())}
