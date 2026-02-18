@@ -170,8 +170,30 @@ export const api = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc'],
+  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc', 'Notification'],
   endpoints: (builder) => ({
+    // Notifications
+    getNotifications: builder.query<
+      { data: any[]; unread_count: number; total: number },
+      void
+    >({
+      query: () => '/notifications',
+      transformResponse: (response: { success: boolean; data: any[]; unread_count: number; total: number }) => ({
+        data: response.data,
+        unread_count: response.unread_count,
+        total: response.total,
+      }),
+      providesTags: ['Notification'],
+    }),
+
+    markNotificationAsRead: builder.mutation<{ id: string; is_read: boolean }, string>({
+      query: (notificationId) => ({
+        url: `/notifications/${notificationId}/read`,
+        method: 'PATCH',
+      }),
+      transformResponse: (response: { success: boolean; data: { id: string; is_read: boolean } }) => response.data,
+      invalidatesTags: ['Notification'],
+    }),
     // Auth Endpoints
     login: builder.mutation<{ user: User; token: string }, { email: string; password: string }>({
       query: (credentials) => ({
@@ -636,4 +658,7 @@ export const {
   useGetLeadByIdQuery,
   useUpdateLeadMutation,
   useDeleteLeadMutation,
+  // Notifications
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
 } = api;
