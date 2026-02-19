@@ -1,11 +1,11 @@
 import 'dotenv/config'; // Load environment variables FIRST, before importing anything else
 
 
-console.log(process.env.DB_HOST)
+console.log('MongoDB URI:', process.env.MONGO_URI ? 'configured' : 'using default');
 
 import express, { Express } from 'express';
 import cors from 'cors';
-import { initializeDatabase } from './config/database.js';
+import { connectDatabase } from './config/database.js';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
 import { verifyJwt } from './middleware/authMiddleware.js';
 import { loginRateLimiter, registerRateLimiter } from './middleware/rateLimitMiddleware.js';
@@ -108,9 +108,9 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
-    console.log('Initializing database...');
-    await initializeDatabase();
-    console.log('Database initialized successfully');
+    console.log('Connecting to MongoDB...');
+    await connectDatabase();
+    console.log('MongoDB connected successfully');
 
     app.listen(PORT, () => {
       console.log(`
@@ -118,6 +118,7 @@ const startServer = async () => {
 ║  Task Management System Backend               ║
 ║  Server running on http://localhost:${PORT}        ║
 ║  API: http://localhost:${PORT}/api              ║
+║  Database: MongoDB                            ║
 ╚═══════════════════════════════════════════════╝
       `);
     });

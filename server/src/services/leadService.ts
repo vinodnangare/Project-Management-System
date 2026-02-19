@@ -1,12 +1,7 @@
-import { v4 as uuidv4 } from 'uuid';
-import { executeQuery } from '../config/database.js';
-import { Lead, LeadStage, PaginationMeta } from '../types/index.js';
+import mongoose from 'mongoose';
+import { Lead, User, ILead } from '../models/index.js';
+import { Lead as LeadType, LeadStage, PaginationMeta } from '../types/index.js';
 import { CreateLeadRequest, UpdateLeadRequest } from '../validators/lead.js';
-
-const toMySQLDateTime = (isoString: string | null): string | null => {
-  if (!isoString) return null;
-  return new Date(isoString).toISOString().slice(0, 19).replace('T', ' ');
-};
 
 interface QueryOptions {
   page?: number;
@@ -16,42 +11,62 @@ interface QueryOptions {
   owner?: string;
 }
 
+const formatLeadResponse = async (lead: ILead): Promise<LeadType> => {
+  const owner = lead.owner_id ? await User.findById(lead.owner_id) : null;
+  const creator = await User.findById(lead.created_by);
+
+  return {
+    id: lead._id.toString(),
+    company_name: lead.company_name,
+    contact_name: lead.contact_name,
+    email: lead.email,
+    phone: lead.phone || null,
+    stage: lead.stage as LeadStage,
+    priority: lead.priority as any,
+    source: lead.source as any,
+    owner_id: lead.owner_id?.toString() || null,
+    owner_name: owner?.full_name || null,
+    owner_email: owner?.email || null,
+    created_by: lead.created_by.toString(),
+    created_by_name: creator?.full_name || null,
+    created_by_email: creator?.email || null,
+    is_deleted: lead.is_deleted,
+    created_at: lead.created_at.toISOString(),
+    updated_at: lead.updated_at.toISOString()
+  };
+};
+
 export const getAllLeads = async (
   options: QueryOptions,
   userId: string,
   userRole: string
-): Promise<{ leads: Lead[]; meta: PaginationMeta }> => {
+): Promise<{ leads: LeadType[]; meta: PaginationMeta }> => {
   try {
     const { page = 1, limit = 10, stage, source, owner } = options;
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-    // Get total count first
-    const countQuery = 'SELECT COUNT(*) as total FROM leads WHERE is_deleted = 0';
-    const [countResult]: any = await executeQuery(countQuery, []);
-    const total = countResult?.[0]?.total || 0;
+    const conditions: any = { is_deleted: false };
 
-    // Get paginated leads - convert to integers
-    const limitNum = parseInt(String(limit), 10);
-    const offsetNum = parseInt(String(offset), 10);
-    
-    const dataQuery = `
-      SELECT id, company_name, contact_name, email, phone, stage, priority, source, 
-             owner_id, created_by, notes, is_deleted, created_at, updated_at
-      FROM leads
-      WHERE is_deleted = 0
-      ORDER BY created_at DESC
-      LIMIT ${limitNum} OFFSET ${offsetNum}
-    `;
-    
-    const [dataResult]: any = await executeQuery(dataQuery, []);
+    if (stage) conditions.stage = stage;
+    if (source) conditions.source = source;
+    if (owner) conditions.owner_id = new mongoose.Types.ObjectId(owner);
+
+    const total = await Lead.countDocuments(conditions);
+
+    const leads = await Lead.find(conditions)
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const formattedLeads = await Promise.all(leads.map(formatLeadResponse));
 
     return {
-      leads: dataResult || [],
+      leads: formattedLeads,
       meta: {
         total,
         page,
-        limit: limitNum,
-        pages: Math.ceil(total / limitNum)
+        limit,
+        pages: Math.ceil(total / limit)
       }
     };
   } catch (error) {
@@ -60,134 +75,84 @@ export const getAllLeads = async (
   }
 };
 
-export const getLeadById = async (leadId: string): Promise<Lead | null> => {
-  const [rows]: any = await executeQuery(
-    `SELECT 
-      l.*,
-      u.full_name as owner_name,
-      u.email as owner_email,
-      c.full_name as created_by_name,
-      c.email as created_by_email
-    FROM leads l
-    LEFT JOIN users u ON l.owner_id = u.id
-    LEFT JOIN users c ON l.created_by = c.id
-    WHERE l.id = ? AND l.is_deleted = 0`,
-    [leadId]
-  );
+export const getLeadById = async (leadId: string): Promise<LeadType | null> => {
+  try {
+    const lead = await Lead.findOne({
+      _id: new mongoose.Types.ObjectId(leadId),
+      is_deleted: false
+    });
 
-  return rows?.[0] || null;
+    if (!lead) return null;
+
+    return formatLeadResponse(lead);
+  } catch (error) {
+    return null;
+  }
 };
 
 export const createLead = async (
   leadData: CreateLeadRequest,
   createdBy: string
-): Promise<Lead> => {
+): Promise<LeadType> => {
   // Check if company name already exists
-  const [existingLeads]: any = await executeQuery(
-    `SELECT id, company_name FROM leads WHERE LOWER(TRIM(company_name)) = LOWER(TRIM(?)) AND is_deleted = 0`,
-    [leadData.company_name]
-  );
+  const existingLead = await Lead.findOne({
+    company_name: { $regex: new RegExp(`^${leadData.company_name.trim()}$`, 'i') },
+    is_deleted: false
+  });
 
-  if (existingLeads && existingLeads.length > 0) {
+  if (existingLead) {
     throw new Error(`A lead with company name "${leadData.company_name}" already exists`);
   }
-  const leadId = uuidv4();
-  const now = toMySQLDateTime(new Date().toISOString());
 
-  await executeQuery(
-    `INSERT INTO leads (
-      id, company_name, contact_name, email, phone,
-      stage, priority, source, owner_id, created_by, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      leadId,
-      leadData.company_name,
-      leadData.contact_name,
-      leadData.email,
-      leadData.phone || null,
-      leadData.stage,
-      leadData.priority,
-      leadData.source,
-      leadData.owner_id || null,
-      createdBy,
-      leadData.notes || null,
-      now,
-      now
-    ]
-  );
+  const lead = await Lead.create({
+    company_name: leadData.company_name,
+    contact_name: leadData.contact_name,
+    email: leadData.email,
+    phone: leadData.phone || null,
+    stage: leadData.stage,
+    priority: leadData.priority,
+    source: leadData.source,
+    owner_id: leadData.owner_id ? new mongoose.Types.ObjectId(leadData.owner_id) : null,
+    created_by: new mongoose.Types.ObjectId(createdBy),
+    notes: leadData.notes || null,
+    is_deleted: false
+  });
 
-  const lead = await getLeadById(leadId);
-  if (!lead) {
-    throw new Error('Failed to retrieve created lead');
-  }
-
-  return lead;
+  return formatLeadResponse(lead);
 };
 
 export const updateLead = async (
   leadId: string,
   updates: UpdateLeadRequest
-): Promise<Lead> => {
-  const fields: string[] = [];
-  const values: any[] = [];
+): Promise<LeadType> => {
+  const updateFields: Record<string, any> = {};
+
   // If company name is being updated, check for duplicates
   if (updates.company_name !== undefined) {
-    const [existingLeads]: any = await executeQuery(
-      `SELECT id, company_name FROM leads 
-       WHERE LOWER(TRIM(company_name)) = LOWER(TRIM(?)) 
-       AND is_deleted = 0 
-       AND id != ?`,
-      [updates.company_name, leadId]
-    );
+    const existingLead = await Lead.findOne({
+      company_name: { $regex: new RegExp(`^${updates.company_name.trim()}$`, 'i') },
+      is_deleted: false,
+      _id: { $ne: new mongoose.Types.ObjectId(leadId) }
+    });
 
-    if (existingLeads && existingLeads.length > 0) {
+    if (existingLead) {
       throw new Error(`A lead with company name "${updates.company_name}" already exists`);
     }
-    fields.push('company_name = ?');
-    values.push(updates.company_name);
+    updateFields.company_name = updates.company_name;
   }
 
-  if (updates.contact_name !== undefined) {
-    fields.push('contact_name = ?');
-    values.push(updates.contact_name);
-  }
-
-  if (updates.email !== undefined) {
-    fields.push('email = ?');
-    values.push(updates.email);
-  }
-
-  if (updates.phone !== undefined) {
-    fields.push('phone = ?');
-    values.push(updates.phone);
-  }
-
-  if (updates.stage !== undefined) {
-    fields.push('stage = ?');
-    values.push(updates.stage);
-  }
-
-  if (updates.priority !== undefined) {
-    fields.push('priority = ?');
-    values.push(updates.priority);
-  }
-
-  if (updates.source !== undefined) {
-    fields.push('source = ?');
-    values.push(updates.source);
-  }
-
+  if (updates.contact_name !== undefined) updateFields.contact_name = updates.contact_name;
+  if (updates.email !== undefined) updateFields.email = updates.email;
+  if (updates.phone !== undefined) updateFields.phone = updates.phone;
+  if (updates.stage !== undefined) updateFields.stage = updates.stage;
+  if (updates.priority !== undefined) updateFields.priority = updates.priority;
+  if (updates.source !== undefined) updateFields.source = updates.source;
   if (updates.owner_id !== undefined) {
-    fields.push('owner_id = ?');
-    values.push(updates.owner_id);
+    updateFields.owner_id = updates.owner_id ? new mongoose.Types.ObjectId(updates.owner_id) : null;
   }
+  if (updates.notes !== undefined) updateFields.notes = updates.notes;
 
-  if (updates.notes !== undefined) {
-    fields.push('notes = ?');
-    values.push(updates.notes);
-  }
-
-  if (fields.length === 0) {
+  if (Object.keys(updateFields).length === 0) {
     const lead = await getLeadById(leadId);
     if (!lead) {
       throw new Error('Lead not found');
@@ -195,150 +160,150 @@ export const updateLead = async (
     return lead;
   }
 
-  values.push(leadId);
-
-  await executeQuery(
-    `UPDATE leads SET ${fields.join(', ')} WHERE id = ?`,
-    values
+  const updatedLead = await Lead.findByIdAndUpdate(
+    leadId,
+    { $set: updateFields },
+    { new: true }
   );
 
-  const lead = await getLeadById(leadId);
-  if (!lead) {
+  if (!updatedLead) {
     throw new Error('Lead not found after update');
   }
 
-  return lead;
+  return formatLeadResponse(updatedLead);
 };
 
 export const updateLeadStage = async (
   leadId: string,
   stage: LeadStage
-): Promise<Lead> => {
-  await executeQuery(
-    `UPDATE leads SET stage = ? WHERE id = ?`,
-    [stage, leadId]
+): Promise<LeadType> => {
+  const updatedLead = await Lead.findByIdAndUpdate(
+    leadId,
+    { $set: { stage } },
+    { new: true }
   );
 
-  const lead = await getLeadById(leadId);
-  if (!lead) {
+  if (!updatedLead) {
     throw new Error('Lead not found after stage update');
   }
 
-  return lead;
+  return formatLeadResponse(updatedLead);
 };
 
 export const deleteLead = async (leadId: string): Promise<void> => {
-  await executeQuery(
-    `UPDATE leads SET is_deleted = 1 WHERE id = ?`,
-    [leadId]
-  );
+  await Lead.findByIdAndUpdate(leadId, { $set: { is_deleted: true } });
 };
 
 export const getLeadStats = async (
   userId: string,
   userRole: string
 ): Promise<any> => {
-  let whereClause = 'WHERE l.is_deleted = 0';
-  const params: any[] = [];
+  const conditions: any = { is_deleted: false };
 
   if (userRole !== 'admin') {
-    whereClause += ' AND (l.owner_id = ? OR l.created_by = ?)';
-    params.push(userId, userId);
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    conditions.$or = [
+      { owner_id: userObjectId },
+      { created_by: userObjectId }
+    ];
   }
 
   // Get stage counts
-  const [stageRows]: any = await executeQuery(
-    `SELECT stage, COUNT(*) as count FROM leads l ${whereClause} GROUP BY stage`,
-    params
-  );
+  const stageStats = await Lead.aggregate([
+    { $match: conditions },
+    { $group: { _id: '$stage', count: { $sum: 1 } } }
+  ]);
 
   // Get source counts
-  const [sourceRows]: any = await executeQuery(
-    `SELECT source, COUNT(*) as count FROM leads l ${whereClause} GROUP BY source`,
-    params
-  );
+  const sourceStats = await Lead.aggregate([
+    { $match: conditions },
+    { $group: { _id: '$source', count: { $sum: 1 } } }
+  ]);
 
   // Get priority counts
-  const [priorityRows]: any = await executeQuery(
-    `SELECT priority, COUNT(*) as count FROM leads l ${whereClause} GROUP BY priority`,
-    params
-  );
+  const priorityStats = await Lead.aggregate([
+    { $match: conditions },
+    { $group: { _id: '$priority', count: { $sum: 1 } } }
+  ]);
 
   // Get total count
-  const [totalRows]: any = await executeQuery(
-    `SELECT COUNT(*) as total FROM leads l ${whereClause}`,
-    params
-  );
+  const totalLeads = await Lead.countDocuments(conditions);
 
   // Get leads created this week
-  const [weekRows]: any = await executeQuery(
-    `SELECT COUNT(*) as total FROM leads l 
-     ${whereClause} AND l.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
-    params
-  );
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const newLeadsThisWeek = await Lead.countDocuments({
+    ...conditions,
+    created_at: { $gte: weekAgo }
+  });
 
   // Get leads created this month
-  const [monthRows]: any = await executeQuery(
-    `SELECT COUNT(*) as total FROM leads l 
-     ${whereClause} AND l.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
-    params
-  );
+  const monthAgo = new Date();
+  monthAgo.setDate(monthAgo.getDate() - 30);
+  const newLeadsThisMonth = await Lead.countDocuments({
+    ...conditions,
+    created_at: { $gte: monthAgo }
+  });
 
   // Get average time to convert (only for won leads)
-  const wonParams = [...params];
-  if (userRole !== 'admin') {
-    wonParams.push(userId, userId);
-  }
-  const [avgTimeRows]: any = await executeQuery(
-    `SELECT AVG(DATEDIFF(l.updated_at, l.created_at)) as avg_days 
-     FROM leads l 
-     ${whereClause.replace('is_deleted = 0', 'is_deleted = 0 AND l.stage = "won"')}`,
-    userRole !== 'admin' ? [userId, userId] : []
-  );
+  const wonConditions = { ...conditions, stage: 'won' };
+  const avgTimeResult = await Lead.aggregate([
+    { $match: wonConditions },
+    {
+      $project: {
+        daysToConvert: {
+          $divide: [
+            { $subtract: ['$updated_at', '$created_at'] },
+            1000 * 60 * 60 * 24 // Convert ms to days
+          ]
+        }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        avgDays: { $avg: '$daysToConvert' }
+      }
+    }
+  ]);
 
-  const stageStats = {
+  const stageMap: Record<string, number> = {
     new: 0,
     in_discussion: 0,
     quoted: 0,
     won: 0,
     lost: 0
   };
-
-  (stageRows || []).forEach((row: any) => {
-    stageStats[row.stage as keyof typeof stageStats] = row.count;
+  stageStats.forEach((s: any) => {
+    stageMap[s._id] = s.count;
   });
 
-  const sourceStats = {
+  const sourceMap: Record<string, number> = {
     web: 0,
     referral: 0,
     campaign: 0,
     manual: 0
   };
-
-  (sourceRows || []).forEach((row: any) => {
-    sourceStats[row.source as keyof typeof sourceStats] = row.count;
+  sourceStats.forEach((s: any) => {
+    sourceMap[s._id] = s.count;
   });
 
-  const priorityStats = {
+  const priorityMap: Record<string, number> = {
     high: 0,
     medium: 0,
     low: 0
   };
-
-  (priorityRows || []).forEach((row: any) => {
-    priorityStats[row.priority as keyof typeof priorityStats] = row.count;
+  priorityStats.forEach((p: any) => {
+    priorityMap[p._id] = p.count;
   });
 
-  const totalLeads = totalRows[0]?.total || 0;
-  const wonLeads = stageStats.won || 0;
-  const lostLeads = stageStats.lost || 0;
+  const wonLeads = stageMap.won || 0;
+  const lostLeads = stageMap.lost || 0;
   const activeLeads = totalLeads - wonLeads - lostLeads;
-  const newLeadsThisWeek = weekRows[0]?.total || 0;
-  const newLeadsThisMonth = monthRows[0]?.total || 0;
   const conversionRate = totalLeads > 0 
     ? ((wonLeads / totalLeads) * 100).toFixed(2)
     : '0.00';
-  const averageTimeToConvert = avgTimeRows[0]?.avg_days || 0;
+  const averageTimeToConvert = avgTimeResult[0]?.avgDays || 0;
 
   return {
     totalLeads,
@@ -349,18 +314,22 @@ export const getLeadStats = async (
     newLeadsThisMonth,
     conversionRate: parseFloat(conversionRate),
     averageTimeToConvert: Math.round(averageTimeToConvert),
-    lastWeekConversionTrend: 0, // TODO: Calculate based on previous week
-    lastMonthConversionTrend: 0, // TODO: Calculate based on previous month
-    byStage: stageStats,
-    bySource: sourceStats,
-    byPriority: priorityStats
+    lastWeekConversionTrend: 0,
+    lastMonthConversionTrend: 0,
+    byStage: stageMap,
+    bySource: sourceMap,
+    byPriority: priorityMap
   };
 };
 
 export const getAssignableOwners = async (): Promise<Array<{ id: string; full_name: string; email: string }>> => {
-  const [rows]: any = await executeQuery(
-    'SELECT id, full_name, email FROM users WHERE is_active = 1 ORDER BY full_name'
-  );
+  const users = await User.find({ is_active: true })
+    .select('full_name email')
+    .sort({ full_name: 1 });
 
-  return rows || [];
+  return users.map(u => ({
+    id: u._id.toString(),
+    full_name: u.full_name,
+    email: u.email
+  }));
 };

@@ -324,7 +324,7 @@ export const api = createApi({
         body: data,
       }),
       transformResponse: (response: { success: boolean; data: Task }) => response.data,
-      invalidatesTags: [{ type: 'Task', id: 'LIST' }, 'Stats'],
+      invalidatesTags: [{ type: 'Task', id: 'LIST' }, 'Stats', 'Notification'],
     }),
 
     updateTask: builder.mutation<Task, { id: string; updates: Partial<Task>; performedBy: string }>({
@@ -338,6 +338,7 @@ export const api = createApi({
         { type: 'Task', id },
         { type: 'Task', id: 'LIST' },
         { type: 'Activity', id },
+        'Notification',
       ],
     }),
 
@@ -384,7 +385,7 @@ export const api = createApi({
         body: { user_id: userId },
       }),
       transformResponse: (response: { success: boolean; data: User[] }) => response.data,
-      invalidatesTags: (result, error, { taskId }) => [{ type: 'Task', id: taskId }],
+      invalidatesTags: (result, error, { taskId }) => [{ type: 'Task', id: taskId }, 'Notification'],
     }),
 
     removeTaskAssignee: builder.mutation<User[], { taskId: string; userId: string }>({
@@ -419,6 +420,7 @@ export const api = createApi({
       invalidatesTags: (result, error, { taskId }) => [
         { type: 'Comment', id: taskId },
         { type: 'Activity', id: taskId },
+        'Notification',
       ],
     }),
 
