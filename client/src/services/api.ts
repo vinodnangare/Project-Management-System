@@ -1,13 +1,14 @@
+// ...existing code...
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../store';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'manager' | 'employee';
   is_active: boolean;
   created_at: string;
   mobile_number?: string | null;
@@ -74,6 +75,44 @@ export interface Subtask {
   created_at: string;
 }
 
+export interface LeadStats {
+  totalLeads: number;
+  total?: number;
+  activeLeads: number;
+  wonLeads: number;
+  lostLeads: number;
+  newLeadsThisWeek: number;
+  newLeadsThisMonth: number;
+  conversionRate: number;
+  averageTimeToConvert: number;
+  lastWeekConversionTrend: number;
+  lastMonthConversionTrend: number;
+  byStage?: {
+    new?: number;
+    in_discussion?: number;
+    quoted?: number;
+    won?: number;
+    lost?: number;
+    [key: string]: number | undefined;
+  };
+}
+
+export interface Lead {
+  id: string;
+  company_name: string;
+  contact_name: string;
+  email: string;
+  phone?: string;
+  source: string;
+  stage: string;
+  priority: string;
+  owner_id?: string;
+  owner_name?: string;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Activity {
   id: string;
   task_id: string;
@@ -118,6 +157,14 @@ export interface TimeLog {
   created_at: string;
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
@@ -132,8 +179,30 @@ export const api = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc'],
+  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc', 'Notification'],
   endpoints: (builder) => ({
+    // Notifications
+    getNotifications: builder.query<
+      { data: Notification[]; unread_count: number; total: number },
+      void
+    >({
+      query: () => '/notifications',
+      transformResponse: (response: { success: boolean; data: Notification[]; unread_count: number; total: number }) => ({
+        data: response.data,
+        unread_count: response.unread_count,
+        total: response.total,
+      }),
+      providesTags: ['Notification'],
+    }),
+
+    markNotificationAsRead: builder.mutation<{ id: string; is_read: boolean }, string>({
+      query: (notificationId) => ({
+        url: `/notifications/${notificationId}/read`,
+        method: 'PATCH',
+      }),
+      transformResponse: (response: { success: boolean; data: { id: string; is_read: boolean } }) => response.data,
+      invalidatesTags: ['Notification'],
+    }),
     // Auth Endpoints
     login: builder.mutation<{ user: User; token: string }, { email: string; password: string }>({
       query: (credentials) => ({
@@ -145,7 +214,7 @@ export const api = createApi({
       invalidatesTags: ['Task', 'TimeLog', 'Comment', 'Activity', 'Stats', 'Profile'],
     }),
     
-    register: builder.mutation<{ user: User; token: string }, { email: string; password: string; password_confirm: string; full_name: string }>({
+    register: builder.mutation<{ user: User; token: string }, { email: string; password: string; password_confirm: string; full_name: string; role?: 'manager' | 'employee' }>({
       query: (data) => ({
         url: '/auth/register',
         method: 'POST',
@@ -195,7 +264,7 @@ export const api = createApi({
 
     deleteEmployee: builder.mutation<void, string>({
       query: (employeeId) => ({
-        url: `/auth/users/${employeeId}/delete`,
+        url: `/auth/employees/${encodeURIComponent(employeeId)}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Stats'],
@@ -435,6 +504,18 @@ export const api = createApi({
       transformResponse: (response: { success: boolean; data: TimeLog | null }) => response.data,
       providesTags: ['TimeLog'],
     }),
+     // Admin: Get all employees' time logs for a date
+    getAdminTimeLogs: builder.query<any[], string>({
+      query: (date) => `/time-logs/all?date=${date}`,
+      transformResponse: (response: { success: boolean; data: any[] }) => response.data,
+      providesTags: ['TimeLog'],
+    }),
+    // Admin: Get time logs for any user by userId and date range
+    getUserTimeLogsAdmin: builder.query<TimeLog[], { userId: string; startDate: string; endDate: string }>({
+      query: ({ userId, startDate, endDate }) => `/time-logs/user/${userId}?startDate=${startDate}&endDate=${endDate}`,
+      transformResponse: (response: { success: boolean; data: TimeLog[] }) => response.data,
+      providesTags: ['TimeLog'],
+    }),
 
     // Stats
     getTaskStats: builder.query<any, void>({
@@ -460,13 +541,13 @@ export const api = createApi({
     }),
 
     // Lead Stats
-    getLeadStats: builder.query<any, void>({
+    getLeadStats: builder.query<LeadStats, void>({
       query: () => '/leads/stats',
-      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      transformResponse: (response: { success: boolean; data: LeadStats }) => response.data,
       providesTags: ['Stats'],
     }),
 
-    getLeads: builder.query<{ leads: any[]; meta: any }, { page?: number; limit?: number; stage?: string; source?: string; owner?: string }>({
+    getLeads: builder.query<{ leads: Lead[]; meta: any }, { page?: number; limit?: number; stage?: string; source?: string; owner?: string }>({
       query: ({ page = 1, limit = 100, stage, source, owner }) => {
         const params = new URLSearchParams({
           page: page.toString(),
@@ -477,10 +558,16 @@ export const api = createApi({
         });
         return `/leads?${params}`;
       },
-      transformResponse: (response: { success: boolean; data: any[]; meta: any }) => ({
+      transformResponse: (response: { success: boolean; data: Lead[]; meta: any }) => ({
         leads: response.data,
         meta: response.meta,
       }),
+      providesTags: ['Task'],
+    }),
+
+    getLeadOwners: builder.query<any[], void>({
+      query: () => '/leads/owners',
+      transformResponse: (response: { success: boolean; data: any[] }) => response.data,
       providesTags: ['Task'],
     }),
 
@@ -491,6 +578,40 @@ export const api = createApi({
         body: { stage },
       }),
       transformResponse: (response: { success: boolean; data: any }) => response.data,
+      invalidatesTags: ['Task', 'Stats'],
+    }),
+
+    getLeadById: builder.query<Lead, string>({
+      query: (leadId) => `/leads/${leadId}`,
+      transformResponse: (response: { success: boolean; data: Lead }) => response.data,
+      providesTags: ['Task'],
+    }),
+
+    createLead: builder.mutation<any, any>({
+      query: (leadData) => ({
+        url: '/leads',
+        method: 'POST',
+        body: leadData,
+      }),
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      invalidatesTags: ['Task', 'Stats'],
+    }),
+
+    updateLead: builder.mutation<any, { leadId: string; updates: any }>({
+      query: ({ leadId, updates }) => ({
+        url: `/leads/${leadId}`,
+        method: 'PUT',
+        body: updates,
+      }),
+      transformResponse: (response: { success: boolean; data: any }) => response.data,
+      invalidatesTags: ['Task', 'Stats'],
+    }),
+
+    deleteLead: builder.mutation<void, string>({
+      query: (leadId) => ({
+        url: `/leads/${leadId}`,
+        method: 'DELETE',
+      }),
       invalidatesTags: ['Task', 'Stats'],
     }),
   }),
@@ -540,6 +661,8 @@ export const {
   useLogTimeMutation,
   useGetTimeLogsQuery,
   useGetTimeLogForDateQuery,
+  useGetAdminTimeLogsQuery,
+  useGetUserTimeLogsAdminQuery,
   
   // Stats
   useGetTaskStatsQuery,
@@ -552,5 +675,13 @@ export const {
   // Leads
   useGetLeadStatsQuery,
   useGetLeadsQuery,
+  useGetLeadOwnersQuery,
+  useCreateLeadMutation,
   useUpdateLeadStageMutation,
+  useGetLeadByIdQuery,
+  useUpdateLeadMutation,
+  useDeleteLeadMutation,
+  // Notifications
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
 } = api;

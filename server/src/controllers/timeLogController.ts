@@ -1,3 +1,36 @@
+// Admin: Get time logs for any user by userId and date range
+export const getTimeLogsByUserId = async (
+  req: Request,
+  res: Response<ApiResponse<any>>
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+    if (req.user.role !== 'admin') {
+      res.status(403).json({ success: false, error: 'Only admins can view other users\' time logs' });
+      return;
+    }
+    let { userId } = req.params;
+    let { startDate, endDate } = req.query;
+    if (Array.isArray(userId)) userId = userId[0];
+    if (Array.isArray(startDate)) startDate = startDate[0];
+    if (Array.isArray(endDate)) endDate = endDate[0];
+    if (!userId || !startDate || !endDate) {
+      res.status(400).json({ success: false, error: 'userId, startDate, and endDate are required' });
+      return;
+    }
+    const logs = await timeLogService.getUserTimeLogs(userId, String(startDate), String(endDate));
+    res.status(200).json({ success: true, data: logs });
+  } catch (error) {
+    console.error('Error fetching user time logs:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch user time logs'
+    });
+  }
+};
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import * as timeLogService from '../services/timeLogService.js';

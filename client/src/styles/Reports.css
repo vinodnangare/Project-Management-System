@@ -1,11 +1,12 @@
 .reports-container {
   padding: 2rem;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: transparent;
   min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   overflow-y: auto;
   overflow-x: hidden;
   height: auto;
+  color: var(--text);
 }
 
 /* ============ HEADER ============ */
@@ -14,16 +15,18 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  background: white;
+  background: var(--panel);
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
   animation: slideDown 0.5s ease-out;
 }
 
 .reports-header h2 {
   font-size: 2rem;
-  color: #2c3e50;
+  color: var(--text);
   margin: 0;
   font-weight: 700;
   letter-spacing: -0.5px;
@@ -50,8 +53,8 @@
 }
 
 .refresh-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #0b1224;
 }
 
 .refresh-btn:hover {
@@ -60,8 +63,8 @@
 }
 
 .export-btn {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--accent-warm) 0%, #f59e0b 100%);
+  color: #0b1224;
 }
 
 .export-btn:hover {
@@ -71,11 +74,13 @@
 
 /* ============ DATE RANGE SELECTOR ============ */
 .date-range-selector {
-  background: white;
+  background: var(--panel);
   padding: 2rem;
   border-radius: 12px;
   margin-bottom: 2rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
@@ -91,7 +96,7 @@
 
 .date-input-group label {
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--muted);
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -99,12 +104,12 @@
 
 .date-input-group input {
   padding: 0.75rem;
-  border: 2px solid #e0e6ed;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.3s ease;
-  background: #ffffff;
-  color: #2c3e50;
+  background: rgba(15, 23, 42, 0.65);
+  color: var(--text);
 }
 
 .date-input-group input::placeholder {
@@ -118,9 +123,9 @@
 
 .date-input-group input:focus {
   outline: none;
-  border-color: #667eea;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: rgba(79, 134, 255, 0.6);
+  background: rgba(15, 23, 42, 0.8);
+  box-shadow: 0 0 0 3px rgba(79, 134, 255, 0.18);
 }
 
 .date-presets {
@@ -131,28 +136,28 @@
 
 .date-presets button {
   padding: 0.65rem 1.25rem;
-  border: 2px solid #e0e6ed;
-  background: white;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.65);
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   font-size: 0.85rem;
-  color: #2c3e50;
+  color: var(--text);
   transition: all 0.3s ease;
 }
 
 .date-presets button:hover {
-  border-color: #667eea;
-  background: #f0f4ff;
-  color: #667eea;
+  border-color: rgba(79, 134, 255, 0.6);
+  background: rgba(79, 134, 255, 0.15);
+  color: var(--text);
   transform: translateY(-2px);
 }
 
 .date-presets button.preset-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #0b1224;
   border-color: transparent;
-  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.35);
+  box-shadow: 0 6px 18px rgba(79, 134, 255, 0.35);
 }
 
 .date-presets button:focus-visible {
@@ -165,10 +170,12 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 2rem;
-  background: white;
+  background: var(--panel);
   padding: 0.5rem;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
   flex-wrap: wrap;
   animation: slideUp 0.5s ease-out 0.2s both;
 }
@@ -183,7 +190,7 @@
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--muted);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
@@ -195,7 +202,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
   border-radius: 2px;
   transform: scaleX(0);
   transition: transform 0.3s ease;
@@ -206,20 +213,21 @@
 }
 
 .reports-tabs .tab.active {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  background: rgba(79, 134, 255, 0.18);
+  color: var(--text);
 }
 
 .reports-tabs .tab:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ============ CONTENT ============ */
 .reports-content {
-  background: white;
+  background: var(--panel);
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
   animation: fadeIn 0.5s ease-out;
 }
 
@@ -228,7 +236,7 @@
   text-align: center;
   padding: 3rem;
   font-size: 1.1rem;
-  color: #667eea;
+  color: var(--accent-2);
   font-weight: 600;
 }
 
@@ -238,15 +246,15 @@
   width: 8px;
   height: 8px;
   margin-left: 0.5rem;
-  background: #667eea;
+  background: var(--accent-2);
   border-radius: 50%;
   animation: pulse 1.5s infinite;
 }
 
 .error {
-  background: #fee;
-  border: 2px solid #f5576c;
-  color: #c33;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fecaca;
   padding: 1.5rem;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -271,11 +279,12 @@
 }
 
 .summary-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(45, 212, 191, 0.25));
+  color: var(--text);
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
@@ -303,8 +312,8 @@
 }
 
 .summary-card.completed {
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  box-shadow: 0 8px 25px rgba(17, 153, 142, 0.2);
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.35), rgba(16, 185, 129, 0.25));
+  box-shadow: var(--shadow);
 }
 
 .summary-card.completed:hover {
@@ -312,9 +321,9 @@
 }
 
 .summary-card.pending {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  box-shadow: 0 8px 25px rgba(250, 112, 154, 0.2);
-  color: #333;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(148, 163, 184, 0.25));
+  box-shadow: var(--shadow);
+  color: var(--text);
 }
 
 .summary-card.pending:hover {
@@ -322,8 +331,8 @@
 }
 
 .summary-card.overdue {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-  box-shadow: 0 8px 25px rgba(255, 107, 107, 0.2);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(248, 113, 113, 0.2));
+  box-shadow: var(--shadow);
 }
 
 .summary-card.overdue:hover {
@@ -357,15 +366,15 @@
 }
 
 .chart-section {
-  background: #f8f9fa;
+  background: var(--panel);
   padding: 2rem;
   border-radius: 12px;
-  border: 2px solid #e0e6ed;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .chart-section h3 {
   margin: 0 0 1.5rem 0;
-  color: #2c3e50;
+  color: var(--text);
   font-size: 1.1rem;
   font-weight: 700;
 }
@@ -386,7 +395,7 @@
 .status-label {
   min-width: 100px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--muted);
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -395,10 +404,10 @@
 .bar-container {
   flex: 1;
   height: 32px;
-  background: white;
+  background: rgba(15, 23, 42, 0.6);
   border-radius: 8px;
   overflow: hidden;
-  border: 2px solid #e0e6ed;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .bar {
@@ -413,23 +422,23 @@
 }
 
 .bar-todo {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
 }
 
 .bar-in_progress {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.85) 0%, rgba(45, 212, 191, 0.85) 100%);
 }
 
 .bar-review {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.85) 0%, rgba(20, 184, 166, 0.85) 100%);
 }
 
 .bar-done {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.85) 0%, rgba(45, 212, 191, 0.85) 100%);
 }
 
 .bar-completed {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.85) 0%, rgba(45, 212, 191, 0.85) 100%);
 }
 
 .bar-on_hold {
@@ -437,7 +446,7 @@
 }
 
 .bar-default {
-  background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.5) 0%, rgba(100, 116, 139, 0.6) 100%);
 }
 
 /* ============ PRIORITY BREAKDOWN ============ */
@@ -448,10 +457,10 @@
 }
 
 .priority-item {
-  background: white;
+  background: rgba(15, 23, 42, 0.6);
   padding: 1.25rem;
   border-radius: 8px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--accent-2);
 }
 
 .priority-item.high {
@@ -494,8 +503,8 @@
 }
 
 .priority-badge.low {
-  background: #f0f4ff;
-  color: #667eea;
+  background: rgba(14, 165, 233, 0.2);
+  color: var(--accent-2);
 }
 
 .priority-badge.urgent {
@@ -504,7 +513,7 @@
 }
 
 .priority-count {
-  color: #2c3e50;
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -522,7 +531,7 @@
 
 .top-performers h3 {
   margin: 0 0 1.5rem 0;
-  color: #2c3e50;
+  color: var(--text);
   font-size: 1.2rem;
   font-weight: 700;
 }
@@ -534,8 +543,8 @@
 }
 
 .performer-card {
-  background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
-  color: white;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(45, 212, 191, 0.25));
+  color: var(--text);
   padding: 1.5rem;
   border-radius: 12px;
   display: flex;
@@ -578,7 +587,7 @@
 
 .employee-performance-table h3 {
   margin: 0 0 1.5rem 0;
-  color: #2c3e50;
+  color: var(--text);
   font-size: 1.2rem;
   font-weight: 700;
 }
@@ -586,15 +595,16 @@
 .employee-performance-table table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--panel);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .employee-performance-table thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.7), rgba(45, 212, 191, 0.6));
+  color: var(--text);
 }
 
 .employee-performance-table th {
@@ -607,17 +617,17 @@
 }
 
 .employee-performance-table tbody tr {
-  border-bottom: 1px solid #e0e6ed;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   transition: all 0.3s ease;
 }
 
 .employee-performance-table tbody tr:hover {
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .employee-performance-table td {
   padding: 1rem;
-  color: #2c3e50;
+  color: var(--text);
   font-size: 0.95rem;
 }
 
@@ -662,7 +672,7 @@
   min-width: 40px;
   text-align: right;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text);
 }
 
 /* ============ COMPLETION REPORT ============ */
@@ -672,13 +682,13 @@
   gap: 1rem;
   margin-bottom: 2rem;
   padding: 1rem;
-  background: #f8f9fa;
+  background: var(--panel);
   border-radius: 8px;
 }
 
 .group-by-selector label {
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--muted);
   text-transform: uppercase;
   font-size: 0.9rem;
   letter-spacing: 0.5px;
@@ -686,18 +696,19 @@
 
 .group-by-selector select {
   padding: 0.5rem 1rem;
-  border: 2px solid #e0e6ed;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
-  background: white;
+  background: rgba(15, 23, 42, 0.65);
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
+  color: var(--text);
 }
 
 .group-by-selector select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: rgba(45, 212, 191, 0.6);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15);
 }
 
 .trends-container {
@@ -707,15 +718,15 @@
 }
 
 .trend-chart {
-  background: #f8f9fa;
+  background: var(--panel);
   padding: 2rem;
   border-radius: 12px;
-  border: 2px solid #e0e6ed;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .trend-chart h3 {
   margin: 0 0 1.5rem 0;
-  color: #2c3e50;
+  color: var(--text);
   font-size: 1.1rem;
   font-weight: 700;
 }
@@ -742,7 +753,7 @@
 .chart-bar {
   width: 100%;
   max-width: 50px;
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.9) 0%, rgba(45, 212, 191, 0.8) 100%);
   border-radius: 8px 8px 0 0;
   position: relative;
   transition: all 0.3s ease;
@@ -766,7 +777,7 @@
 
 .chart-label {
   font-size: 0.75rem;
-  color: #718096;
+  color: var(--muted);
   font-weight: 600;
   text-align: center;
   word-break: break-word;
@@ -774,15 +785,15 @@
 }
 
 .trend-stats {
-  background: #f8f9fa;
+  background: var(--panel);
   padding: 2rem;
   border-radius: 12px;
-  border: 2px solid #e0e6ed;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .trend-stats h3 {
   margin: 0 0 1.5rem 0;
-  color: #2c3e50;
+  color: var(--text);
   font-size: 1.1rem;
   font-weight: 700;
 }
@@ -794,21 +805,21 @@
 }
 
 .stat-item {
-  background: white;
+  background: rgba(15, 23, 42, 0.6);
   padding: 1.5rem;
   border-radius: 8px;
-  border: 2px solid #e0e6ed;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   text-align: center;
   transition: all 0.3s ease;
 }
 
 .stat-item:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  border-color: rgba(45, 212, 191, 0.6);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.18);
 }
 
 .stat-label {
-  color: #718096;
+  color: var(--muted);
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -818,8 +829,215 @@
 
 .stat-value {
   font-size: 2rem;
-  color: #667eea;
+  color: var(--accent-2);
   font-weight: 700;
+}
+
+.reports-container {
+  --accent: #0ea5e9;
+  --accent-2: #2dd4bf;
+  --accent-warm: #14b8a6;
+  --panel: #0f1b33;
+  --card: #0b1528;
+  --text: #e6edf6;
+  --muted: #9aa7bd;
+  --shadow: 0 20px 45px rgba(5, 10, 20, 0.55);
+}
+
+html[data-theme='light'] .reports-container {
+  --panel: #ffffff;
+  --card: #f8fafc;
+  --text: #0f172a;
+  --muted: #475569;
+  --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  background: #f4f7fb;
+  color: #0f172a;
+}
+
+html[data-theme='light'] .reports-header,
+html[data-theme='light'] .date-range-selector,
+html[data-theme='light'] .reports-tabs,
+html[data-theme='light'] .reports-content,
+html[data-theme='light'] .chart-section,
+html[data-theme='light'] .trend-chart,
+html[data-theme='light'] .trend-stats,
+html[data-theme='light'] .stat-item,
+html[data-theme='light'] .employee-performance-table table,
+html[data-theme='light'] .group-by-selector {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme='light'] .reports-tabs .tab {
+  color: #475569;
+}
+
+html[data-theme='light'] .reports-tabs .tab.active {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0f172a;
+}
+
+html[data-theme='light'] .reports-tabs .tab:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+html[data-theme='light'] .date-input-group input,
+html[data-theme='light'] .group-by-selector select {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+}
+
+html[data-theme='light'] .date-input-group input::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.7;
+}
+
+html[data-theme='light'] .date-presets button {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+}
+
+html[data-theme='light'] .date-presets button:hover {
+  background: rgba(14, 165, 233, 0.12);
+  border-color: rgba(14, 165, 233, 0.4);
+}
+
+html[data-theme='light'] .summary-card,
+html[data-theme='light'] .performer-card {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(45, 212, 191, 0.14));
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme='light'] .summary-card.completed {
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.16), rgba(16, 185, 129, 0.16));
+}
+
+html[data-theme='light'] .summary-card.pending {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(148, 163, 184, 0.2));
+}
+
+html[data-theme='light'] .summary-card.overdue {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(248, 113, 113, 0.16));
+}
+
+html[data-theme='light'] .bar-container,
+html[data-theme='light'] .priority-item {
+  background: #f1f5f9;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme='light'] .employee-performance-table tbody tr:hover {
+  background: rgba(14, 165, 233, 0.08);
+}
+
+html[data-theme='light'] .stat-value {
+  color: #0ea5e9;
+}
+
+.reports-content,
+.date-range-selector,
+.reports-tabs,
+.chart-section,
+.trend-chart,
+.trend-stats,
+.stat-item,
+.employee-performance-table table,
+.group-by-selector {
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow);
+}
+
+.reports-header h2,
+.top-performers h3,
+.employee-performance-table h3,
+.trend-chart h3,
+.trend-stats h3,
+.chart-section h3 {
+  color: var(--text);
+}
+
+.loading {
+  color: var(--accent-2);
+}
+
+.loading::after {
+  background: var(--accent-2);
+}
+
+.summary-card {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(45, 212, 191, 0.25));
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow);
+}
+
+.summary-card.completed {
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.35), rgba(16, 185, 129, 0.25));
+}
+
+.summary-card.pending {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(148, 163, 184, 0.25));
+  color: var(--text);
+}
+
+.summary-card.overdue {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(248, 113, 113, 0.2));
+}
+
+.status-label,
+.priority-count,
+.completion-rate span,
+.chart-label,
+.stat-label {
+  color: var(--muted);
+}
+
+.bar-container,
+.priority-item,
+.employee-performance-table tbody tr:hover {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.bar-todo,
+.bar-default,
+.chart-bar {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+}
+
+.bar-in_progress {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.85) 0%, rgba(45, 212, 191, 0.85) 100%);
+}
+
+.bar-review {
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.85) 0%, rgba(20, 184, 166, 0.85) 100%);
+}
+
+.bar-done,
+.bar-completed {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.85) 0%, rgba(45, 212, 191, 0.85) 100%);
+}
+
+.priority-item {
+  border-left-color: var(--accent-2);
+}
+
+.priority-badge.low,
+.stat-value {
+  color: var(--accent-2);
+}
+
+.employee-performance-table thead {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.7), rgba(45, 212, 191, 0.6));
+}
+
+.employee-performance-table td {
+  color: var(--text);
 }
 
 /* ============ ANIMATIONS ============ */

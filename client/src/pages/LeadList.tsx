@@ -1,22 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useGetLeadsQuery, useCreateLeadMutation, useDeleteLeadMutation } from '../services/api';
+import { useGetLeadsQuery, useCreateLeadMutation, useDeleteLeadMutation, useGetLeadOwnersQuery, useUpdateLeadStageMutation, useUpdateLeadMutation, type Lead } from '../services/api';
+import BulkActions from '../components/BulkActions';
 import LeadForm from '../components/LeadForm';
 import '../styles/LeadList.css';
-
-interface Lead {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone?: string;
-  source: string;
-  stage: string;
-  priority: string;
-  owner_id?: string;
-  owner_name?: string;
-  created_at: string;
-}
 
 export const LeadList: React.FC = () => {
   const navigate = useNavigate();
@@ -31,6 +19,8 @@ export const LeadList: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [showLeadForm, setShowLeadForm] = useState(false);
+  const [showAssignPanel, setShowAssignPanel] = useState(false);
+  const [selectedOwnerId, setSelectedOwnerId] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -46,8 +36,11 @@ export const LeadList: React.FC = () => {
     source: sourceFilter,
   });
 
+  const { data: leadOwners = [] } = useGetLeadOwnersQuery();
   const [createLead, { isLoading: isCreatingLead }] = useCreateLeadMutation();
   const [deleteLead] = useDeleteLeadMutation();
+  const [updateLeadStage] = useUpdateLeadStageMutation();
+  const [updateLead] = useUpdateLeadMutation();
 
   const leads = leadsData?.leads || [];
   const totalLeads = leadsData?.meta?.total || 0;
@@ -61,9 +54,11 @@ export const LeadList: React.FC = () => {
         lead.phone?.toLowerCase().includes(searchTerm.toLowerCase())
       : true;
 
+    const matchesStage = stageFilter ? lead.stage === stageFilter : true;
+    const matchesSource = sourceFilter ? lead.source === sourceFilter : true;
     const matchesPriority = priorityFilter ? lead.priority === priorityFilter : true;
 
-    return matchesSearch && matchesPriority;
+    return matchesSearch && matchesStage && matchesSource && matchesPriority;
   });
 
   const sortedLeads = [...filteredLeads].sort((a, b) => {
@@ -117,14 +112,26 @@ export const LeadList: React.FC = () => {
     setPage(1);
   };
 
+  const handleClearSelection = () => {
+    setSelectedLeads(new Set());
+    setShowAssignPanel(false);
+    setSelectedOwnerId('');
+  };
+
   const handleCreateLead = async (formData: any) => {
     try {
       await createLead(formData).unwrap();
       setShowLeadForm(false);
+      toast.success('Lead created successfully');
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create lead:', error);
-      alert('Failed to create lead. Please try again.');
+      
+      if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
+        toast.error(error?.data?.error || 'A lead with this company name already exists.');
+      } else {
+        toast.error('Failed to create lead. Please try again.');
+      }
     }
   };
 
@@ -132,11 +139,81 @@ export const LeadList: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this lead?')) {
       try {
         await deleteLead(leadId).unwrap();
+        toast.success('Lead deleted successfully');
         refetch();
       } catch (error) {
         console.error('Failed to delete lead:', error);
-        alert('Failed to delete lead. Please try again.');
+        toast.error('Failed to delete lead. Please try again.');
       }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedLeads.size === 0) return;
+    if (!window.confirm(`Delete ${selectedLeads.size} selected lead(s)?`)) return;
+
+    try {
+      await Promise.all(
+        Array.from(selectedLeads).map((leadId) => deleteLead(leadId).unwrap())
+      );
+      toast.success('Selected leads deleted');
+      handleClearSelection();
+      refetch();
+    } catch (error) {
+      console.error('Failed to delete leads:', error);
+      toast.error('Failed to delete selected leads. Please try again.');
+    }
+  };
+
+  const handleBulkStageChange = async (stage: string) => {
+    if (selectedLeads.size === 0) return;
+
+    try {
+      await Promise.all(
+        Array.from(selectedLeads).map((leadId) => updateLeadStage({ leadId, stage }).unwrap())
+      );
+      toast.success('Lead stages updated');
+      handleClearSelection();
+      refetch();
+    } catch (error) {
+      console.error('Failed to update lead stages:', error);
+      toast.error('Failed to update lead stages. Please try again.');
+    }
+  };
+
+  const handleBulkPriorityChange = async (priority: string) => {
+    if (selectedLeads.size === 0) return;
+
+    try {
+      await Promise.all(
+        Array.from(selectedLeads).map((leadId) => updateLead({ leadId, updates: { priority } }).unwrap())
+      );
+      toast.success('Lead priorities updated');
+      handleClearSelection();
+      refetch();
+    } catch (error) {
+      console.error('Failed to update lead priorities:', error);
+      toast.error('Failed to update lead priorities. Please try again.');
+    }
+  };
+
+  const handleOpenAssign = () => {
+    setShowAssignPanel(true);
+  };
+
+  const handleAssignOwner = async () => {
+    if (!selectedOwnerId || selectedLeads.size === 0) return;
+
+    try {
+      await Promise.all(
+        Array.from(selectedLeads).map((leadId) => updateLead({ leadId, updates: { owner_id: selectedOwnerId } }).unwrap())
+      );
+      toast.success('Owner assigned to selected leads');
+      handleClearSelection();
+      refetch();
+    } catch (error) {
+      console.error('Failed to assign owner:', error);
+      toast.error('Failed to assign owner. Please try again.');
     }
   };
 
@@ -274,13 +351,47 @@ export const LeadList: React.FC = () => {
         </div>
       </div>
 
-      {selectedLeads.size > 0 && (
-        <div className="bulk-actions-bar">
-          <span>{selectedLeads.size} selected</span>
-          <div className="bulk-buttons">
-            <button className="btn-bulk">Assign Owner</button>
-            <button className="btn-bulk">Change Stage</button>
-            <button className="btn-bulk btn-danger">Delete</button>
+      <BulkActions
+        selectedCount={selectedLeads.size}
+        onAssign={handleOpenAssign}
+        onChangeStage={handleBulkStageChange}
+        onChangePriority={handleBulkPriorityChange}
+        onDelete={handleBulkDelete}
+        onClearSelection={handleClearSelection}
+      />
+
+      {showAssignPanel && selectedLeads.size > 0 && (
+        <div className="bulk-assign-panel">
+          <div className="bulk-assign-content">
+            <span className="bulk-assign-label">Assign owner:</span>
+            <select
+              value={selectedOwnerId}
+              onChange={(e) => setSelectedOwnerId(e.target.value)}
+              className="bulk-assign-select"
+            >
+              <option value="">Select owner</option>
+              {leadOwners.map((owner: any) => (
+                <option key={owner.id} value={owner.id}>
+                  {owner.full_name || owner.email}
+                </option>
+              ))}
+            </select>
+            <button
+              className="btn-bulk"
+              onClick={handleAssignOwner}
+              disabled={!selectedOwnerId}
+            >
+              Assign
+            </button>
+            <button
+              className="btn-bulk"
+              onClick={() => {
+                setShowAssignPanel(false);
+                setSelectedOwnerId('');
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

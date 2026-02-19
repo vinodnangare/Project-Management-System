@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import TaskList from './components/TaskList';
 import TaskDetail from './components/TaskDetail';
@@ -11,7 +12,10 @@ import Reports from './components/Reports.tsx';
 import EmployeeDashboard from './components/EmployeeDashboard.tsx';
 import LeadDashboard from './pages/LeadDashboard';
 import LeadPipeline from './pages/LeadPipeline';
+import LeadList from './pages/LeadList';
+import LeadDetail from './pages/LeadDetail';
 import ProfileModal from './components/ProfileModal';
+import NotificationBell from './components/NotificationBell';
 import { useAppDispatch, useAppSelector } from './hooks/redux';
 import { openTaskForm, closeTaskForm, setSelectedTask } from './store/slices/uiSlice';
 import { logout, setCredentials } from './store/slices/authSlice';
@@ -28,13 +32,10 @@ function App() {
   const showTaskForm = useAppSelector((state) => state.ui.showTaskForm);
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  // Clear old Express tokens on app initialization
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     
-    // If there's a token but no valid user data, it's likely an old Express token
-    // Clear it and let user re-login with Django
     if (storedToken && !storedUser) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -42,7 +43,6 @@ function App() {
     }
   }, [dispatch]);
 
-  // Validate token once on app load to avoid stale/invalid tokens causing 403s
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (!storedToken) return;
@@ -63,19 +63,14 @@ function App() {
         }
       })
       .catch(() => {
-        // Ignore network errors on startup
       });
 
     return () => controller.abort();
   }, [apiBaseUrl, dispatch]);
 
   useEffect(() => {
-    // Only redirect if:
-    // 1. User is authenticated AND
-    // 2. User has a role AND
-    // 3. They're on a public route
     if (isAuthenticated && user && (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register')) {
-      const defaultRoute = user.role === 'admin' ? '/admin/analytics' : '/dashboard';
+      const defaultRoute = user.role === 'admin' ? '/admin/analytics' : user.role === 'manager' ? '/leads' : '/dashboard';
       navigate(defaultRoute, { replace: true });
     }
   }, [isAuthenticated, user, navigate, location.pathname]);
@@ -89,10 +84,9 @@ function App() {
     dispatch(closeTaskForm());
   };
 
-  const roleLabel = user?.role === 'admin' ? 'Admin' : 'Developer';
-  const roleEmoji = user?.role === 'admin' ? '🛠️' : '💻';
+  const roleLabel = user?.role === 'admin' ? 'Admin' : user?.role === 'manager' ? 'Manager' : 'Employee';
+  const roleEmoji = user?.role === 'admin' ? '🛠️' : user?.role === 'manager' ? '👔' : '💻';
 
-  // Public routes (no authentication required)
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -103,7 +97,6 @@ function App() {
     );
   }
 
-  // Protected routes (authentication required)
   return (
     <Routes>
       <Route path="*" element={<AuthenticatedLayout 
@@ -127,9 +120,20 @@ function AuthenticatedLayout({
   selectedTaskId, showTaskForm, handleTaskCreated 
 }: any) {
   const currentPath = location.pathname;
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme ? savedTheme === 'dark' : true;
+  });
+
+  useEffect(() => {
+    const theme = isDarkMode ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [isDarkMode]);
   
   return (
     <div className="app-container">
+      <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
       <header className="app-header">
         <div className="header-brand">
           <div className="brand-left">
@@ -143,52 +147,97 @@ function AuthenticatedLayout({
         </div>
 
         <nav className="app-nav">
-          <button
-            className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
-            onClick={() => navigate('/tasks')}
-          >
-            📋 Tasks
-          </button>
-          {user?.role === 'admin' ? (
-            <>
-              <button
-                className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
-                onClick={() => navigate('/leads')}
-              >
-                🎯 Leads
-              </button>
-              <button
-                className={`nav-btn ${currentPath === '/admin/analytics' ? 'active' : ''}`}
-                onClick={() => navigate('/admin/analytics')}
-              >
-                📊 Analytics
-              </button>
-              <button
-                className={`nav-btn ${currentPath === '/admin/reports' ? 'active' : ''}`}
-                onClick={() => navigate('/admin/reports')}
-              >
-                📈 Reports
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className={`nav-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
-                onClick={() => navigate('/dashboard')}
-              >
-                🎯 Dashboard
-              </button>
-              <button
-                className={`nav-btn ${currentPath === '/time-log' ? 'active' : ''}`}
-                onClick={() => navigate('/time-log')}
-              >
-                ⏱️ Time
-              </button>
-            </>
-          )}
+          <div className="nav-container">
+            {/* Admin Navigation */}
+            {user?.role === 'admin' && (
+              <>
+                <button
+                  className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
+                  onClick={() => navigate('/tasks')}
+                >
+                  📋 Tasks
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
+                  onClick={() => navigate('/leads')}
+                >
+                  🎯 Leads
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/admin/analytics' ? 'active' : ''}`}
+                  onClick={() => navigate('/admin/analytics')}
+                >
+                  📊 Analytics
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/admin/reports' ? 'active' : ''}`}
+                  onClick={() => navigate('/admin/reports')}
+                >
+                  📈 Reports
+                </button>
+              </>
+            )}
+
+            {/* Manager Navigation */}
+            {user?.role === 'manager' && (
+              <>
+                <button
+                  className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
+                  onClick={() => navigate('/leads')}
+                >
+                  🎯 Leads
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/reports' ? 'active' : ''}`}
+                  onClick={() => navigate('/reports')}
+                >
+                  📈 Reports
+                </button>
+              </>
+            )}
+
+            {/* Employee Navigation */}
+            {user?.role === 'employee' && (
+              <>
+                <button
+                  className={`nav-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
+                  onClick={() => navigate('/dashboard')}
+                >
+                  🎯 Dashboard
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
+                  onClick={() => navigate('/tasks')}
+                >
+                  📋 Tasks
+                </button>
+                <button
+                  className={`nav-btn ${currentPath === '/time-log' ? 'active' : ''}`}
+                  onClick={() => navigate('/time-log')}
+                >
+                  ⏱️ Time
+                </button>
+              </>
+            )}
+          </div>
         </nav>
 
         <div className="header-actions">
+          <button
+            className={`btn-create-task ${user?.role !== 'admin' || currentPath !== '/tasks' ? 'btn-hidden' : ''}`}
+            onClick={() => dispatch(openTaskForm())}
+            disabled={user?.role !== 'admin' || currentPath !== '/tasks'}
+          >
+            ✚ New Task
+          </button>
+          <NotificationBell />
+          <button
+            className="btn-theme"
+            onClick={() => setIsDarkMode((prev) => !prev)}
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDarkMode ? '🌙 Dark' : '☀️ Light'}
+          </button>
           <button
             className="btn-profile"
             onClick={() => dispatch(openProfileModal())}
@@ -207,14 +256,6 @@ function AuthenticatedLayout({
               )}
             </span>
           </button>
-          {user?.role === 'admin' && currentPath === '/tasks' && (
-            <button
-              className="btn-create-task"
-              onClick={() => dispatch(openTaskForm())}
-            >
-              ✚ New Task
-            </button>
-          )}
           <button className="btn-logout" onClick={handleLogout}>
             ⎇ Logout
           </button>
@@ -231,6 +272,8 @@ function AuthenticatedLayout({
               <Route path="/admin/analytics" element={<AdminStats />} />
               <Route path="/leads" element={<LeadDashboard />} />
               <Route path="/leads/pipeline" element={<LeadPipeline />} />
+              <Route path="/leads/list" element={<LeadList />} />
+              <Route path="/leads/:id" element={<LeadDetail />} />
               <Route path="/admin/reports" element={<Reports />} /> 
               <Route path="/tasks" element={
                 <div className="app-layout">
@@ -258,6 +301,38 @@ function AuthenticatedLayout({
               } />
               <Route path="/" element={<Navigate to="/admin/analytics" replace />} />
               <Route path="*" element={<Navigate to="/admin/analytics" replace />} />
+            </>
+          )}
+
+          {/* Manager routes */}
+          {user?.role === 'manager' && (
+            <>
+              <Route path="/leads" element={<LeadDashboard />} />
+              <Route path="/leads/pipeline" element={<LeadPipeline />} />
+              <Route path="/leads/list" element={<LeadList />} />
+              <Route path="/leads/:id" element={<LeadDetail />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/tasks" element={
+                <div className="app-layout">
+                  <aside className="task-list-panel">
+                    <TaskList
+                      onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
+                      selectedTaskId={selectedTaskId || undefined}
+                    />
+                  </aside>
+                  <section className="task-detail-panel">
+                    {selectedTaskId ? (
+                      <TaskDetail taskId={selectedTaskId} />
+                    ) : (
+                      <div className="empty-state">
+                        <p>Select a task to view details</p>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              } />
+              <Route path="/" element={<Navigate to="/leads" replace />} />
+              <Route path="*" element={<Navigate to="/leads" replace />} />
             </>
           )}
           

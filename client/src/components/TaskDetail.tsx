@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   useGetTaskByIdQuery,
   useGetTaskCommentsQuery,
@@ -73,8 +74,10 @@ export const TaskDetail: React.FC<{ taskId: string }> = ({ taskId }) => {
       await deleteTask({ id: taskId, performedBy: user.id }).unwrap();
       dispatch(setSelectedTask(null));
       setShowDeleteConfirm(false);
+      toast.success('Task deleted');
     } catch (error) {
       console.error('Error deleting task:', error);
+      toast.error('Failed to delete task');
     }
   };
 
@@ -165,7 +168,7 @@ export const TaskDetail: React.FC<{ taskId: string }> = ({ taskId }) => {
           className={`tab ${activeTab === 'activity' ? 'active' : ''}`}
           onClick={() => setActiveTab('activity')}
         >
-          Activity ({activities.length})
+          Activity ({Math.max(0, activities.length - 1)})
         </button>
       </div>
 

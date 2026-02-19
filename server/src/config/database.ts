@@ -3,8 +3,9 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
+console.log(process.env.DB_HOST)
 const pool = mysql.createPool({
+  
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306'),
   user: process.env.DB_USER || 'root',
@@ -25,7 +26,7 @@ export const initializeDatabase = async (): Promise<void> => {
         email VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
         full_name VARCHAR(255) NOT NULL,
-        role ENUM('admin', 'employee') NOT NULL DEFAULT 'employee',
+        role ENUM('admin', 'manager', 'employee') NOT NULL DEFAULT 'employee',
         is_active BOOLEAN DEFAULT 1,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -33,6 +34,18 @@ export const initializeDatabase = async (): Promise<void> => {
         INDEX idx_role (role)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
+
+    // Update existing role ENUM to include 'manager' if needed
+    try {
+      await connection.execute(
+        `ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'manager', 'employee') NOT NULL DEFAULT 'employee'`
+      );
+      console.log('✓ Updated role ENUM to include manager');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.log('✓ Role ENUM already up to date');
+      }
+    }
 
     try {
       await connection.execute(
@@ -181,6 +194,87 @@ export const initializeDatabase = async (): Promise<void> => {
         INDEX idx_task_docs_updated_at (updated_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
+
+    await connection.execute(
+      `CREATE TABLE IF NOT EXISTS notifications (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        message LONGTEXT NOT NULL,
+        is_read BOOLEAN DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_notifications_user_id (user_id),
+        INDEX idx_notifications_is_read (is_read),
+        INDEX idx_notifications_created_at (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    );
+
+    await connection.execute(
+      `CREATE TABLE IF NOT EXISTS leads (
+        id VARCHAR(36) PRIMARY KEY,
+        company_name VARCHAR(255) NOT NULL,
+        contact_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(20) NULL,
+        stage ENUM('new', 'in_discussion', 'quoted', 'won', 'lost') NOT NULL DEFAULT 'new',
+        priority ENUM('high', 'medium', 'low') NOT NULL DEFAULT 'medium',
+        source ENUM('web', 'referral', 'campaign', 'manual') NOT NULL DEFAULT 'manual',
+        owner_id VARCHAR(36) NULL,
+        created_by VARCHAR(36) NOT NULL,
+        notes LONGTEXT NULL,
+        is_deleted BOOLEAN DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_stage (stage),
+        INDEX idx_priority (priority),
+        INDEX idx_owner_id (owner_id),
+        INDEX idx_created_by (created_by),
+        INDEX idx_is_deleted (is_deleted),
+        INDEX idx_email (email)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    );
+
+    await connection.execute(
+      `CREATE TABLE IF NOT EXISTS notifications (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_id (user_id),
+        INDEX idx_is_read (is_read),
+        INDEX idx_created_at (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    );
+
+    try {
+      await connection.execute(
+        `ALTER TABLE leads ADD COLUMN notes LONGTEXT DEFAULT NULL`
+      );
+      console.log('✓ Added notes column to leads table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.log('⚠ notes column already exists or error:', error.message);
+      }
+    }
+
+    try {
+      await connection.execute(
+        `UPDATE leads SET stage = 'in_discussion' WHERE stage = 'qualified'`
+      );
+      await connection.execute(
+        `UPDATE leads SET stage = 'quoted' WHERE stage = 'in_progress'`
+      );
+      await connection.execute(
+        `ALTER TABLE leads MODIFY COLUMN stage ENUM('new', 'in_discussion', 'quoted', 'won', 'lost') NOT NULL DEFAULT 'new'`
+      );
+      console.log('✓ Updated lead stage enum');
+    } catch (error: any) {
+      console.log('✓ Lead stage enum already up to date');
+    }
 
     connection.release();
     console.log('Database schema initialized successfully');

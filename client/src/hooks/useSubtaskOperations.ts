@@ -11,12 +11,13 @@ export const useSubtasks = (taskId: string) => {
   const [updateStatus, updateState] = useUpdateSubtaskStatusMutation();
   const [deleteSubtask, deleteState] = useDeleteSubtaskMutation();
 
-  const create = async (title: string) => {
-    await createSubtask({ taskId, title }).unwrap();
+  const create = async (title: string, createdBy: string, description?: string | null) => {
+    await createSubtask({ taskId, title, description: description ?? null, created_by: createdBy }).unwrap();
   };
 
   const updateSubtaskStatus = async (subtaskId: string, completed: boolean) => {
-    await updateStatus({ taskId, subtaskId, is_completed: completed }).unwrap();
+    const status = completed ? 'DONE' : 'TODO';
+    await updateStatus({ taskId, subtaskId, status }).unwrap();
   };
 
   const remove = async (subtaskId: string) => {

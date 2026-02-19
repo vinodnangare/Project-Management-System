@@ -55,14 +55,12 @@ coverage/
 *~
 
 
-.ARCHITECTURE.md
-.BUILD.md
-.INTERVIEW_GUIDE.md
-.COMMIT_STRATEGY.md
-.COMPLETION_REPORT.md
-.DOCUMENTATION_INDEX.md
-.MIGRATION_SUMMARY.md
-.PRE_LAUNCH_CHECKLIST.md
-.PROJECT_COMPLETE.md
-.PROJECT_SUMMARY.md
-.QUICK_START.md
+# Markdown files (exclude README.md and QUICK_START.md)
+*.md
+!README.md
+!QUICK_START.md
+
+
+*.json
+
+django_server/

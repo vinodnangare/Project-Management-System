@@ -382,7 +382,7 @@ export const getTaskStats = async (
 
 export const getReportSummary = async (req: Request, res: Response) => {
   try {
-    if (!req.user || req.user.role !== 'admin') {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'manager')) {
       res.status(403).json({ success: false, error: 'Forbidden' });
       return;
     }
@@ -400,7 +400,7 @@ export const getReportSummary = async (req: Request, res: Response) => {
 
 export const getEmployeePerformanceReport = async (req: Request, res: Response) => {
   try {
-    if (!req.user || req.user.role !== 'admin') {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'manager')) {
       res.status(403).json({ success: false, error: 'Forbidden' });
       return;
     }
@@ -418,7 +418,7 @@ export const getEmployeePerformanceReport = async (req: Request, res: Response) 
 
 export const getTaskCompletionReport = async (req: Request, res: Response) => {
   try {
-    if (!req.user || req.user.role !== 'admin') {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'manager')) {
       res.status(403).json({ success: false, error: 'Forbidden' });
       return;
     }

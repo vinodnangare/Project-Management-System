@@ -1,33 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useGetLeadByIdQuery, useUpdateLeadMutation, useDeleteLeadMutation } from '../services/api';
+import { useGetLeadByIdQuery, useUpdateLeadMutation, useDeleteLeadMutation, useGetAssignableUsersQuery, type Lead } from '../services/api';
 import '../styles/LeadDetail.css';
-
-interface Lead {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone?: string;
-  source: string;
-  stage: string;
-  priority: string;
-  owner_id?: string;
-  owner_name?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export const LeadDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: lead, isLoading, error, refetch } = useGetLeadByIdQuery(id!);
+  const { data: availableUsers = [] } = useGetAssignableUsersQuery();
   const [updateLead] = useUpdateLeadMutation();
   const [deleteLead] = useDeleteLeadMutation();
 
-  const [activeTab, setActiveTab] = useState<'info' | 'notes' | 'activity' | 'tasks' | 'docs'>('info');
+  const [activeTab, setActiveTab] = useState<'info'>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [editedLead, setEditedLead] = useState<Partial<Lead>>({});
+  const [notes, setNotes] = useState<string>('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const notesTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (lead) {
+      setNotes(lead.notes || '');
+    }
+  }, [lead?.id]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -39,15 +35,77 @@ export const LeadDetail: React.FC = () => {
     setEditedLead({});
   };
 
+  const handleNotesChange = (value: string) => {
+    setNotes(value);
+
+    if (notesTimeoutRef.current) {
+      clearTimeout(notesTimeoutRef.current);
+    }
+    notesTimeoutRef.current = setTimeout(async () => {
+      if (!id) return;
+      
+      try {
+        setIsSavingNotes(true);
+        await updateLead({ leadId: id, updates: { notes: value } }).unwrap();
+        toast.success('Notes saved', { duration: 1500 });
+        refetch();
+      } catch (error: any) {
+        console.error('Failed to update notes:', error);
+        toast.error('Failed to save notes. Please try again.');
+      } finally {
+        setIsSavingNotes(false);
+      }
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (notesTimeoutRef.current) {
+        clearTimeout(notesTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleSave = async () => {
     if (!id) return;
     
     try {
       await updateLead({ leadId: id, updates: editedLead }).unwrap();
       setIsEditing(false);
+      toast.success('Lead updated');
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update lead:', error);
+
+      if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
+        toast.error(error?.data?.error || 'A lead with this company name already exists.');
+      } else {
+        toast.error('Failed to update lead. Please try again.');
+      }
+    }
+  };
+
+  const handleQuickUpdate = async (field: 'stage' | 'priority' | 'owner_id', value: string) => {
+    if (!id) return;
+
+    try {
+      const updateObj: any = {};
+      if (field === 'owner_id') {
+        updateObj[field] = value || null;
+      } else {
+        updateObj[field] = value;
+      }
+      await updateLead({ leadId: id, updates: updateObj }).unwrap();
+      toast.success('Lead updated');
+      refetch();
+    } catch (error: any) {
+      console.error('Failed to update lead:', error);
+
+      if (error?.status === 409 || error?.data?.error?.includes('already exists')) {
+        toast.error(error?.data?.error || 'A lead with this company name already exists.');
+      } else {
+        toast.error('Failed to update lead. Please try again.');
+      }
     }
   };
 
@@ -57,9 +115,11 @@ export const LeadDetail: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete lead "${lead?.company_name}"?`)) {
       try {
         await deleteLead(id).unwrap();
+        toast.success('Lead deleted');
         navigate('/leads/list');
       } catch (error) {
         console.error('Failed to delete lead:', error);
+        toast.error('Failed to delete lead. Please try again.');
       }
     }
   };
@@ -177,30 +237,6 @@ export const LeadDetail: React.FC = () => {
             >
               📋 Information
             </button>
-            <button
-              className={`lead-tab ${activeTab === 'notes' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notes')}
-            >
-              📝 Notes
-            </button>
-            <button
-              className={`lead-tab ${activeTab === 'activity' ? 'active' : ''}`}
-              onClick={() => setActiveTab('activity')}
-            >
-              📊 Activity
-            </button>
-            <button
-              className={`lead-tab ${activeTab === 'tasks' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tasks')}
-            >
-              ✓ Tasks
-            </button>
-            <button
-              className={`lead-tab ${activeTab === 'docs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('docs')}
-            >
-              📎 Documents
-            </button>
           </div>
 
           <div className="lead-tab-content">
@@ -285,12 +321,17 @@ export const LeadDetail: React.FC = () => {
                           <option value="lost">Lost</option>
                         </select>
                       ) : (
-                        <span
-                          className="lead-badge"
-                          style={{ backgroundColor: getStageColor(lead.stage) }}
+                        <select
+                          value={lead.stage || ''}
+                          onChange={(e) => handleQuickUpdate('stage', e.target.value)}
+                          className="select-edit"
                         >
-                          {formatStageLabel(lead.stage)}
-                        </span>
+                          <option value="new">New</option>
+                          <option value="in_discussion">In Discussion</option>
+                          <option value="quoted">Quoted</option>
+                          <option value="won">Won</option>
+                          <option value="lost">Lost</option>
+                        </select>
                       )}
                     </div>
 
@@ -307,12 +348,15 @@ export const LeadDetail: React.FC = () => {
                           <option value="low">Low</option>
                         </select>
                       ) : (
-                        <span
-                          className="lead-badge"
-                          style={{ backgroundColor: getPriorityColor(lead.priority) }}
+                        <select
+                          value={lead.priority || ''}
+                          onChange={(e) => handleQuickUpdate('priority', e.target.value)}
+                          className="select-edit"
                         >
-                          {lead.priority}
-                        </span>
+                          <option value="high">High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
+                        </select>
                       )}
                     </div>
 
@@ -336,7 +380,33 @@ export const LeadDetail: React.FC = () => {
 
                     <div className="info-item">
                       <label>Owner</label>
-                      <p>{lead.owner_name || 'Unassigned'}</p>
+                      {isEditing ? (
+                        <select
+                          value={editedLead.owner_id || ''}
+                          onChange={(e) => setEditedLead({ ...editedLead, owner_id: e.target.value || undefined })}
+                          className="select-edit"
+                        >
+                          <option value="">Unassigned</option>
+                          {availableUsers?.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.full_name || user.email}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <select
+                          value={lead.owner_id || ''}
+                          onChange={(e) => handleQuickUpdate('owner_id', e.target.value)}
+                          className="select-edit"
+                        >
+                          <option value="">Unassigned</option>
+                          {availableUsers?.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.full_name || user.email}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -354,44 +424,27 @@ export const LeadDetail: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {activeTab === 'notes' && (
-              <div className="lead-notes-tab">
-                <div className="empty-state-tab">
-                  <p>📝 Notes</p>
-                  <p className="empty-subtitle">Add notes and comments about this lead</p>
+                <div className="info-section notes-section">
+                  <div className="notes-header">
+                    <h3>Notes</h3>
+                    {isSavingNotes && (
+                      <span className="saving-indicator">💾 Saving...</span>
+                    )}
+                  </div>
+
+                  <div className="notes-edit-area">
+                    <textarea
+                      value={notes}
+                      onChange={(e) => handleNotesChange(e.target.value)}
+                      placeholder="Add notes about this lead..."
+                      className="notes-textarea"
+                    />
+                  </div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'activity' && (
-              <div className="lead-activity-tab">
-                <div className="empty-state-tab">
-                  <p>📊 Activity Timeline</p>
-                  <p className="empty-subtitle">Track all changes and interactions with this lead</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'tasks' && (
-              <div className="lead-tasks-tab">
-                <div className="empty-state-tab">
-                  <p>✓ Related Tasks</p>
-                  <p className="empty-subtitle">View and manage tasks associated with this lead</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'docs' && (
-              <div className="lead-docs-tab">
-                <div className="empty-state-tab">
-                  <p>📎 Documents</p>
-                  <p className="empty-subtitle">Upload and manage documents related to this lead</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

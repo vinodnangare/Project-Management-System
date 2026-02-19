@@ -7,7 +7,7 @@ declare global {
       user?: {
         id: string;
         email: string;
-        role: 'admin' | 'employee';
+        role: 'admin' | 'manager' | 'employee';
       };
     }
   }
@@ -29,7 +29,7 @@ export const verifyJwt = (req: Request, res: Response, next: NextFunction) => {
     const payload = jwt.verify(token, secret) as {
       id: string;
       email: string;
-      role: 'admin' | 'employee';
+      role: 'admin' | 'manager' | 'employee';
     };
 
     req.user = {

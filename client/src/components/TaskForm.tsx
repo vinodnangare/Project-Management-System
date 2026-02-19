@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useGetAssignableUsersQuery, useCreateTaskMutation } from '../services/api';
 import '../styles/TaskForm.css';
 
@@ -51,7 +52,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
     setFormError('');
 
     if (!formData.title.trim()) {
-      setFormError('Title is required');
+      const message = 'Title is required';
+      setFormError(message);
+      toast.error(message);
       return;
     }
 
@@ -67,6 +70,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
         created_by: user?.id || ''
       }).unwrap();
       
+      toast.success('Task created successfully');
       onTaskCreated?.(result.id);
       setFormData({
         title: '',
@@ -78,7 +82,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
         created_by: user?.id || ''
       });
     } catch (err) {
-      setFormError('Failed to create task');
+      const message = 'Failed to create task';
+      setFormError(message);
+      toast.error(message);
     }
   };
 

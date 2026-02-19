@@ -82,9 +82,10 @@ export const getUserTimeLogs = async (
   endDate: string
 ): Promise<TimeLog[]> => {
   const [logs]: any = await executeQuery(
-    `SELECT * FROM time_logs 
-     WHERE user_id = ? AND date BETWEEN ? AND ?
-     ORDER BY date DESC`,
+    `SELECT tl.*, t.title as task_title FROM time_logs tl
+     LEFT JOIN tasks t ON tl.task_id = t.id
+     WHERE tl.user_id = ? AND tl.date BETWEEN ? AND ?
+     ORDER BY tl.date DESC`,
     [userId, startDate, endDate]
   );
 
