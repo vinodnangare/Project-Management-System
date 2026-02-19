@@ -24,6 +24,7 @@ const formatLeadResponse = async (lead: ILead): Promise<LeadType> => {
     stage: lead.stage as LeadStage,
     priority: lead.priority as any,
     source: lead.source as any,
+    notes: lead.notes || null,
     owner_id: lead.owner_id?.toString() || null,
     owner_name: owner?.full_name || null,
     owner_email: owner?.email || null,

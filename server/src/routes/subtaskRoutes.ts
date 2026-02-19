@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import * as subtaskController from '../controllers/subtaskController.js';
+import { apiRateLimiter } from '../middleware/rateLimitMiddleware.js';
 
 const router = Router();
+
+router.use(apiRateLimiter);
 
 router.get('/:taskId/subtasks', subtaskController.getSubtasks);
 router.post('/:taskId/subtasks', subtaskController.createSubtask);

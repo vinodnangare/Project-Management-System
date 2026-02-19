@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import * as timeLogController from '../controllers/timeLogController.js';
+import { apiRateLimiter } from '../middleware/rateLimitMiddleware.js';
 
 const router = Router();
 
+router.use(apiRateLimiter);
 
 router.post('/', timeLogController.logTime);
 router.get('/range', timeLogController.getUserTimeLogs);
