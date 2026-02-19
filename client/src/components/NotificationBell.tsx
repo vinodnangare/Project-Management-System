@@ -5,11 +5,15 @@ import '../styles/NotificationBell.css';
 
 const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false);
+
   const { data, isLoading, refetch } = useGetNotificationsQuery(undefined, {
-    pollingInterval: 30000, // Poll every 30 seconds
+    pollingInterval: 30000,
   });
+
   const notifications = data?.data ?? [];
-  const unreadCount = data?.unread_count ?? notifications.filter((n) => !n.is_read).length;
+  const unreadCount =
+    data?.unread_count ??
+    notifications.filter((n) => !n.is_read).length;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,14 +38,19 @@ const NotificationBell: React.FC = () => {
         className="notification-bell"
         onClick={() => {
           setOpen((prev) => !prev);
-          refetch(); // Refresh notifications when opening
+          refetch();
         }}
         title="Notifications"
         aria-label="Notifications"
       >
-        <span className="notification-icon" aria-hidden="true">🔔</span>
+        <span className="notification-icon" aria-hidden="true">
+          🔔
+        </span>
+
         {unreadCount > 0 && (
-          <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+          <span className="notification-badge">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
       </button>
 
