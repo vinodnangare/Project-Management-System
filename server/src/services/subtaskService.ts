@@ -1,111 +1,117 @@
-import mongoose from "mongoose";
-import TaskModel from "../models/Task.js";
-
+import { v4 as uuidv4 } from 'uuid';
+import { executeQuery } from '../config/database.js';
 import { Subtask } from '../types/index.js';
 
-
+const toMySQLDateTime = (isoString: string | null): string | null => {
+  if (!isoString) return null;
+  return new Date(isoString).toISOString().slice(0, 19).replace('T', ' ');
+};
 
 export const createSubtask = async (
   taskId: string,
   title: string,
   description: string | null,
   createdBy: string
-) => {
+): Promise<Subtask> => {
+  const subtaskId = uuidv4();
+  const now = toMySQLDateTime(new Date().toISOString());
 
-  const task = await TaskModel.findById(taskId);
-  if (!task) throw new Error("Task not found");
-
-  const subtask = {
-    _id: new mongoose.Types.ObjectId(),
+  const subtask: Subtask = {
+    id: subtaskId,
+    task_id: taskId,
     title,
     description: description ?? null,
-    status: "TODO",
+    status: 'TODO',
     created_by: createdBy,
-    created_at: new Date()
+    created_at: now!,
+    updated_at: now!
   };
 
-  task.subtasks.push(subtask as any);
-  await task.save();
+  await executeQuery(
+    `INSERT INTO subtasks (id, task_id, title, description, status, created_by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      subtask.id,
+      subtask.task_id,
+      subtask.title,
+      subtask.description,
+      subtask.status,
+      subtask.created_by,
+      subtask.created_at,
+      subtask.updated_at
+    ]
+  );
 
-  return map(taskId, subtask);
+  return subtask;
 };
 
+export const getSubtasksByTaskId = async (taskId: string): Promise<Subtask[]> => {
+  const [subtasks]: any = await executeQuery(
+    `SELECT 
+      s.*,
+      u.full_name AS created_by_name,
+      u.email AS created_by_email
+     FROM subtasks s
+     LEFT JOIN users u ON u.id = s.created_by
+     WHERE s.task_id = ?
+     ORDER BY s.created_at ASC`,
+    [taskId]
+  );
 
-export const getSubtasksByTaskId = async (taskId: string) => {
-
-  const task = await TaskModel.findById(taskId)
-    .populate("subtasks.created_by", "full_name email")
-    .select("subtasks")
-    .lean();
-
-  if (!task) return [];
-
-  return task.subtasks.map((s: any) => map(taskId, s));
+  return (subtasks || []) as Subtask[];
 };
 
+export const getSubtaskById = async (subtaskId: string): Promise<Subtask | null> => {
+  const [subtasks]: any = await executeQuery(
+    `SELECT 
+      s.*,
+      u.full_name AS created_by_name,
+      u.email AS created_by_email
+     FROM subtasks s
+     LEFT JOIN users u ON u.id = s.created_by
+     WHERE s.id = ?`,
+    [subtaskId]
+  );
 
-export const getSubtaskById = async (subtaskId: string) => {
-
-  const task = await TaskModel.findOne({ "subtasks._id": subtaskId })
-    .populate("subtasks.created_by", "full_name email")
-    .select("subtasks");
-
-  if (!task) return null;
-
-  const subtask = task.subtasks.id(subtaskId);
-  return subtask ? map(task._id.toString(), subtask) : null;
+  return subtasks?.[0] || null;
 };
-
 
 export const updateSubtaskStatus = async (
   subtaskId: string,
-  status: "TODO" | "DONE"
-) => {
+  status: 'TODO' | 'DONE'
+): Promise<Subtask | null> => {
+  const now = toMySQLDateTime(new Date().toISOString());
 
-  const task = await TaskModel.findOne({ "subtasks._id": subtaskId });
-  if (!task) return null;
+  await executeQuery(
+    `UPDATE subtasks SET status = ?, updated_at = ? WHERE id = ?`,
+    [status, now, subtaskId]
+  );
 
-  const subtask = task.subtasks.id(subtaskId);
-  if (!subtask) return null;
-
-  subtask.status = status;
-  await task.save();
-
-  return map(task._id.toString(), subtask);
+  return getSubtaskById(subtaskId);
 };
 
+export const deleteSubtask = async (subtaskId: string): Promise<boolean> => {
+  const [result]: any = await executeQuery(
+    `DELETE FROM subtasks WHERE id = ?`,
+    [subtaskId]
+  );
 
-export const deleteSubtask = async (subtaskId: string) => {
-
-  const task = await TaskModel.findOne({ "subtasks._id": subtaskId });
-  if (!task) return false;
-
-  task.subtasks.pull({ _id: subtaskId });
-  await task.save();
-
-  return true;
+  return (result as any).affectedRows > 0;
 };
 
+export const getTaskSubtaskStats = async (taskId: string): Promise<{ total: number; completed: number }> => {
+  const [stats]: any = await executeQuery(
+    `SELECT 
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completed
+     FROM subtasks
+     WHERE task_id = ?`,
+    [taskId]
+  );
 
-export const getTaskSubtaskStats = async (taskId: string) => {
-
-  const task = await TaskModel.findById(taskId).select("subtasks status").lean();
-  if (!task) return { total: 0, completed: 0 };
-
-  const total = task.subtasks.length;
-  const completed = task.subtasks.filter((s: any) => s.status === "DONE").length;
-
-  return { total, completed };
+  const result = stats?.[0] || { total: 0, completed: 0 };
+  return {
+    total: Number(result.total) || 0,
+    completed: Number(result.completed) || 0
+  };
 };
-
-const map = (taskId: string, s: any) => ({
-  id: s._id.toString(),
-  task_id: taskId,
-  title: s.title,
-  description: s.description ?? null,
-  status: s.status,
-  created_by: s.created_by?._id?.toString?.() || s.created_by,
-  created_at: s.created_at,
-  updated_at: s.updated_at ?? s.created_at
-});
-

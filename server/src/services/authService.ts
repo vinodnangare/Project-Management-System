@@ -1,13 +1,13 @@
-import bcrypt from "bcrypt";
-import UserModel from "../models/User.js";
-import cloudinary from "../config/cloudinary.js";
-import mongoose from "mongoose";
+import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcrypt';
+import { executeQuery } from '../config/database.js';
+import cloudinary from '../config/cloudinary.js';
 
 export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: "admin" | "manager" | "employee";
+  role: 'admin' | 'manager' | 'employee';
   is_active: boolean;
   created_at: string;
   mobile_number?: string | null;
@@ -18,7 +18,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   full_name: string;
-  role?: "manager" | "employee";
+  role?: 'manager' | 'employee';
 }
 
 export interface LoginRequest {
@@ -26,151 +26,267 @@ export interface LoginRequest {
   password: string;
 }
 
-/* ---------------- REGISTER ---------------- */
-
 export const registerEmployee = async (data: RegisterRequest): Promise<User> => {
-  const role = String(data.role || "employee").trim().toLowerCase();
-
-  if (!["manager", "employee"].includes(role)) {
-    throw new Error(`Invalid role: "${role}"`);
-  }
-
-  const existingUser = await UserModel.findOne({ email: data.email });
-  if (existingUser) {
-    throw new Error("User with this email already exists");
-  }
-
+  const userId = uuidv4();
   const hashedPassword = await bcrypt.hash(data.password, 10);
-
-  const user = await UserModel.create({
+  
+  console.log('RegisterEmployee received data:', {
     email: data.email,
-    password: hashedPassword,
     full_name: data.full_name,
-    role,
+    role: data.role,
+    roleType: typeof data.role
   });
 
-  return mapUser(user);
-};
+  const role = String(data.role || 'employee').trim().toLowerCase();
 
-/* ---------------- LOGIN ---------------- */
+  console.log('Processed role:', { original: data.role, processed: role });
+
+  // Validate role value
+  if (!['manager', 'employee'].includes(role)) {
+    throw new Error(`Invalid role: "${role}". Must be either "manager" or "employee"`);
+  }
+
+  const [existingUsers]: any = await executeQuery(
+    'SELECT id FROM users WHERE email = ?',
+    [data.email]
+  );
+
+  if (existingUsers && existingUsers.length > 0) {
+    throw new Error('User with this email already exists');
+  }
+
+  console.log('Inserting user with role:', role);
+
+  await executeQuery(
+    `INSERT INTO users (id, email, password, full_name, role, is_active, mobile_number)
+     VALUES (?, ?, ?, ?, ?, 1, NULL)`,
+    [userId, data.email, hashedPassword, data.full_name, role]
+  );
+
+  return {
+    id: userId,
+    email: data.email,
+    full_name: data.full_name,
+    role: role as 'admin' | 'manager' | 'employee',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    mobile_number: null,
+    profile_image_url: null
+  };
+};
 
 export const login = async (data: LoginRequest): Promise<User> => {
-  const user = await UserModel.findOne({ email: data.email, is_active: true }).select("+password");
+  const [users]: any = await executeQuery(
+    'SELECT * FROM users WHERE email = ? AND is_active = 1',
+    [data.email]
+  );
 
-  if (!user) throw new Error("Invalid email or password");
+  if (!users || users.length === 0) {
+    throw new Error('Invalid email or password');
+  }
 
-  const valid = await bcrypt.compare(data.password, user.password);
-  if (!valid) throw new Error("Invalid email or password");
+  const user = users[0];
+  const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
-  return mapUser(user);
+  if (!isPasswordValid) {
+    throw new Error('Invalid email or password');
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    full_name: user.full_name,
+    role: user.role,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    mobile_number: user.mobile_number || null,
+    profile_image_url: user.profile_image_url || null
+  };
 };
-
-/* ---------------- DELETE EMPLOYEE ---------------- */
 
 export const deleteEmployee = async (
   employeeIdentifier: string,
   adminId: string
 ): Promise<void> => {
-
-  const admin = await UserModel.findById(adminId);
-  if (!admin || admin.role !== "admin") {
-    throw new Error("Only admins can delete employees");
+  if (!employeeIdentifier || !adminId) {
+    throw new Error('Employee ID and Admin ID are required');
   }
 
-  const user = await UserModel.findOne({
-    $or: [
-      { _id: mongoose.Types.ObjectId.isValid(employeeIdentifier) ? employeeIdentifier : null },
-      { email: employeeIdentifier }
-    ]
-  });
+  const [admins]: any = await executeQuery(
+    'SELECT role FROM users WHERE id = ?',
+    [adminId]
+  );
 
-  if (!user) throw new Error("Employee not found");
-  if (user.role === "admin") throw new Error("Cannot delete admin users");
+  if (!admins || admins.length === 0 || admins[0].role !== 'admin') {
+    throw new Error('Only admins can delete employees');
+  }
 
-  user.is_active = false;
-  await user.save();
+  const identifier = String(employeeIdentifier).trim();
+  const [users]: any = await executeQuery(
+    'SELECT id, role FROM users WHERE id = ? OR email = ?',
+    [identifier, identifier]
+  );
+
+  if (!users || users.length === 0) {
+    throw new Error('Employee not found');
+  }
+
+  if (users[0].role === 'admin') {
+    throw new Error('Cannot delete admin users');
+  }
+
+  await executeQuery(
+    'UPDATE users SET is_active = 0 WHERE id = ?',
+    [users[0].id]
+  );
 };
-
-/* ---------------- UPDATE PROFILE ---------------- */
 
 export const updateUserProfile = async (
   userId: string,
   data: { full_name?: string; mobile_number?: string }
 ): Promise<User> => {
+  // Validation
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
 
-  if (data.mobile_number) {
-    const clean = data.mobile_number.replace(/[-\s]/g, "");
-    if (!/^\d{10}$/.test(clean)) {
-      throw new Error("Mobile number must be 10 digits");
+  if (data.full_name !== undefined && !data.full_name.trim()) {
+    throw new Error('Full name cannot be empty');
+  }
+
+  if (data.mobile_number && data.mobile_number.trim()) {
+    const cleanNumber = data.mobile_number.replace(/[-\s]/g, '');
+    if (!/^\d{10}$/.test(cleanNumber)) {
+      throw new Error('Mobile number must be 10 digits');
     }
   }
 
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
-    {
-      ...(data.full_name !== undefined && { full_name: data.full_name.trim() }),
-      ...(data.mobile_number !== undefined && { mobile_number: data.mobile_number || null })
-    },
-    { new: true }
+  const updateFields: string[] = [];
+  const updateValues: any[] = [];
+
+  if (data.full_name !== undefined) {
+    updateFields.push('full_name = ?');
+    updateValues.push(data.full_name.trim());
+  }
+
+  if (data.mobile_number !== undefined) {
+    updateFields.push('mobile_number = ?');
+    updateValues.push(data.mobile_number ? data.mobile_number.trim() : null);
+  }
+
+  if (updateFields.length === 0) {
+    throw new Error('No fields to update');
+  }
+
+  updateValues.push(userId);
+
+  await executeQuery(
+    `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
+    updateValues
   );
 
-  if (!user) throw new Error("User not found");
+  const [users]: any = await executeQuery(
+    'SELECT id, email, full_name, role, is_active, created_at, mobile_number, profile_image_url FROM users WHERE id = ?',
+    [userId]
+  );
 
-  return mapUser(user);
+  if (!users || users.length === 0) {
+    throw new Error('User not found');
+  }
+
+  const user = users[0];
+  return {
+    id: user.id,
+    email: user.email,
+    full_name: user.full_name,
+    role: user.role,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    mobile_number: user.mobile_number || null,
+    profile_image_url: user.profile_image_url || null
+  };
 };
-
-/* ---------------- GET USER ---------------- */
 
 export const getUserById = async (userId: string): Promise<User | null> => {
-  const user = await UserModel.findById(userId);
-  return user ? mapUser(user) : null;
-};
+  const [users]: any = await executeQuery(
+    'SELECT id, email, full_name, role, is_active, created_at, mobile_number, profile_image_url FROM users WHERE id = ?',
+    [userId]
+  );
 
-/* ---------------- PROFILE IMAGE ---------------- */
+  return users && users.length > 0 ? users[0] : null;
+};
 
 export const updateProfileImage = async (
   userId: string,
   file: Express.Multer.File
 ): Promise<User> => {
-
-  const user = await UserModel.findById(userId);
-  if (!user) throw new Error("User not found");
-
-  // delete old image
-  if (user.profile_image_url) {
-    try {
-      const publicId = user.profile_image_url.split("/").pop()?.split(".")[0];
-      if (publicId) await cloudinary.uploader.destroy(`profile_images/${publicId}`);
-    } catch {}
+  if (!userId) {
+    throw new Error('User ID is required');
   }
 
-  // upload new
+  // Get current user to delete old image if exists
+  const [users]: any = await executeQuery(
+    'SELECT profile_image_url FROM users WHERE id = ?',
+    [userId]
+  );
+
+  if (!users || users.length === 0) {
+    throw new Error('User not found');
+  }
+
+  const oldImageUrl = users[0].profile_image_url;
+
+  // Delete old image from Cloudinary if exists
+  if (oldImageUrl) {
+    try {
+      const publicId = oldImageUrl.split('/').pop()?.split('.')[0];
+      if (publicId) {
+        await cloudinary.uploader.destroy(`profile_images/${publicId}`);
+      }
+    } catch (error) {
+      console.error('Error deleting old image:', error);
+    }
+  }
+
+  // Upload new image to Cloudinary
   const uploadResult = await new Promise<any>((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
+    const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: "profile_images",
-        transformation: [{ width: 400, height: 400, crop: "fill", gravity: "face" }]
+        folder: 'profile_images',
+        transformation: [
+          { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+          { quality: 'auto:good' }
+        ]
       },
-      (err, result) => (err ? reject(err) : resolve(result))
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
     );
-    stream.end(file.buffer);
+    uploadStream.end(file.buffer);
   });
 
-  user.profile_image_url = uploadResult.secure_url;
-  await user.save();
+  // Update database with new image URL
+  await executeQuery(
+    'UPDATE users SET profile_image_url = ? WHERE id = ?',
+    [uploadResult.secure_url, userId]
+  );
 
-  return mapUser(user);
+  // Return updated user
+  const [updatedUsers]: any = await executeQuery(
+    'SELECT id, email, full_name, role, is_active, created_at, mobile_number, profile_image_url FROM users WHERE id = ?',
+    [userId]
+  );
+
+  const user = updatedUsers[0];
+  return {
+    id: user.id,
+    email: user.email,
+    full_name: user.full_name,
+    role: user.role,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    mobile_number: user.mobile_number || null,
+    profile_image_url: user.profile_image_url || null
+  };
 };
-
-/* ---------------- HELPER ---------------- */
-
-const mapUser = (user: any): User => ({
-  id: user._id.toString(),
-  email: user.email,
-  full_name: user.full_name,
-  role: user.role,
-  is_active: user.is_active,
-  created_at: user.created_at?.toISOString(),
-  mobile_number: user.mobile_number ?? null,
-  profile_image_url: user.profile_image_url ?? null,
-});
