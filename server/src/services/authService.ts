@@ -1,9 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
-import { executeQuery } from '../config/database.js';
+import { User, IUser } from '../models/index.js';
 import cloudinary from '../config/cloudinary.js';
 
-export interface User {
+export interface UserResponse {
   id: string;
   email: string;
   full_name: string;
@@ -26,8 +25,18 @@ export interface LoginRequest {
   password: string;
 }
 
-export const registerEmployee = async (data: RegisterRequest): Promise<User> => {
-  const userId = uuidv4();
+const formatUserResponse = (user: IUser): UserResponse => ({
+  id: user._id.toString(),
+  email: user.email,
+  full_name: user.full_name,
+  role: user.role,
+  is_active: user.is_active,
+  created_at: user.created_at.toISOString(),
+  mobile_number: user.mobile_number || null,
+  profile_image_url: user.profile_image_url || null
+});
+
+export const registerEmployee = async (data: RegisterRequest): Promise<UserResponse> => {
   const hashedPassword = await bcrypt.hash(data.password, 10);
   
   console.log('RegisterEmployee received data:', {
@@ -37,7 +46,7 @@ export const registerEmployee = async (data: RegisterRequest): Promise<User> => 
     roleType: typeof data.role
   });
 
-  const role = String(data.role || 'employee').trim().toLowerCase();
+  const role = String(data.role || 'employee').trim().toLowerCase() as 'manager' | 'employee';
 
   console.log('Processed role:', { original: data.role, processed: role });
 
@@ -46,62 +55,44 @@ export const registerEmployee = async (data: RegisterRequest): Promise<User> => 
     throw new Error(`Invalid role: "${role}". Must be either "manager" or "employee"`);
   }
 
-  const [existingUsers]: any = await executeQuery(
-    'SELECT id FROM users WHERE email = ?',
-    [data.email]
-  );
+  // Check if user exists
+  const existingUser = await User.findOne({ email: data.email.toLowerCase() });
 
-  if (existingUsers && existingUsers.length > 0) {
+  if (existingUser) {
     throw new Error('User with this email already exists');
   }
 
   console.log('Inserting user with role:', role);
 
-  await executeQuery(
-    `INSERT INTO users (id, email, password, full_name, role, is_active, mobile_number)
-     VALUES (?, ?, ?, ?, ?, 1, NULL)`,
-    [userId, data.email, hashedPassword, data.full_name, role]
-  );
-
-  return {
-    id: userId,
-    email: data.email,
+  const newUser = await User.create({
+    email: data.email.toLowerCase(),
+    password: hashedPassword,
     full_name: data.full_name,
-    role: role as 'admin' | 'manager' | 'employee',
+    role: role,
     is_active: true,
-    created_at: new Date().toISOString(),
-    mobile_number: null,
-    profile_image_url: null
-  };
+    mobile_number: null
+  });
+
+  return formatUserResponse(newUser);
 };
 
-export const login = async (data: LoginRequest): Promise<User> => {
-  const [users]: any = await executeQuery(
-    'SELECT * FROM users WHERE email = ? AND is_active = 1',
-    [data.email]
-  );
+export const login = async (data: LoginRequest): Promise<UserResponse> => {
+  const user = await User.findOne({ 
+    email: data.email.toLowerCase(),
+    is_active: true 
+  });
 
-  if (!users || users.length === 0) {
+  if (!user) {
     throw new Error('Invalid email or password');
   }
 
-  const user = users[0];
   const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
   if (!isPasswordValid) {
     throw new Error('Invalid email or password');
   }
 
-  return {
-    id: user.id,
-    email: user.email,
-    full_name: user.full_name,
-    role: user.role,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    mobile_number: user.mobile_number || null,
-    profile_image_url: user.profile_image_url || null
-  };
+  return formatUserResponse(user);
 };
 
 export const deleteEmployee = async (
@@ -112,39 +103,35 @@ export const deleteEmployee = async (
     throw new Error('Employee ID and Admin ID are required');
   }
 
-  const [admins]: any = await executeQuery(
-    'SELECT role FROM users WHERE id = ?',
-    [adminId]
-  );
+  const admin = await User.findById(adminId);
 
-  if (!admins || admins.length === 0 || admins[0].role !== 'admin') {
+  if (!admin || admin.role !== 'admin') {
     throw new Error('Only admins can delete employees');
   }
 
   const identifier = String(employeeIdentifier).trim();
-  const [users]: any = await executeQuery(
-    'SELECT id, role FROM users WHERE id = ? OR email = ?',
-    [identifier, identifier]
-  );
+  const user = await User.findOne({
+    $or: [
+      { _id: identifier },
+      { email: identifier }
+    ]
+  });
 
-  if (!users || users.length === 0) {
+  if (!user) {
     throw new Error('Employee not found');
   }
 
-  if (users[0].role === 'admin') {
+  if (user.role === 'admin') {
     throw new Error('Cannot delete admin users');
   }
 
-  await executeQuery(
-    'UPDATE users SET is_active = 0 WHERE id = ?',
-    [users[0].id]
-  );
+  await User.findByIdAndUpdate(user._id, { is_active: false });
 };
 
 export const updateUserProfile = async (
   userId: string,
   data: { full_name?: string; mobile_number?: string }
-): Promise<User> => {
+): Promise<UserResponse> => {
   // Validation
   if (!userId) {
     throw new Error('User ID is required');
@@ -161,80 +148,54 @@ export const updateUserProfile = async (
     }
   }
 
-  const updateFields: string[] = [];
-  const updateValues: any[] = [];
+  const updateFields: Record<string, any> = {};
 
   if (data.full_name !== undefined) {
-    updateFields.push('full_name = ?');
-    updateValues.push(data.full_name.trim());
+    updateFields.full_name = data.full_name.trim();
   }
 
   if (data.mobile_number !== undefined) {
-    updateFields.push('mobile_number = ?');
-    updateValues.push(data.mobile_number ? data.mobile_number.trim() : null);
+    updateFields.mobile_number = data.mobile_number ? data.mobile_number.trim() : null;
   }
 
-  if (updateFields.length === 0) {
+  if (Object.keys(updateFields).length === 0) {
     throw new Error('No fields to update');
   }
 
-  updateValues.push(userId);
-
-  await executeQuery(
-    `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
-    updateValues
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $set: updateFields },
+    { new: true }
   );
 
-  const [users]: any = await executeQuery(
-    'SELECT id, email, full_name, role, is_active, created_at, mobile_number, profile_image_url FROM users WHERE id = ?',
-    [userId]
-  );
-
-  if (!users || users.length === 0) {
+  if (!updatedUser) {
     throw new Error('User not found');
   }
 
-  const user = users[0];
-  return {
-    id: user.id,
-    email: user.email,
-    full_name: user.full_name,
-    role: user.role,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    mobile_number: user.mobile_number || null,
-    profile_image_url: user.profile_image_url || null
-  };
+  return formatUserResponse(updatedUser);
 };
 
-export const getUserById = async (userId: string): Promise<User | null> => {
-  const [users]: any = await executeQuery(
-    'SELECT id, email, full_name, role, is_active, created_at, mobile_number, profile_image_url FROM users WHERE id = ?',
-    [userId]
-  );
-
-  return users && users.length > 0 ? users[0] : null;
+export const getUserById = async (userId: string): Promise<UserResponse | null> => {
+  const user = await User.findById(userId);
+  return user ? formatUserResponse(user) : null;
 };
 
 export const updateProfileImage = async (
   userId: string,
   file: Express.Multer.File
-): Promise<User> => {
+): Promise<UserResponse> => {
   if (!userId) {
     throw new Error('User ID is required');
   }
 
   // Get current user to delete old image if exists
-  const [users]: any = await executeQuery(
-    'SELECT profile_image_url FROM users WHERE id = ?',
-    [userId]
-  );
+  const user = await User.findById(userId);
 
-  if (!users || users.length === 0) {
+  if (!user) {
     throw new Error('User not found');
   }
 
-  const oldImageUrl = users[0].profile_image_url;
+  const oldImageUrl = user.profile_image_url;
 
   // Delete old image from Cloudinary if exists
   if (oldImageUrl) {
@@ -267,26 +228,15 @@ export const updateProfileImage = async (
   });
 
   // Update database with new image URL
-  await executeQuery(
-    'UPDATE users SET profile_image_url = ? WHERE id = ?',
-    [uploadResult.secure_url, userId]
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $set: { profile_image_url: uploadResult.secure_url } },
+    { new: true }
   );
 
-  // Return updated user
-  const [updatedUsers]: any = await executeQuery(
-    'SELECT id, email, full_name, role, is_active, created_at, mobile_number, profile_image_url FROM users WHERE id = ?',
-    [userId]
-  );
+  if (!updatedUser) {
+    throw new Error('User not found after update');
+  }
 
-  const user = updatedUsers[0];
-  return {
-    id: user.id,
-    email: user.email,
-    full_name: user.full_name,
-    role: user.role,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    mobile_number: user.mobile_number || null,
-    profile_image_url: user.profile_image_url || null
-  };
+  return formatUserResponse(updatedUser);
 };

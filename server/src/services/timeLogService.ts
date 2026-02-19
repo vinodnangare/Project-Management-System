@@ -1,7 +1,7 @@
-import { v4 as uuidv4 } from 'uuid';
-import { executeQuery } from '../config/database.js';
+import mongoose from 'mongoose';
+import { TimeLog, Task, User } from '../models/index.js';
 
-export interface TimeLog {
+export interface TimeLogResponse {
   id: string;
   user_id: string;
   task_id: string | null;
@@ -10,6 +10,8 @@ export interface TimeLog {
   description: string | null;
   created_at: string;
   updated_at: string;
+  task_title?: string;
+  full_name?: string;
 }
 
 export interface CreateTimeLogRequest {
@@ -22,57 +24,63 @@ export interface CreateTimeLogRequest {
 export const logTime = async (
   userId: string,
   data: CreateTimeLogRequest
-): Promise<TimeLog> => {
-  const timeLogId = uuidv4();
-  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+): Promise<TimeLogResponse> => {
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
-  const [existing]: any = await executeQuery(
-    'SELECT id FROM time_logs WHERE user_id = ? AND date = ?',
-    [userId, data.date]
-  );
+  // Check for existing time log on same date
+  const existing = await TimeLog.findOne({
+    user_id: userObjectId,
+    date: data.date
+  });
 
-  if (existing && existing.length > 0) {
-    await executeQuery(
-      `UPDATE time_logs 
-       SET hours_worked = ?, task_id = ?, description = ?, updated_at = ?
-       WHERE user_id = ? AND date = ?`,
-      [
-        data.hours_worked,
-        data.task_id || null,
-        data.description || null,
-        now,
-        userId,
-        data.date
-      ]
+  if (existing) {
+    // Update existing time log
+    const updated = await TimeLog.findByIdAndUpdate(
+      existing._id,
+      {
+        $set: {
+          hours_worked: data.hours_worked,
+          task_id: data.task_id ? new mongoose.Types.ObjectId(data.task_id) : null,
+          description: data.description || null
+        }
+      },
+      { new: true }
     );
 
-    return getTimeLogByUserAndDate(userId, data.date);
+    if (!updated) {
+      throw new Error('Time log not found after update');
+    }
+
+    return {
+      id: updated._id.toString(),
+      user_id: userId,
+      task_id: updated.task_id?.toString() || null,
+      hours_worked: updated.hours_worked,
+      date: updated.date,
+      description: updated.description || null,
+      created_at: updated.created_at.toISOString(),
+      updated_at: updated.updated_at.toISOString()
+    };
   }
 
-  await executeQuery(
-    `INSERT INTO time_logs (id, user_id, task_id, hours_worked, date, description, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      timeLogId,
-      userId,
-      data.task_id || null,
-      data.hours_worked,
-      data.date,
-      data.description || null,
-      now,
-      now
-    ]
-  );
-
-  return {
-    id: timeLogId,
-    user_id: userId,
-    task_id: data.task_id || null,
+  // Create new time log
+  const timeLog = await TimeLog.create({
+    user_id: userObjectId,
+    task_id: data.task_id ? new mongoose.Types.ObjectId(data.task_id) : null,
     hours_worked: data.hours_worked,
     date: data.date,
-    description: data.description || null,
-    created_at: now,
-    updated_at: now
+    description: data.description || null
+  });
+
+  return {
+    id: timeLog._id.toString(),
+    user_id: userId,
+    task_id: timeLog.task_id?.toString() || null,
+    hours_worked: timeLog.hours_worked,
+    date: timeLog.date,
+    description: timeLog.description || null,
+    created_at: timeLog.created_at.toISOString(),
+    updated_at: timeLog.updated_at.toISOString()
   };
 };
 
@@ -80,42 +88,66 @@ export const getUserTimeLogs = async (
   userId: string,
   startDate: string,
   endDate: string
-): Promise<TimeLog[]> => {
-  const [logs]: any = await executeQuery(
-    `SELECT tl.*, t.title as task_title FROM time_logs tl
-     LEFT JOIN tasks t ON tl.task_id = t.id
-     WHERE tl.user_id = ? AND tl.date BETWEEN ? AND ?
-     ORDER BY tl.date DESC`,
-    [userId, startDate, endDate]
-  );
+): Promise<TimeLogResponse[]> => {
+  const logs = await TimeLog.find({
+    user_id: new mongoose.Types.ObjectId(userId),
+    date: { $gte: startDate, $lte: endDate }
+  })
+    .populate('task_id', 'title')
+    .sort({ date: -1 });
 
-  return logs || [];
+  return logs.map(log => ({
+    id: log._id.toString(),
+    user_id: userId,
+    task_id: log.task_id?._id?.toString() || null,
+    hours_worked: log.hours_worked,
+    date: log.date,
+    description: log.description || null,
+    created_at: log.created_at.toISOString(),
+    updated_at: log.updated_at.toISOString(),
+    task_title: (log.task_id as any)?.title || null
+  }));
 };
 
 export const getTimeLogByUserAndDate = async (
   userId: string,
   date: string
-): Promise<TimeLog> => {
-  const [logs]: any = await executeQuery(
-    'SELECT * FROM time_logs WHERE user_id = ? AND date = ?',
-    [userId, date]
-  );
+): Promise<TimeLogResponse> => {
+  const log = await TimeLog.findOne({
+    user_id: new mongoose.Types.ObjectId(userId),
+    date: date
+  });
 
-  if (!logs || logs.length === 0) {
+  if (!log) {
     throw new Error('Time log not found');
   }
 
-  return logs[0];
+  return {
+    id: log._id.toString(),
+    user_id: userId,
+    task_id: log.task_id?.toString() || null,
+    hours_worked: log.hours_worked,
+    date: log.date,
+    description: log.description || null,
+    created_at: log.created_at.toISOString(),
+    updated_at: log.updated_at.toISOString()
+  };
 };
 
-export const getTimeLogsByDate = async (date: string): Promise<TimeLog[]> => {
-  const [logs]: any = await executeQuery(
-    `SELECT tl.*, u.full_name FROM time_logs tl
-     JOIN users u ON tl.user_id = u.id
-     WHERE tl.date = ?
-     ORDER BY u.full_name ASC`,
-    [date]
-  );
+export const getTimeLogsByDate = async (date: string): Promise<TimeLogResponse[]> => {
+  const logs = await TimeLog.find({ date })
+    .populate('user_id', 'full_name')
+    .sort({ 'user_id.full_name': 1 });
 
-  return logs || [];
+  return logs.map(log => ({
+    id: log._id.toString(),
+    user_id: log.user_id._id.toString(),
+    task_id: log.task_id?.toString() || null,
+    hours_worked: log.hours_worked,
+    date: log.date,
+    description: log.description || null,
+    created_at: log.created_at.toISOString(),
+    updated_at: log.updated_at.toISOString(),
+    full_name: (log.user_id as any).full_name || null
+  }));
 };

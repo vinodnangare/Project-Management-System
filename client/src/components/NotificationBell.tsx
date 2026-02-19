@@ -7,7 +7,8 @@ const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false);
 
   const { data, isLoading, refetch } = useGetNotificationsQuery(undefined, {
-    pollingInterval: 30000,
+    pollingInterval: 10000,
+    refetchOnMountOrArgChange: true,
   });
 
   const notifications = data?.data ?? [];

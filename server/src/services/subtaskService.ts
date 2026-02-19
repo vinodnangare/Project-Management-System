@@ -1,117 +1,120 @@
-import { v4 as uuidv4 } from 'uuid';
-import { executeQuery } from '../config/database.js';
-import { Subtask } from '../types/index.js';
-
-const toMySQLDateTime = (isoString: string | null): string | null => {
-  if (!isoString) return null;
-  return new Date(isoString).toISOString().slice(0, 19).replace('T', ' ');
-};
+import mongoose from 'mongoose';
+import { Subtask, User } from '../models/index.js';
+import { Subtask as SubtaskType } from '../types/index.js';
 
 export const createSubtask = async (
   taskId: string,
   title: string,
   description: string | null,
   createdBy: string
-): Promise<Subtask> => {
-  const subtaskId = uuidv4();
-  const now = toMySQLDateTime(new Date().toISOString());
-
-  const subtask: Subtask = {
-    id: subtaskId,
-    task_id: taskId,
+): Promise<SubtaskType> => {
+  const subtask = await Subtask.create({
+    task_id: new mongoose.Types.ObjectId(taskId),
     title,
     description: description ?? null,
     status: 'TODO',
+    created_by: new mongoose.Types.ObjectId(createdBy)
+  });
+
+  return {
+    id: subtask._id.toString(),
+    task_id: taskId,
+    title: subtask.title,
+    description: subtask.description || null,
+    status: subtask.status,
     created_by: createdBy,
-    created_at: now!,
-    updated_at: now!
+    created_at: subtask.created_at.toISOString(),
+    updated_at: subtask.updated_at.toISOString()
   };
-
-  await executeQuery(
-    `INSERT INTO subtasks (id, task_id, title, description, status, created_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      subtask.id,
-      subtask.task_id,
-      subtask.title,
-      subtask.description,
-      subtask.status,
-      subtask.created_by,
-      subtask.created_at,
-      subtask.updated_at
-    ]
-  );
-
-  return subtask;
 };
 
-export const getSubtasksByTaskId = async (taskId: string): Promise<Subtask[]> => {
-  const [subtasks]: any = await executeQuery(
-    `SELECT 
-      s.*,
-      u.full_name AS created_by_name,
-      u.email AS created_by_email
-     FROM subtasks s
-     LEFT JOIN users u ON u.id = s.created_by
-     WHERE s.task_id = ?
-     ORDER BY s.created_at ASC`,
-    [taskId]
-  );
+export const getSubtasksByTaskId = async (taskId: string): Promise<SubtaskType[]> => {
+  const subtasks = await Subtask.find({
+    task_id: new mongoose.Types.ObjectId(taskId)
+  })
+    .populate('created_by', 'full_name email')
+    .sort({ created_at: 1 });
 
-  return (subtasks || []) as Subtask[];
+  return subtasks.map(s => ({
+    id: s._id.toString(),
+    task_id: taskId,
+    title: s.title,
+    description: s.description || null,
+    status: s.status,
+    created_by: s.created_by._id.toString(),
+    created_by_name: (s.created_by as any).full_name || null,
+    created_by_email: (s.created_by as any).email || null,
+    created_at: s.created_at.toISOString(),
+    updated_at: s.updated_at.toISOString()
+  }));
 };
 
-export const getSubtaskById = async (subtaskId: string): Promise<Subtask | null> => {
-  const [subtasks]: any = await executeQuery(
-    `SELECT 
-      s.*,
-      u.full_name AS created_by_name,
-      u.email AS created_by_email
-     FROM subtasks s
-     LEFT JOIN users u ON u.id = s.created_by
-     WHERE s.id = ?`,
-    [subtaskId]
-  );
+export const getSubtaskById = async (subtaskId: string): Promise<SubtaskType | null> => {
+  const subtask = await Subtask.findById(subtaskId)
+    .populate('created_by', 'full_name email');
 
-  return subtasks?.[0] || null;
+  if (!subtask) return null;
+
+  return {
+    id: subtask._id.toString(),
+    task_id: subtask.task_id.toString(),
+    title: subtask.title,
+    description: subtask.description || null,
+    status: subtask.status,
+    created_by: subtask.created_by._id.toString(),
+    created_by_name: (subtask.created_by as any).full_name || null,
+    created_by_email: (subtask.created_by as any).email || null,
+    created_at: subtask.created_at.toISOString(),
+    updated_at: subtask.updated_at.toISOString()
+  };
 };
 
 export const updateSubtaskStatus = async (
   subtaskId: string,
   status: 'TODO' | 'DONE'
-): Promise<Subtask | null> => {
-  const now = toMySQLDateTime(new Date().toISOString());
+): Promise<SubtaskType | null> => {
+  const updated = await Subtask.findByIdAndUpdate(
+    subtaskId,
+    { $set: { status } },
+    { new: true }
+  ).populate('created_by', 'full_name email');
 
-  await executeQuery(
-    `UPDATE subtasks SET status = ?, updated_at = ? WHERE id = ?`,
-    [status, now, subtaskId]
-  );
+  if (!updated) return null;
 
-  return getSubtaskById(subtaskId);
+  return {
+    id: updated._id.toString(),
+    task_id: updated.task_id.toString(),
+    title: updated.title,
+    description: updated.description || null,
+    status: updated.status,
+    created_by: updated.created_by._id.toString(),
+    created_by_name: (updated.created_by as any).full_name || null,
+    created_by_email: (updated.created_by as any).email || null,
+    created_at: updated.created_at.toISOString(),
+    updated_at: updated.updated_at.toISOString()
+  };
 };
 
 export const deleteSubtask = async (subtaskId: string): Promise<boolean> => {
-  const [result]: any = await executeQuery(
-    `DELETE FROM subtasks WHERE id = ?`,
-    [subtaskId]
-  );
-
-  return (result as any).affectedRows > 0;
+  const result = await Subtask.findByIdAndDelete(subtaskId);
+  return result !== null;
 };
 
 export const getTaskSubtaskStats = async (taskId: string): Promise<{ total: number; completed: number }> => {
-  const [stats]: any = await executeQuery(
-    `SELECT 
-      COUNT(*) as total,
-      SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completed
-     FROM subtasks
-     WHERE task_id = ?`,
-    [taskId]
-  );
+  const stats = await Subtask.aggregate([
+    { $match: { task_id: new mongoose.Types.ObjectId(taskId) } },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'DONE'] }, 1, 0] } }
+      }
+    }
+  ]);
 
-  const result = stats?.[0] || { total: 0, completed: 0 };
+  const result = stats[0] || { total: 0, completed: 0 };
   return {
-    total: Number(result.total) || 0,
-    completed: Number(result.completed) || 0
+    total: result.total,
+    completed: result.completed
   };
 };
