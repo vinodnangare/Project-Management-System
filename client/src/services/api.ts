@@ -1,7 +1,8 @@
+// ...existing code...
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../store';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export interface User {
   id: string;
@@ -156,6 +157,14 @@ export interface TimeLog {
   created_at: string;
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
@@ -170,8 +179,30 @@ export const api = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc'],
+  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc', 'Notification'],
   endpoints: (builder) => ({
+    // Notifications
+    getNotifications: builder.query<
+      { data: Notification[]; unread_count: number; total: number },
+      void
+    >({
+      query: () => '/notifications',
+      transformResponse: (response: { success: boolean; data: Notification[]; unread_count: number; total: number }) => ({
+        data: response.data,
+        unread_count: response.unread_count,
+        total: response.total,
+      }),
+      providesTags: ['Notification'],
+    }),
+
+    markNotificationAsRead: builder.mutation<{ id: string; is_read: boolean }, string>({
+      query: (notificationId) => ({
+        url: `/notifications/${notificationId}/read`,
+        method: 'PATCH',
+      }),
+      transformResponse: (response: { success: boolean; data: { id: string; is_read: boolean } }) => response.data,
+      invalidatesTags: ['Notification'],
+    }),
     // Auth Endpoints
     login: builder.mutation<{ user: User; token: string }, { email: string; password: string }>({
       query: (credentials) => ({
@@ -473,6 +504,18 @@ export const api = createApi({
       transformResponse: (response: { success: boolean; data: TimeLog | null }) => response.data,
       providesTags: ['TimeLog'],
     }),
+     // Admin: Get all employees' time logs for a date
+    getAdminTimeLogs: builder.query<any[], string>({
+      query: (date) => `/time-logs/all?date=${date}`,
+      transformResponse: (response: { success: boolean; data: any[] }) => response.data,
+      providesTags: ['TimeLog'],
+    }),
+    // Admin: Get time logs for any user by userId and date range
+    getUserTimeLogsAdmin: builder.query<TimeLog[], { userId: string; startDate: string; endDate: string }>({
+      query: ({ userId, startDate, endDate }) => `/time-logs/user/${userId}?startDate=${startDate}&endDate=${endDate}`,
+      transformResponse: (response: { success: boolean; data: TimeLog[] }) => response.data,
+      providesTags: ['TimeLog'],
+    }),
 
     // Stats
     getTaskStats: builder.query<any, void>({
@@ -618,6 +661,8 @@ export const {
   useLogTimeMutation,
   useGetTimeLogsQuery,
   useGetTimeLogForDateQuery,
+  useGetAdminTimeLogsQuery,
+  useGetUserTimeLogsAdminQuery,
   
   // Stats
   useGetTaskStatsQuery,
@@ -636,4 +681,7 @@ export const {
   useGetLeadByIdQuery,
   useUpdateLeadMutation,
   useDeleteLeadMutation,
+  // Notifications
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
 } = api;

@@ -14,6 +14,7 @@ import {
   CreateTaskRequest,
   UpdateTaskRequest
 } from '../validators/task.js';
+import { NotificationService } from './notificationService.js';
 
 const toMySQLDateTime = (isoString: string | null): string | null => {
   if (!isoString) return null;
@@ -67,6 +68,24 @@ export const addAssignee = async (
     new_value: userId,
     performed_by: assignedBy
   }).catch(console.error);
+
+  try {
+    const [taskRows]: any = await executeQuery(
+      'SELECT title FROM tasks WHERE id = ? LIMIT 1',
+      [taskId]
+    );
+    const taskTitle = taskRows?.[0]?.title as string | undefined;
+    const message = taskTitle
+      ? `You have been assigned a task: ${taskTitle}`
+      : 'You have been assigned a task.';
+
+    await NotificationService.createNotification({
+      user_id: userId,
+      message
+    });
+  } catch (error) {
+    console.error('Failed to create assignment notification:', error);
+  }
 };
 
 export const removeAssignee = async (

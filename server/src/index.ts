@@ -1,18 +1,20 @@
-import dotenv from 'dotenv';
+import 'dotenv/config'; // Load environment variables FIRST, before importing anything else
 
-// Load environment variables FIRST, before importing anything else
-dotenv.config();
+
+console.log(process.env.DB_HOST)
 
 import express, { Express } from 'express';
 import cors from 'cors';
 import { initializeDatabase } from './config/database.js';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
 import { verifyJwt } from './middleware/authMiddleware.js';
+import { loginRateLimiter, registerRateLimiter } from './middleware/rateLimitMiddleware.js';
 import taskRoutes from './routes/taskRoutes.js';
 import subtaskRoutes from './routes/subtaskRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import timeLogRoutes from './routes/timeLogRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
@@ -33,9 +35,9 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 
-app.post('/api/auth/register', authController.register);
+app.post('/api/auth/register', registerRateLimiter, authController.register);
 
-app.post('/api/auth/login', authController.signIn);
+app.post('/api/auth/login', loginRateLimiter, authController.signIn);
 
 app.get('/api/auth/profile', verifyJwt, authController.getProfile);
 
@@ -95,8 +97,12 @@ app.post('/api/time-logs', verifyJwt, timeLogController.logTime);
 app.get('/api/time-logs/range', verifyJwt, timeLogController.getUserTimeLogs);
 
 app.get('/api/time-logs', verifyJwt, timeLogController.getUserTimeLogs);
+app.get('/api/time-logs/user/:userId', verifyJwt, timeLogController.getTimeLogsByUserId);
 
 app.use('/api/leads', verifyJwt, leadRoutes);
+
+// Notification routes
+app.use('/api/notifications', verifyJwt, notificationRoutes);
 
 app.use(errorHandler);
 
