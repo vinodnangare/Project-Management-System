@@ -1,0 +1,87 @@
+.admin-time-logs.premium-glass {
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
+  backdrop-filter: blur(8px);
+  border-radius: 24px;
+  padding: 2.5rem 2rem 2rem 2rem;
+  margin: 2rem auto;
+  max-width: 900px;
+  min-height: 400px;
+}
+.atl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+.atl-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: 0.01em;
+}
+.atl-table-wrapper {
+  overflow-x: auto;
+}
+.atl-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+  font-size: 1.05rem;
+  background: transparent;
+}
+.atl-table th {
+  background: rgba(0,0,0,0.04);
+  color: #333;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-radius: 12px 12px 0 0;
+  text-align: left;
+}
+.atl-row {
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 2px 8px 0 rgba(31,38,135,0.08);
+  border-radius: 12px;
+  transition: box-shadow 0.2s;
+}
+.atl-row:hover {
+  box-shadow: 0 4px 16px 0 rgba(31,38,135,0.16);
+}
+.atl-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: none;
+  vertical-align: middle;
+}
+.atl-emp {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.atl-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6a82fb 0%, #fc5c7d 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px 0 rgba(31,38,135,0.10);
+}
+.atl-hours {
+  font-weight: 600;
+  color: #2d8cff;
+}
+.atl-empty {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+}
+.atl-loading, .atl-error {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #888;
+  margin-top: 2rem;
+}
