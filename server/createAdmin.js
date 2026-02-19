@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://patiladitya914_db_user:pwblCl7bDf5h1lU7@cluster0.3scoquu.mongodb.net/taskmanager?appName=Cluster0';
+const MONGO_URI = process.env.MONGO_URI;
 
 // Define User schema inline for this script
 const userSchema = new mongoose.Schema(
