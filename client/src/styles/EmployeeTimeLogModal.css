@@ -1,0 +1,91 @@
+.etl-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(31,38,135,0.12);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.etl-modal.premium-glass {
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
+  backdrop-filter: blur(8px);
+  border-radius: 24px;
+  padding: 2rem 2.5rem 2rem 2.5rem;
+  min-width: 420px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+.etl-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.etl-close-btn:hover {
+  color: #2d8cff;
+}
+.etl-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 1.5rem;
+}
+.etl-table-wrapper {
+  overflow-x: auto;
+}
+.etl-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+  font-size: 1.05rem;
+  background: transparent;
+}
+.etl-table th {
+  background: rgba(0,0,0,0.04);
+  color: #333;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-radius: 12px 12px 0 0;
+  text-align: left;
+}
+.etl-row {
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 2px 8px 0 rgba(31,38,135,0.08);
+  border-radius: 12px;
+  transition: box-shadow 0.2s;
+}
+.etl-row:hover {
+  box-shadow: 0 4px 16px 0 rgba(31,38,135,0.16);
+}
+.etl-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: none;
+  vertical-align: middle;
+}
+.etl-hours {
+  font-weight: 600;
+  color: #2d8cff;
+}
+.etl-empty {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+}
+.etl-loading, .etl-error {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #888;
+  margin-top: 2rem;
+}
