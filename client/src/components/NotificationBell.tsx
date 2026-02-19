@@ -6,7 +6,8 @@ import '../styles/NotificationBell.css';
 const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { data, isLoading, refetch } = useGetNotificationsQuery(undefined, {
-    pollingInterval: 30000, // Poll every 30 seconds
+    pollingInterval: 10000,
+    refetchOnMountOrArgChange: true,
   });
   const notifications = data?.data ?? [];
   const unreadCount = data?.unread_count ?? notifications.filter((n) => !n.is_read).length;

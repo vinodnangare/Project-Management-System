@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosError } from 'axios';
+import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -39,6 +40,11 @@ class ApiClient {
           status: error.response?.status,
           data: error.response?.data
         };
+        // Show toast for rate limit errors
+        if (apiError.status === 429) {
+          const msg = apiError.data?.error || 'Too many requests. Please try again later.';
+          toast.error(msg);
+        }
         return Promise.reject(apiError);
       }
     );

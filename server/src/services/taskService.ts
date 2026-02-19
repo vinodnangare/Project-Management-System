@@ -1,31 +1,20 @@
-import { v4 as uuidv4 } from 'uuid';
-import { executeQuery } from '../config/database.js';
+import mongoose from 'mongoose';
+import { Task, TaskComment, TaskActivity, TaskAssignee, TaskDoc, User, ITask } from '../models/index.js';
 import {
-  Task,
+  Task as TaskType,
   TaskStatus,
   TaskPriority,
-  TaskComment,
-  TaskActivity,
+  TaskComment as TaskCommentType,
+  TaskActivity as TaskActivityType,
   ActivityAction,
   PaginationMeta,
-  TaskDoc
+  TaskDoc as TaskDocType
 } from '../types/index.js';
 import {
   CreateTaskRequest,
   UpdateTaskRequest
 } from '../validators/task.js';
 import { NotificationService } from './notificationService.js';
-
-const toMySQLDateTime = (isoString: string | null): string | null => {
-  if (!isoString) return null;
-  return new Date(isoString).toISOString().slice(0, 19).replace('T', ' ');
-};
-
-const withTimeBounds = (date?: string, isEnd?: boolean): string | null => {
-  if (!date) return null;
-  if (date.includes(' ')) return date;
-  return `${date} ${isEnd ? '23:59:59' : '00:00:00'}`;
-};
 
 interface QueryOptions {
   page?: number;
@@ -35,15 +24,40 @@ interface QueryOptions {
   assigned_to?: string;
 }
 
-export const getAssignableUsers = async (): Promise<Array<{ id: string; full_name: string; email: string }>> => {
-  const [rows]: any = await executeQuery(
-    'SELECT id, full_name, email FROM users WHERE LOWER(role) = "employee" AND is_active = 1'
-  );
+const formatTaskResponse = async (task: ITask): Promise<TaskType> => {
+  const createdByUser = task.created_by ? await User.findById(task.created_by) : null;
+  const assignedToUser = task.assigned_to ? await User.findById(task.assigned_to) : null;
 
-  return (rows || []).map((row: any) => ({
-    id: row.id,
-    full_name: row.full_name,
-    email: row.email
+  return {
+    id: task._id.toString(),
+    title: task.title,
+    description: task.description || null,
+    status: task.status as TaskStatus,
+    priority: task.priority as TaskPriority,
+    assigned_to: task.assigned_to?.toString() || null,
+    assigned_to_name: assignedToUser?.full_name || null,
+    assigned_to_email: assignedToUser?.email || null,
+    created_by: task.created_by.toString(),
+    created_by_name: createdByUser?.full_name || null,
+    created_by_email: createdByUser?.email || null,
+    due_date: task.due_date?.toISOString() || null,
+    estimated_hours: task.estimated_hours || null,
+    is_deleted: task.is_deleted,
+    created_at: task.created_at.toISOString(),
+    updated_at: task.updated_at.toISOString()
+  };
+};
+
+export const getAssignableUsers = async (): Promise<Array<{ id: string; full_name: string; email: string }>> => {
+  const users = await User.find({
+    role: 'employee',
+    is_active: true
+  }).select('full_name email');
+
+  return users.map(user => ({
+    id: user._id.toString(),
+    full_name: user.full_name,
+    email: user.email
   }));
 };
 
@@ -52,14 +66,12 @@ export const addAssignee = async (
   userId: string,
   assignedBy: string
 ): Promise<void> => {
-  const assigneeId = uuidv4();
-  const now = toMySQLDateTime(new Date().toISOString());
-
-  await executeQuery(
-    `INSERT INTO task_assignees (id, task_id, user_id, assigned_by, assigned_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [assigneeId, taskId, userId, assignedBy, now]
-  );
+  await TaskAssignee.create({
+    task_id: new mongoose.Types.ObjectId(taskId),
+    user_id: new mongoose.Types.ObjectId(userId),
+    assigned_by: new mongoose.Types.ObjectId(assignedBy),
+    assigned_at: new Date()
+  });
 
   await logActivity({
     task_id: taskId,
@@ -70,11 +82,8 @@ export const addAssignee = async (
   }).catch(console.error);
 
   try {
-    const [taskRows]: any = await executeQuery(
-      'SELECT title FROM tasks WHERE id = ? LIMIT 1',
-      [taskId]
-    );
-    const taskTitle = taskRows?.[0]?.title as string | undefined;
+    const task = await Task.findById(taskId);
+    const taskTitle = task?.title;
     const message = taskTitle
       ? `You have been assigned a task: ${taskTitle}`
       : 'You have been assigned a task.';
@@ -93,10 +102,10 @@ export const removeAssignee = async (
   userId: string,
   unassignedBy: string
 ): Promise<void> => {
-  await executeQuery(
-    `DELETE FROM task_assignees WHERE task_id = ? AND user_id = ?`,
-    [taskId, userId]
-  );
+  await TaskAssignee.deleteOne({
+    task_id: new mongoose.Types.ObjectId(taskId),
+    user_id: new mongoose.Types.ObjectId(userId)
+  });
 
   await logActivity({
     task_id: taskId,
@@ -118,37 +127,38 @@ export const getTaskAssignees = async (
     assigned_at: string;
   }>
 > => {
-  const [rows]: any = await executeQuery(
-    `SELECT 
-      u.id, u.full_name, u.email,
-      ta.assigned_by, ta.assigned_at
-     FROM task_assignees ta
-     JOIN users u ON u.id = ta.user_id
-     WHERE ta.task_id = ?
-     ORDER BY ta.assigned_at DESC`,
-    [taskId]
-  );
+  const assignees = await TaskAssignee.find({
+    task_id: new mongoose.Types.ObjectId(taskId)
+  })
+    .populate('user_id', 'full_name email')
+    .sort({ assigned_at: -1 });
 
-  return rows || [];
+  return assignees.map(a => ({
+    id: (a.user_id as any)._id.toString(),
+    full_name: (a.user_id as any).full_name,
+    email: (a.user_id as any).email,
+    assigned_by: a.assigned_by.toString(),
+    assigned_at: a.assigned_at.toISOString()
+  }));
 };
 
-export const getUserAssignedTasks = async (userId: string): Promise<Task[]> => {
-  const [tasks]: any = await executeQuery(
-    `SELECT DISTINCT
-      t.*, 
-      cu.full_name AS created_by_name,
-      cu.email AS created_by_email
-     FROM tasks t
-     LEFT JOIN users cu ON cu.id = t.created_by
-     WHERE (t.assigned_to = ? OR t.id IN (
-       SELECT task_id FROM task_assignees WHERE user_id = ?
-     ))
-     AND t.is_deleted = 0
-     ORDER BY t.created_at DESC`,
-    [userId, userId]
-  );
+export const getUserAssignedTasks = async (userId: string): Promise<TaskType[]> => {
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  
+  // Get task IDs from task_assignees
+  const assigneeTaskIds = await TaskAssignee.find({ 
+    user_id: userObjectId 
+  }).distinct('task_id');
 
-  return (tasks || []) as Task[];
+  const tasks = await Task.find({
+    $or: [
+      { assigned_to: userObjectId },
+      { _id: { $in: assigneeTaskIds } }
+    ],
+    is_deleted: false
+  }).sort({ created_at: -1 });
+
+  return Promise.all(tasks.map(formatTaskResponse));
 };
 
 export const getAllTasks = async (
@@ -156,61 +166,75 @@ export const getAllTasks = async (
   userId: string,
   userRole: string
 ): Promise<{
-  tasks: Task[];
+  tasks: TaskType[];
   meta: PaginationMeta;
 }> => {
   const page = Number(options.page || 1);
   const limit = Number(options.limit || 10);
-  const offset = (page - 1) * limit;
+  const skip = (page - 1) * limit;
 
-  let whereClause = 't.is_deleted = 0';
-  const params: (string | number)[] = [];
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  
+  // Build query conditions
+  const conditions: any = { is_deleted: false };
 
   if (userRole !== 'admin') {
-    whereClause += ' AND (t.assigned_to = ? OR EXISTS (SELECT 1 FROM task_assignees ta WHERE ta.task_id = t.id AND ta.user_id = ?))';
-    params.push(userId, userId);
+    // Get task IDs from task_assignees for this user
+    const assigneeTaskIds = await TaskAssignee.find({ 
+      user_id: userObjectId 
+    }).distinct('task_id');
+
+    conditions.$or = [
+      { assigned_to: userObjectId },
+      { _id: { $in: assigneeTaskIds } }
+    ];
   }
 
   if (options.status) {
-    whereClause += ' AND t.status = ?';
-    params.push(options.status);
+    conditions.status = options.status;
   }
 
   if (options.priority) {
-    whereClause += ' AND t.priority = ?';
-    params.push(options.priority);
+    conditions.priority = options.priority;
   }
 
   if (options.assigned_to) {
-    whereClause += ' AND (t.assigned_to = ? OR EXISTS (SELECT 1 FROM task_assignees ta2 WHERE ta2.task_id = t.id AND ta2.user_id = ?))';
-    params.push(options.assigned_to, options.assigned_to);
+    const assignedToId = new mongoose.Types.ObjectId(options.assigned_to);
+    const filterAssigneeTaskIds = await TaskAssignee.find({ 
+      user_id: assignedToId 
+    }).distinct('task_id');
+
+    if (conditions.$or) {
+      // If we already have $or conditions, we need to use $and
+      conditions.$and = [
+        { $or: conditions.$or },
+        {
+          $or: [
+            { assigned_to: assignedToId },
+            { _id: { $in: filterAssigneeTaskIds } }
+          ]
+        }
+      ];
+      delete conditions.$or;
+    } else {
+      conditions.$or = [
+        { assigned_to: assignedToId },
+        { _id: { $in: filterAssigneeTaskIds } }
+      ];
+    }
   }
 
-  const [countResult]: any = await executeQuery(
-    `SELECT COUNT(*) as total FROM tasks t WHERE ${whereClause}`,
-    params
-  );
+  const total = await Task.countDocuments(conditions);
 
-  const total = countResult[0].total;
+  const tasks = await Task.find(conditions)
+    .sort({ created_at: -1 })
+    .skip(skip)
+    .limit(limit);
 
-  const [tasks]: any = await executeQuery(
-    `SELECT 
-      t.*, 
-      cu.full_name AS created_by_name,
-      cu.email AS created_by_email,
-      au.full_name AS assigned_to_name,
-      au.email AS assigned_to_email
-     FROM tasks t
-     LEFT JOIN users cu ON cu.id = t.created_by
-     LEFT JOIN users au ON au.id = t.assigned_to
-     WHERE ${whereClause}
-     ORDER BY t.created_at DESC
-     LIMIT ${limit} OFFSET ${offset}`,
-    params
-  );
+  const formattedTasks = await Promise.all(tasks.map(formatTaskResponse));
 
   return {
-    tasks: (tasks || []) as Task[],
+    tasks: formattedTasks,
     meta: {
       total,
       page,
@@ -220,90 +244,60 @@ export const getAllTasks = async (
   };
 };
 
-export const getTaskById = async (taskId: string): Promise<Task | null> => {
-  const [tasks]: any = await executeQuery(
-    `SELECT 
-      t.*, 
-      cu.full_name AS created_by_name,
-      cu.email AS created_by_email,
-      au.full_name AS assigned_to_name,
-      au.email AS assigned_to_email
-     FROM tasks t
-     LEFT JOIN users cu ON cu.id = t.created_by
-     LEFT JOIN users au ON au.id = t.assigned_to
-     WHERE t.id = ? AND t.is_deleted = 0`,
-    [taskId]
-  );
+export const getTaskById = async (taskId: string): Promise<TaskType | null> => {
+  try {
+    const task = await Task.findOne({
+      _id: new mongoose.Types.ObjectId(taskId),
+      is_deleted: false
+    });
 
-  return tasks?.[0] || null;
+    if (!task) return null;
+
+    return formatTaskResponse(task);
+  } catch (error) {
+    return null;
+  }
 };
 
-export const createTask = async (data: CreateTaskRequest): Promise<Task> => {
-  const taskId = uuidv4();
-  const now = toMySQLDateTime(new Date().toISOString());
-
-  const task: Task = {
-    id: taskId,
-    title: data.title as string,
+export const createTask = async (data: CreateTaskRequest): Promise<TaskType> => {
+  const task = await Task.create({
+    title: data.title,
     description: data.description || null,
     status: TaskStatus.TODO,
-    priority: (data.priority || TaskPriority.MEDIUM) as TaskPriority,
-    assigned_to: data.assigned_to || null,
-    created_by: data.created_by as string,
-    due_date: toMySQLDateTime(data.due_date as string | null) || null,
+    priority: data.priority || TaskPriority.MEDIUM,
+    assigned_to: data.assigned_to ? new mongoose.Types.ObjectId(data.assigned_to) : null,
+    created_by: new mongoose.Types.ObjectId(data.created_by),
+    due_date: data.due_date ? new Date(data.due_date) : null,
     estimated_hours: data.estimated_hours || null,
-    is_deleted: false,
-    created_at: now!,
-    updated_at: now!
-  };
-
-  await executeQuery(
-    `INSERT INTO tasks (
-      id, title, description, status, priority,
-      assigned_to, created_by, due_date, estimated_hours, is_deleted,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      task.id,
-      task.title,
-      task.description,
-      task.status,
-      task.priority,
-      task.assigned_to,
-      task.created_by,
-      task.due_date,
-      task.estimated_hours,
-      task.is_deleted ? 1 : 0,
-      task.created_at,
-      task.updated_at
-    ]
-  );
+    is_deleted: false
+  });
 
   await logActivity({
-    task_id: taskId,
+    task_id: task._id.toString(),
     action: ActivityAction.CREATED,
     old_value: null,
     new_value: task.title,
     performed_by: data.created_by
   }).catch(console.error);
 
-  const created = await getTaskById(taskId);
-  return (created || task) as Task;
+  return formatTaskResponse(task);
 };
 
 export const updateTask = async (
   taskId: string,
   data: UpdateTaskRequest,
   performedBy: string
-): Promise<Task> => {
-  const currentTask = await getTaskById(taskId);
+): Promise<TaskType> => {
+  const currentTask = await Task.findOne({
+    _id: new mongoose.Types.ObjectId(taskId),
+    is_deleted: false
+  });
+
   if (!currentTask) {
     throw new Error('Task not found');
   }
 
-  const now = toMySQLDateTime(new Date().toISOString());
-  const updates: string[] = [];
-  const values: (string | number | boolean)[] = [];
+  const updates: Record<string, any> = {};
 
   const trackChange = (
     field: string,
@@ -323,104 +317,68 @@ export const updateTask = async (
   };
 
   if (data.title !== undefined) {
-    updates.push('title = ?');
-    values.push(data.title as any);
-    trackChange(
-      'title',
-      currentTask.title,
-      data.title as any,
-      ActivityAction.TITLE_CHANGED
-    );
+    updates.title = data.title;
+    trackChange('title', currentTask.title, data.title as string, ActivityAction.TITLE_CHANGED);
   }
 
   if (data.description !== undefined) {
-    updates.push('description = ?');
-    values.push((data.description || null) as any);
-    trackChange(
-      'description',
-      currentTask.description,
-      data.description,
-      ActivityAction.DESCRIPTION_CHANGED
-    );
+    updates.description = data.description || null;
+    trackChange('description', currentTask.description || null, data.description || null, ActivityAction.DESCRIPTION_CHANGED);
   }
 
   if (data.status !== undefined) {
-    updates.push('status = ?');
-    values.push(data.status as any);
-    trackChange(
-      'status',
-      currentTask.status,
-      data.status as any,
-      ActivityAction.STATUS_CHANGED
-    );
+    updates.status = data.status;
+    trackChange('status', currentTask.status, data.status as string, ActivityAction.STATUS_CHANGED);
   }
 
   if (data.priority !== undefined) {
-    updates.push('priority = ?');
-    values.push(data.priority as any);
-    trackChange(
-      'priority',
-      currentTask.priority,
-      data.priority as any,
-      ActivityAction.PRIORITY_CHANGED
-    );
+    updates.priority = data.priority;
+    trackChange('priority', currentTask.priority, data.priority as string, ActivityAction.PRIORITY_CHANGED);
   }
 
   if (data.assigned_to !== undefined) {
-    updates.push('assigned_to = ?');
-    values.push((data.assigned_to || null) as any);
-    const action =
-      data.assigned_to === null
-        ? ActivityAction.UNASSIGNED
-        : ActivityAction.ASSIGNED;
-    trackChange(
-      'assigned_to',
-      currentTask.assigned_to,
-      (data.assigned_to as any),
-      action
-    );
+    updates.assigned_to = data.assigned_to ? new mongoose.Types.ObjectId(data.assigned_to) : null;
+    const action = data.assigned_to === null ? ActivityAction.UNASSIGNED : ActivityAction.ASSIGNED;
+    trackChange('assigned_to', currentTask.assigned_to?.toString() || null, data.assigned_to || null, action);
   }
 
   if (data.due_date !== undefined) {
-    updates.push('due_date = ?');
-    const mysqlDate = toMySQLDateTime(data.due_date as string | null);
-    values.push((mysqlDate || null) as any);
+    updates.due_date = data.due_date ? new Date(data.due_date) : null;
     trackChange(
       'due_date',
-      currentTask.due_date,
-      mysqlDate,
+      currentTask.due_date?.toISOString() || null,
+      data.due_date || null,
       ActivityAction.DUE_DATE_CHANGED
     );
   }
 
-  updates.push('updated_at = ?');
-  values.push(now!);
-  values.push(taskId);
-
-  await executeQuery(
-    `UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`,
-    values
+  const updatedTask = await Task.findByIdAndUpdate(
+    taskId,
+    { $set: updates },
+    { new: true }
   );
 
-  const updatedTask = await getTaskById(taskId);
-  return updatedTask!;
+  if (!updatedTask) {
+    throw new Error('Task not found after update');
+  }
+
+  return formatTaskResponse(updatedTask);
 };
 
 export const deleteTask = async (
   taskId: string,
   performedBy: string
 ): Promise<boolean> => {
-  const currentTask = await getTaskById(taskId);
+  const currentTask = await Task.findOne({
+    _id: new mongoose.Types.ObjectId(taskId),
+    is_deleted: false
+  });
+
   if (!currentTask) {
     throw new Error('Task not found');
   }
 
-  const now = toMySQLDateTime(new Date().toISOString());
-
-  await executeQuery(
-    'UPDATE tasks SET is_deleted = 1, updated_at = ? WHERE id = ?',
-    [now, taskId]
-  );
+  await Task.findByIdAndUpdate(taskId, { $set: { is_deleted: true } });
 
   await logActivity({
     task_id: taskId,
@@ -437,34 +395,21 @@ export const addComment = async (
   taskId: string,
   comment: string,
   createdBy: string
-): Promise<TaskComment> => {
-  const task = await getTaskById(taskId);
+): Promise<TaskCommentType> => {
+  const task = await Task.findOne({
+    _id: new mongoose.Types.ObjectId(taskId),
+    is_deleted: false
+  });
+
   if (!task) {
     throw new Error('Task not found');
   }
 
-  const commentId = uuidv4();
-  const now = toMySQLDateTime(new Date().toISOString());
-
-  const taskComment: TaskComment = {
-    id: commentId,
-    task_id: taskId,
+  const taskComment = await TaskComment.create({
+    task_id: new mongoose.Types.ObjectId(taskId),
     comment,
-    created_by: createdBy,
-    created_at: now!
-  };
-
-  await executeQuery(
-    `INSERT INTO task_comments (id, task_id, comment, created_by, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      taskComment.id,
-      taskComment.task_id,
-      taskComment.comment,
-      taskComment.created_by,
-      taskComment.created_at
-    ]
-  );
+    created_by: new mongoose.Types.ObjectId(createdBy)
+  });
 
   await logActivity({
     task_id: taskId,
@@ -474,34 +419,35 @@ export const addComment = async (
     performed_by: createdBy
   }).catch(console.error);
 
-  const [comments]: any = await executeQuery(
-    `SELECT 
-      tc.*,
-      u.full_name AS created_by_name,
-      u.email AS created_by_email
-     FROM task_comments tc
-     LEFT JOIN users u ON u.id = tc.created_by
-     WHERE tc.id = ?`,
-    [commentId]
-  );
+  const user = await User.findById(createdBy);
 
-  return comments?.[0] || taskComment;
+  return {
+    id: taskComment._id.toString(),
+    task_id: taskId,
+    comment: taskComment.comment,
+    created_by: createdBy,
+    created_by_name: user?.full_name || null,
+    created_by_email: user?.email || null,
+    created_at: taskComment.created_at.toISOString()
+  };
 };
 
-export const getTaskComments = async (taskId: string): Promise<TaskComment[]> => {
-  const [comments]: any = await executeQuery(
-    `SELECT 
-      tc.*,
-      u.full_name AS created_by_name,
-      u.email AS created_by_email
-     FROM task_comments tc
-     LEFT JOIN users u ON u.id = tc.created_by
-     WHERE tc.task_id = ? 
-     ORDER BY tc.created_at DESC`,
-    [taskId]
-  );
+export const getTaskComments = async (taskId: string): Promise<TaskCommentType[]> => {
+  const comments = await TaskComment.find({
+    task_id: new mongoose.Types.ObjectId(taskId)
+  })
+    .populate('created_by', 'full_name email')
+    .sort({ created_at: -1 });
 
-  return (comments || []) as TaskComment[];
+  return comments.map(c => ({
+    id: c._id.toString(),
+    task_id: taskId,
+    comment: c.comment,
+    created_by: c.created_by._id.toString(),
+    created_by_name: (c.created_by as any).full_name || null,
+    created_by_email: (c.created_by as any).email || null,
+    created_at: c.created_at.toISOString()
+  }));
 };
 
 export const logActivity = async (data: {
@@ -510,54 +456,46 @@ export const logActivity = async (data: {
   old_value: string | null;
   new_value: string | null;
   performed_by: string;
-}): Promise<TaskActivity> => {
-  const activityId = uuidv4();
-  const now = toMySQLDateTime(new Date().toISOString());
+}): Promise<TaskActivityType> => {
+  const activity = await TaskActivity.create({
+    task_id: new mongoose.Types.ObjectId(data.task_id),
+    action: data.action,
+    old_value: data.old_value,
+    new_value: data.new_value,
+    performed_by: new mongoose.Types.ObjectId(data.performed_by)
+  });
 
-  const activity: TaskActivity = {
-    id: activityId,
+  return {
+    id: activity._id.toString(),
     task_id: data.task_id,
     action: data.action,
     old_value: data.old_value,
     new_value: data.new_value,
     performed_by: data.performed_by,
-    created_at: now!
+    created_at: activity.created_at.toISOString()
   };
-
-  await executeQuery(
-    `INSERT INTO task_activities (
-      id, task_id, action, old_value, new_value, performed_by, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      activity.id,
-      activity.task_id,
-      activity.action,
-      activity.old_value,
-      activity.new_value,
-      activity.performed_by,
-      activity.created_at
-    ]
-  );
-
-  return activity;
 };
 
 export const getTaskActivities = async (
   taskId: string
-): Promise<TaskActivity[]> => {
-  const [activities]: any = await executeQuery(
-    `SELECT 
-      ta.*,
-      u.full_name AS performed_by_name,
-      u.email AS performed_by_email
-     FROM task_activities ta
-     LEFT JOIN users u ON u.id = ta.performed_by
-     WHERE ta.task_id = ? 
-     ORDER BY ta.created_at DESC`,
-    [taskId]
-  );
+): Promise<TaskActivityType[]> => {
+  const activities = await TaskActivity.find({
+    task_id: new mongoose.Types.ObjectId(taskId)
+  })
+    .populate('performed_by', 'full_name email')
+    .sort({ created_at: -1 });
 
-  return (activities || []) as TaskActivity[];
+  return activities.map(a => ({
+    id: a._id.toString(),
+    task_id: taskId,
+    action: a.action as ActivityAction,
+    old_value: a.old_value || null,
+    new_value: a.new_value || null,
+    performed_by: a.performed_by._id.toString(),
+    performed_by_name: (a.performed_by as any).full_name || null,
+    performed_by_email: (a.performed_by as any).email || null,
+    created_at: a.created_at.toISOString()
+  }));
 };
 
 export const getTaskStats = async (): Promise<{
@@ -581,57 +519,91 @@ export const getTaskStats = async (): Promise<{
     total: number;
   }>;
 }> => {
-  const [overallResult]: any = await executeQuery(
-    `SELECT 
-      COUNT(*) as total_tasks,
-      SUM(CASE WHEN status = 'TODO' THEN 1 ELSE 0 END) as todo_tasks,
-      SUM(CASE WHEN status = 'IN_PROGRESS' THEN 1 ELSE 0 END) as in_progress_tasks,
-      SUM(CASE WHEN status = 'REVIEW' THEN 1 ELSE 0 END) as review_tasks,
-      SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as done_tasks,
-      (
-        SELECT COUNT(*)
-        FROM users
-        WHERE LOWER(role) = 'employee' AND is_active = 1
-      ) as total_employees
-     FROM tasks
-     WHERE is_deleted = 0`
+  // Overall stats
+  const overallStats = await Task.aggregate([
+    { $match: { is_deleted: false } },
+    {
+      $group: {
+        _id: null,
+        total_tasks: { $sum: 1 },
+        todo_tasks: { $sum: { $cond: [{ $eq: ['$status', 'TODO'] }, 1, 0] } },
+        in_progress_tasks: { $sum: { $cond: [{ $eq: ['$status', 'IN_PROGRESS'] }, 1, 0] } },
+        review_tasks: { $sum: { $cond: [{ $eq: ['$status', 'REVIEW'] }, 1, 0] } },
+        done_tasks: { $sum: { $cond: [{ $eq: ['$status', 'DONE'] }, 1, 0] } }
+      }
+    }
+  ]);
+
+  const totalEmployees = await User.countDocuments({
+    role: 'employee',
+    is_active: true
+  });
+
+  // Employee stats
+  const employees = await User.find({
+    role: 'employee',
+    is_active: true
+  }).select('full_name email profile_image_url');
+
+  const employeeStats = await Promise.all(
+    employees.map(async (emp) => {
+      // Get tasks assigned directly or via task_assignees
+      const assigneeTaskIds = await TaskAssignee.find({
+        user_id: emp._id
+      }).distinct('task_id');
+
+      const taskStats = await Task.aggregate([
+        {
+          $match: {
+            is_deleted: false,
+            $or: [
+              { assigned_to: emp._id },
+              { _id: { $in: assigneeTaskIds } }
+            ]
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            todo: { $sum: { $cond: [{ $eq: ['$status', 'TODO'] }, 1, 0] } },
+            in_progress: { $sum: { $cond: [{ $eq: ['$status', 'IN_PROGRESS'] }, 1, 0] } },
+            review: { $sum: { $cond: [{ $eq: ['$status', 'REVIEW'] }, 1, 0] } },
+            done: { $sum: { $cond: [{ $eq: ['$status', 'DONE'] }, 1, 0] } }
+          }
+        }
+      ]);
+
+      const stats = taskStats[0] || { total: 0, todo: 0, in_progress: 0, review: 0, done: 0 };
+
+      return {
+        employee_id: emp._id.toString(),
+        employee_name: emp.full_name,
+        employee_email: emp.email,
+        profile_image_url: emp.profile_image_url || null,
+        todo: stats.todo,
+        in_progress: stats.in_progress,
+        review: stats.review,
+        done: stats.done,
+        total: stats.total
+      };
+    })
   );
 
-  const [employeeResults]: any = await executeQuery(
-    `SELECT 
-      u.id as employee_id,
-      u.full_name as employee_name,
-      u.email as employee_email,
-      u.profile_image_url as profile_image_url,
-      u.is_active as is_active,
-      COUNT(DISTINCT t.id) as total,
-      SUM(CASE WHEN t.status = 'TODO' THEN 1 ELSE 0 END) as todo,
-      SUM(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 ELSE 0 END) as in_progress,
-      SUM(CASE WHEN t.status = 'REVIEW' THEN 1 ELSE 0 END) as review,
-      SUM(CASE WHEN t.status = 'DONE' THEN 1 ELSE 0 END) as done
-     FROM users u
-     LEFT JOIN tasks t ON (u.id = t.assigned_to OR u.id IN (
-       SELECT user_id FROM task_assignees WHERE task_id = t.id
-     )) AND t.is_deleted = 0
-    WHERE LOWER(u.role) = 'employee' AND u.is_active = 1
-     GROUP BY u.id, u.full_name, u.email, u.profile_image_url, u.is_active
-     ORDER BY total DESC, u.full_name ASC`
-  );
-
-  const activeEmployees = (employeeResults || []).filter((emp: any) =>
-    emp.is_active === 1 || emp.is_active === true || emp.is_active === '1'
-  );
+  const overall = overallStats[0] || {
+    total_tasks: 0,
+    todo_tasks: 0,
+    in_progress_tasks: 0,
+    review_tasks: 0,
+    done_tasks: 0
+  };
 
   return {
     overall: {
-      total_tasks: overallResult[0]?.total_tasks || 0,
-      todo_tasks: overallResult[0]?.todo_tasks || 0,
-      in_progress_tasks: overallResult[0]?.in_progress_tasks || 0,
-      review_tasks: overallResult[0]?.review_tasks || 0,
-      done_tasks: overallResult[0]?.done_tasks || 0,
-      total_employees: overallResult[0]?.total_employees || 0
+      ...overall,
+      total_employees: totalEmployees
     },
-    employees: activeEmployees
+    employees: employeeStats.sort((a, b) => b.total - a.total)
   };
 };
 
@@ -639,49 +611,75 @@ export const getReportSummary = async (
   startDate?: string,
   endDate?: string
 ): Promise<any> => {
-  const startBound = withTimeBounds(startDate, false);
-  const endBound = withTimeBounds(endDate, true);
-  const dateFilter = startBound && endBound
-    ? `AND created_at BETWEEN '${startBound}' AND '${endBound}'`
-    : '';
+  const dateFilter: any = {};
+  if (startDate && endDate) {
+    dateFilter.created_at = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate + 'T23:59:59.999Z')
+    };
+  }
 
-  const [summaryResult]: any = await executeQuery(
-    `SELECT 
-      COUNT(*) as total_tasks,
-      SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completed_tasks,
-      SUM(CASE WHEN status IN ('TODO', 'IN_PROGRESS', 'REVIEW') THEN 1 ELSE 0 END) as pending_tasks,
-      AVG(CASE WHEN status = 'DONE' AND created_at IS NOT NULL 
-        THEN TIMESTAMPDIFF(HOUR, created_at, updated_at) END) as avg_completion_hours,
-      COUNT(DISTINCT assigned_to) as active_employees,
-      SUM(CASE WHEN priority = 'HIGH' THEN 1 ELSE 0 END) as high_priority_tasks,
-      SUM(CASE WHEN due_date < NOW() AND status != 'DONE' THEN 1 ELSE 0 END) as overdue_tasks
-     FROM tasks t
-     WHERE is_deleted = 0 ${dateFilter}`
-  );
+  const summaryStats = await Task.aggregate([
+    { $match: { is_deleted: false, ...dateFilter } },
+    {
+      $group: {
+        _id: null,
+        total_tasks: { $sum: 1 },
+        completed_tasks: { $sum: { $cond: [{ $eq: ['$status', 'DONE'] }, 1, 0] } },
+        pending_tasks: { $sum: { $cond: [{ $in: ['$status', ['TODO', 'IN_PROGRESS', 'REVIEW']] }, 1, 0] } },
+        high_priority_tasks: { $sum: { $cond: [{ $eq: ['$priority', 'HIGH'] }, 1, 0] } },
+        overdue_tasks: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $lt: ['$due_date', new Date()] },
+                  { $ne: ['$status', 'DONE'] },
+                  { $ne: ['$due_date', null] }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        active_employees: { $addToSet: '$assigned_to' }
+      }
+    },
+    {
+      $project: {
+        total_tasks: 1,
+        completed_tasks: 1,
+        pending_tasks: 1,
+        high_priority_tasks: 1,
+        overdue_tasks: 1,
+        active_employees: { $size: '$active_employees' }
+      }
+    }
+  ]);
 
-  const [tasksByStatus]: any = await executeQuery(
-    `SELECT 
-      status,
-      COUNT(*) as count
-     FROM tasks
-     WHERE is_deleted = 0 ${dateFilter}
-     GROUP BY status`
-  );
+  const tasksByStatus = await Task.aggregate([
+    { $match: { is_deleted: false, ...dateFilter } },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+    { $project: { status: '$_id', count: 1, _id: 0 } }
+  ]);
 
-  const [tasksByPriority]: any = await executeQuery(
-    `SELECT 
-      priority,
-      COUNT(*) as count,
-      SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) as completed
-     FROM tasks
-     WHERE is_deleted = 0 ${dateFilter}
-     GROUP BY priority`
-  );
+  const tasksByPriority = await Task.aggregate([
+    { $match: { is_deleted: false, ...dateFilter } },
+    {
+      $group: {
+        _id: '$priority',
+        count: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'DONE'] }, 1, 0] } }
+      }
+    },
+    { $project: { priority: '$_id', count: 1, completed: 1, _id: 0 } }
+  ]);
 
   return {
-    summary: summaryResult[0] || {},
-    by_status: tasksByStatus || [],
-    by_priority: tasksByPriority || [],
+    summary: summaryStats[0] || {},
+    by_status: tasksByStatus,
+    by_priority: tasksByPriority,
     period: { start: startDate, end: endDate }
   };
 };
@@ -690,52 +688,87 @@ export const getEmployeePerformanceReport = async (
   startDate?: string,
   endDate?: string
 ): Promise<any> => {
-  const dateFilter = '';
+  const employees = await User.find({
+    role: 'employee',
+    is_active: true
+  }).select('full_name email profile_image_url');
 
-  const [employeePerformance]: any = await executeQuery(
-    `SELECT 
-      u.id as employee_id,
-      u.full_name as employee_name,
-      u.email as employee_email,
-      u.profile_image_url as profile_image_url,
-      COUNT(DISTINCT t.id) as total_assigned,
-      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') THEN 1 ELSE 0 END), 0) as completed,
-      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('IN_PROGRESS', 'INPROGRESS') THEN 1 ELSE 0 END), 0) as in_progress,
-      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('TODO', 'PENDING') THEN 1 ELSE 0 END), 0) as pending,
-      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('TODO', 'PENDING') THEN 1 ELSE 0 END), 0) as todo,
-      COALESCE(SUM(CASE WHEN UPPER(t.status) = 'REVIEW' THEN 1 ELSE 0 END), 0) as review,
-      COALESCE(SUM(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') THEN 1 ELSE 0 END), 0) as done,
-      COALESCE(SUM(CASE WHEN t.due_date < NOW() AND UPPER(t.status) NOT IN ('DONE', 'COMPLETED') THEN 1 ELSE 0 END), 0) as overdue,
-      ROUND(AVG(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') 
-        THEN TIMESTAMPDIFF(HOUR, t.created_at, t.updated_at) END), 2) as avg_completion_hours,
-      ROUND((SUM(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') THEN 1 ELSE 0 END) / NULLIF(COUNT(t.id), 0)) * 100, 2) as completion_rate
-     FROM users u
-     LEFT JOIN tasks t ON (u.id = t.assigned_to OR u.id IN (
-       SELECT user_id FROM task_assignees WHERE task_id = t.id
-     )) AND t.is_deleted = 0 ${dateFilter}
-      WHERE LOWER(u.role) = 'employee' AND u.is_active = 1
-     GROUP BY u.id, u.full_name, u.email, u.profile_image_url
-     ORDER BY completion_rate DESC, completed DESC`
+  const employeePerformance = await Promise.all(
+    employees.map(async (emp) => {
+      const assigneeTaskIds = await TaskAssignee.find({
+        user_id: emp._id
+      }).distinct('task_id');
+
+      const stats = await Task.aggregate([
+        {
+          $match: {
+            is_deleted: false,
+            $or: [
+              { assigned_to: emp._id },
+              { _id: { $in: assigneeTaskIds } }
+            ]
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total_assigned: { $sum: 1 },
+            completed: { $sum: { $cond: [{ $eq: ['$status', 'DONE'] }, 1, 0] } },
+            in_progress: { $sum: { $cond: [{ $eq: ['$status', 'IN_PROGRESS'] }, 1, 0] } },
+            pending: { $sum: { $cond: [{ $eq: ['$status', 'TODO'] }, 1, 0] } },
+            review: { $sum: { $cond: [{ $eq: ['$status', 'REVIEW'] }, 1, 0] } },
+            overdue: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $lt: ['$due_date', new Date()] },
+                      { $ne: ['$status', 'DONE'] },
+                      { $ne: ['$due_date', null] }
+                    ]
+                  },
+                  1,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]);
+
+      const s = stats[0] || { total_assigned: 0, completed: 0, in_progress: 0, pending: 0, review: 0, overdue: 0 };
+      const completionRate = s.total_assigned > 0 ? ((s.completed / s.total_assigned) * 100).toFixed(2) : '0.00';
+
+      return {
+        employee_id: emp._id.toString(),
+        employee_name: emp.full_name,
+        employee_email: emp.email,
+        profile_image_url: emp.profile_image_url || null,
+        total_assigned: s.total_assigned,
+        completed: s.completed,
+        in_progress: s.in_progress,
+        pending: s.pending,
+        todo: s.pending,
+        review: s.review,
+        done: s.completed,
+        overdue: s.overdue,
+        completion_rate: parseFloat(completionRate)
+      };
+    })
   );
 
-  const [topPerformers]: any = await executeQuery(
-    `SELECT 
-      u.id,
-      u.full_name,
-      COUNT(CASE WHEN UPPER(t.status) IN ('DONE', 'COMPLETED') THEN 1 END) as completed_tasks
-     FROM users u
-     LEFT JOIN tasks t ON (u.id = t.assigned_to OR u.id IN (
-       SELECT user_id FROM task_assignees WHERE task_id = t.id
-     )) AND t.is_deleted = 0 ${dateFilter}
-      WHERE LOWER(u.role) = 'employee' AND u.is_active = 1
-     GROUP BY u.id, u.full_name
-     ORDER BY completed_tasks DESC
-     LIMIT 5`
-  );
+  const topPerformers = [...employeePerformance]
+    .sort((a, b) => b.completed - a.completed)
+    .slice(0, 5)
+    .map(p => ({
+      id: p.employee_id,
+      full_name: p.employee_name,
+      completed_tasks: p.completed
+    }));
 
   return {
-    employees: employeePerformance || [],
-    top_performers: topPerformers || [],
+    employees: employeePerformance.sort((a, b) => b.completion_rate - a.completion_rate),
+    top_performers: topPerformers,
     period: { start: startDate, end: endDate }
   };
 };
@@ -745,81 +778,144 @@ export const getTaskCompletionReport = async (
   endDate?: string,
   groupBy: string = 'day'
 ): Promise<any> => {
-  const startBound = withTimeBounds(startDate, false);
-  const endBound = withTimeBounds(endDate, true);
-  const dateFilter = startBound && endBound
-    ? `AND updated_at BETWEEN '${startBound}' AND '${endBound}'`
-    : `AND updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`;
+  const dateFilter: any = {};
+  if (startDate && endDate) {
+    dateFilter.updated_at = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate + 'T23:59:59.999Z')
+    };
+  } else {
+    dateFilter.updated_at = {
+      $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    };
+  }
 
-  let dateFormat = '%Y-%m-%d';
-  if (groupBy === 'week') dateFormat = '%Y-%u';
-  if (groupBy === 'month') dateFormat = '%Y-%m';
+  let dateFormat: string;
+  switch (groupBy) {
+    case 'week':
+      dateFormat = '%Y-%U';
+      break;
+    case 'month':
+      dateFormat = '%Y-%m';
+      break;
+    default:
+      dateFormat = '%Y-%m-%d';
+  }
 
-  const [completionTrend]: any = await executeQuery(
-    `SELECT 
-      DATE_FORMAT(updated_at, '${dateFormat}') as period,
-      COUNT(*) as tasks_completed,
-      AVG(TIMESTAMPDIFF(HOUR, created_at, updated_at)) as avg_hours_to_complete
-     FROM tasks
-     WHERE status = 'DONE' AND is_deleted = 0 ${dateFilter}
-     GROUP BY period
-     ORDER BY period ASC`
-  );
+  const completionTrend = await Task.aggregate([
+    { $match: { is_deleted: false, status: 'DONE', ...dateFilter } },
+    {
+      $group: {
+        _id: { $dateToString: { format: dateFormat, date: '$updated_at' } },
+        tasks_completed: { $sum: 1 }
+      }
+    },
+    { $sort: { _id: 1 } },
+    { $project: { period: '$_id', tasks_completed: 1, _id: 0 } }
+  ]);
 
-  const [taskCreationTrend]: any = await executeQuery(
-    `SELECT 
-      DATE_FORMAT(created_at, '${dateFormat}') as period,
-      COUNT(*) as tasks_created
-     FROM tasks
-     WHERE is_deleted = 0 ${dateFilter}
-     GROUP BY period
-     ORDER BY period ASC`
-  );
+  const creationFilter: any = {};
+  if (startDate && endDate) {
+    creationFilter.created_at = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate + 'T23:59:59.999Z')
+    };
+  } else {
+    creationFilter.created_at = {
+      $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    };
+  }
+
+  const taskCreationTrend = await Task.aggregate([
+    { $match: { is_deleted: false, ...creationFilter } },
+    {
+      $group: {
+        _id: { $dateToString: { format: dateFormat, date: '$created_at' } },
+        tasks_created: { $sum: 1 }
+      }
+    },
+    { $sort: { _id: 1 } },
+    { $project: { period: '$_id', tasks_created: 1, _id: 0 } }
+  ]);
 
   return {
-    completion_trend: completionTrend || [],
-    creation_trend: taskCreationTrend || [],
+    completion_trend: completionTrend,
+    creation_trend: taskCreationTrend,
     group_by: groupBy,
     period: { start: startDate, end: endDate }
   };
 };
 
-export const getTaskDoc = async (taskId: string): Promise<TaskDoc | null> => {
-  const [rows]: any = await executeQuery(
-    `SELECT * FROM task_docs WHERE task_id = ? ORDER BY updated_at DESC LIMIT 1`,
-    [taskId]
-  );
+export const getTaskDoc = async (taskId: string): Promise<TaskDocType | null> => {
+  const doc = await TaskDoc.findOne({
+    task_id: new mongoose.Types.ObjectId(taskId)
+  }).sort({ updated_at: -1 });
 
-  return rows?.[0] || null;
+  if (!doc) return null;
+
+  return {
+    id: doc._id.toString(),
+    task_id: taskId,
+    content: doc.content || null,
+    created_by: doc.created_by.toString(),
+    updated_by: doc.updated_by?.toString() || null,
+    created_at: doc.created_at.toISOString(),
+    updated_at: doc.updated_at.toISOString()
+  };
 };
 
 export const upsertTaskDoc = async (
   taskId: string,
   content: string,
   userId: string
-): Promise<TaskDoc> => {
-  const now = toMySQLDateTime(new Date().toISOString());
-  const existing = await getTaskDoc(taskId);
+): Promise<TaskDocType> => {
+  const existing = await TaskDoc.findOne({
+    task_id: new mongoose.Types.ObjectId(taskId)
+  });
 
   if (!existing) {
-    const docId = uuidv4();
-    await executeQuery(
-      `INSERT INTO task_docs (id, task_id, content, created_by, updated_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [docId, taskId, content, userId, userId, now, now]
-    );
-  } else {
-    await executeQuery(
-      `UPDATE task_docs SET content = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
-      [content, userId, now, existing.id]
-    );
+    const doc = await TaskDoc.create({
+      task_id: new mongoose.Types.ObjectId(taskId),
+      content,
+      created_by: new mongoose.Types.ObjectId(userId),
+      updated_by: new mongoose.Types.ObjectId(userId)
+    });
+
+    return {
+      id: doc._id.toString(),
+      task_id: taskId,
+      content: doc.content || null,
+      created_by: userId,
+      updated_by: userId,
+      created_at: doc.created_at.toISOString(),
+      updated_at: doc.updated_at.toISOString()
+    };
   }
 
-  const updated = await getTaskDoc(taskId);
+  const updated = await TaskDoc.findByIdAndUpdate(
+    existing._id,
+    {
+      $set: {
+        content,
+        updated_by: new mongoose.Types.ObjectId(userId)
+      }
+    },
+    { new: true }
+  );
+
   if (!updated) {
     throw new Error('Failed to save task doc');
   }
-  return updated;
+
+  return {
+    id: updated._id.toString(),
+    task_id: taskId,
+    content: updated.content || null,
+    created_by: updated.created_by.toString(),
+    updated_by: userId,
+    created_at: updated.created_at.toISOString(),
+    updated_at: updated.updated_at.toISOString()
+  };
 };
 
 export const exportReportData = async (

@@ -1,43 +1,63 @@
-import mysql from 'mysql2/promise';
+import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
+
+const MONGO_URI = process.env.MONGO_URI;
+
+// Define User schema inline for this script
+const userSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true },
+    full_name: { type: String, required: true, trim: true },
+    role: { type: String, enum: ['admin', 'manager', 'employee'], default: 'employee' },
+    is_active: { type: Boolean, default: true },
+    mobile_number: { type: String, default: null },
+    profile_image_url: { type: String, default: null }
+  },
+  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+);
+
+const User = mongoose.model('User', userSchema);
 
 const createAdmin = async () => {
-  const connection = await mysql.createConnection({
-    host: 'localhost',
-    port: 3306,
-    user: 'root',
-    password: 'Aditya96#',
-    database: 'task_management'
-  });
-
   try {
+    await mongoose.connect(MONGO_URI);
+    console.log('✓ Connected to MongoDB');
+
     const email = 'admin@example.com';
     const password = 'admin123';
     const fullName = 'Admin User';
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = uuidv4();
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    // Check if admin already exists
+    const existingAdmin = await User.findOne({ email: email.toLowerCase() });
+    if (existingAdmin) {
+      console.log('⚠️  Admin user already exists with this email');
+      await mongoose.connection.close();
+      return;
+    }
 
-    await connection.execute(
-      `INSERT INTO users (id, email, password, full_name, role, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'admin', 1, ?, ?)`,
-      [userId, email, hashedPassword, fullName, now, now]
-    );
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await User.create({
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      full_name: fullName,
+      role: 'admin',
+      is_active: true
+    });
 
     console.log('✅ Admin user created successfully!');
     console.log('📧 Email:', email);
     console.log('🔑 Password:', password);
     console.log('👤 Role: admin');
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
+    if (error.code === 11000) {
       console.log('⚠️  Admin user already exists with this email');
     } else {
       console.error('❌ Error creating admin:', error.message);
     }
   } finally {
-    await connection.end();
+    await mongoose.connection.close();
   }
 };
 

@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import * as taskController from '../controllers/taskController.js';
+import { apiRateLimiter } from '../middleware/rateLimitMiddleware.js';
 
 const router = Router();
+
+router.use(apiRateLimiter);
 
 router.get('/assignees', taskController.getAssignableUsers);
 router.get('/stats', taskController.getTaskStats);

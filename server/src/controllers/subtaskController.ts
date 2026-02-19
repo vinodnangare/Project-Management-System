@@ -143,7 +143,7 @@ export const updateSubtaskStatus = async (
         try {
           const task = await taskService.getTaskById(taskId);
           if (task && task.created_by) {
-            const userName = req.user?.full_name || req.user?.email || 'A user';
+            const userName = req.user?.email || 'A user';
             await NotificationService.createNotification({
               user_id: task.created_by,
               message: `${userName} has completed all subtasks for task: "${task.title}". Task is ready for review.`

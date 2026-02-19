@@ -133,6 +133,7 @@ export interface Lead {
   stage: LeadStage;
   priority: LeadPriority;
   source: LeadSource;
+  notes: string | null;
   owner_id: string | null;
   owner_name?: string | null;
   owner_email?: string | null;
