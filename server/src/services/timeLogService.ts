@@ -1,5 +1,5 @@
-import { v4 as uuidv4 } from 'uuid';
-import { executeQuery } from '../config/database.js';
+import mongoose from "mongoose";
+import TimeLogModel from "../models/TimeLog.js";
 
 export interface TimeLog {
   id: string;
@@ -19,103 +19,69 @@ export interface CreateTimeLogRequest {
   description?: string;
 }
 
-export const logTime = async (
-  userId: string,
-  data: CreateTimeLogRequest
-): Promise<TimeLog> => {
-  const timeLogId = uuidv4();
-  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+export const logTime = async (userId: string, data: any) => {
 
-  const [existing]: any = await executeQuery(
-    'SELECT id FROM time_logs WHERE user_id = ? AND date = ?',
-    [userId, data.date]
+  const log = await TimeLogModel.findOneAndUpdate(
+    { user_id: userId, date: data.date },
+    {
+      hours_worked: data.hours_worked,
+      task_id: data.task_id || null,
+      description: data.description || null
+    },
+    { new: true, upsert: true }
   );
 
-  if (existing && existing.length > 0) {
-    await executeQuery(
-      `UPDATE time_logs 
-       SET hours_worked = ?, task_id = ?, description = ?, updated_at = ?
-       WHERE user_id = ? AND date = ?`,
-      [
-        data.hours_worked,
-        data.task_id || null,
-        data.description || null,
-        now,
-        userId,
-        data.date
-      ]
-    );
-
-    return getTimeLogByUserAndDate(userId, data.date);
-  }
-
-  await executeQuery(
-    `INSERT INTO time_logs (id, user_id, task_id, hours_worked, date, description, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      timeLogId,
-      userId,
-      data.task_id || null,
-      data.hours_worked,
-      data.date,
-      data.description || null,
-      now,
-      now
-    ]
-  );
-
-  return {
-    id: timeLogId,
-    user_id: userId,
-    task_id: data.task_id || null,
-    hours_worked: data.hours_worked,
-    date: data.date,
-    description: data.description || null,
-    created_at: now,
-    updated_at: now
-  };
+  return map(log);
 };
+
 
 export const getUserTimeLogs = async (
   userId: string,
   startDate: string,
   endDate: string
-): Promise<TimeLog[]> => {
-  const [logs]: any = await executeQuery(
-    `SELECT tl.*, t.title as task_title FROM time_logs tl
-     LEFT JOIN tasks t ON tl.task_id = t.id
-     WHERE tl.user_id = ? AND tl.date BETWEEN ? AND ?
-     ORDER BY tl.date DESC`,
-    [userId, startDate, endDate]
-  );
+) => {
 
-  return logs || [];
+  const logs = await TimeLogModel.find({
+    user_id: userId,
+    date: { $gte: startDate, $lte: endDate }
+  })
+    .populate("task_id", "title")
+    .sort({ date: -1 })
+    .lean();
+
+  return logs.map(map);
 };
+
 
 export const getTimeLogByUserAndDate = async (
   userId: string,
   date: string
-): Promise<TimeLog> => {
-  const [logs]: any = await executeQuery(
-    'SELECT * FROM time_logs WHERE user_id = ? AND date = ?',
-    [userId, date]
-  );
+) => {
 
-  if (!logs || logs.length === 0) {
-    throw new Error('Time log not found');
-  }
+  const log = await TimeLogModel.findOne({ user_id: userId, date });
+  if (!log) throw new Error("Time log not found");
 
-  return logs[0];
+  return map(log);
 };
 
-export const getTimeLogsByDate = async (date: string): Promise<TimeLog[]> => {
-  const [logs]: any = await executeQuery(
-    `SELECT tl.*, u.full_name FROM time_logs tl
-     JOIN users u ON tl.user_id = u.id
-     WHERE tl.date = ?
-     ORDER BY u.full_name ASC`,
-    [date]
-  );
 
-  return logs || [];
+export const getTimeLogsByDate = async (date: string) => {
+
+  const logs = await TimeLogModel.find({ date })
+    .populate("user_id", "full_name")
+    .sort({ "user_id.full_name": 1 })
+    .lean();
+
+  return logs.map(map);
 };
+
+const map = (log: any) => ({
+  id: log._id.toString(),
+  user_id: log.user_id?._id?.toString?.() || log.user_id.toString(),
+  task_id: log.task_id?._id?.toString?.() || log.task_id || null,
+  hours_worked: log.hours_worked,
+  date: log.date,
+  description: log.description ?? null,
+  created_at: log.created_at,
+  updated_at: log.updated_at
+});
