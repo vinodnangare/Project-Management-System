@@ -4,7 +4,7 @@ import { getNotifications, markAsRead } from '../controllers/notificationControl
 
 const router = Router();
 
-router.use(apiRateLimiter);
+
 
 // Get all notifications for the authenticated user
 router.get('/', getNotifications);

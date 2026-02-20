@@ -33,6 +33,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({ message: 'Server is running' });
 });
 
+// Use route modules for tasks, leads, time-logs, and subtasks (rate limiter is applied in each router)
 app.use('/api/auth', authRoutes);
 
 app.post('/api/auth/register', registerRateLimiter, authController.register);
@@ -59,34 +60,12 @@ app.get('/api/tasks/reports/export', verifyJwt, taskController.exportReport);
 
 app.get('/api/tasks/assigned/me', verifyJwt, taskController.getMyAssignedTasks);
 
-app.get('/api/tasks/users/assignable', verifyJwt, taskController.getAssignableUsers);
-
-app.post('/api/tasks', verifyJwt, taskController.createTask);
-
-app.get('/api/tasks/:id', verifyJwt, taskController.getTaskById);
-
-app.patch('/api/tasks/:id', verifyJwt, taskController.updateTask);
-
-app.delete('/api/tasks/:id', verifyJwt, taskController.deleteTask);
-
-app.get('/api/tasks/:taskId/comments', verifyJwt, taskController.getTaskComments);
-
-app.post('/api/tasks/:taskId/comments', verifyJwt, taskController.addComment);
-
-app.get('/api/tasks/:taskId/activities', verifyJwt, taskController.getTaskActivities);
-
-app.get('/api/tasks/:taskId/docs', verifyJwt, taskController.getTaskDoc);
-app.put('/api/tasks/:taskId/docs', verifyJwt, taskController.upsertTaskDoc);
-
-app.get('/api/tasks/:taskId/assignees', verifyJwt, taskController.getTaskAssignees);
-
-app.post('/api/tasks/:taskId/assignees', verifyJwt, taskController.addTaskAssignee);
-
 app.delete('/api/tasks/:taskId/assignees/:userId', verifyJwt, taskController.removeTaskAssignee);
 
 app.post('/api/tasks/:taskId/subtasks', verifyJwt, subtaskController.createSubtask);
 
 app.get('/api/tasks/:taskId/subtasks', verifyJwt, subtaskController.getSubtasks);
+// Use route modules for tasks, leads, time-logs, and subtasks (rate limiter is applied in each router)
 
 app.patch('/api/tasks/:taskId/subtasks/:subtaskId', verifyJwt, subtaskController.updateSubtaskStatus);
 
