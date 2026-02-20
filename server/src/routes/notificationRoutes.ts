@@ -1,9 +1,15 @@
 import { Router } from 'express';
 import { apiRateLimiter } from '../middleware/rateLimitMiddleware.js';
+import { getNotifications, markAsRead } from '../controllers/notificationController.js';
+
 const router = Router();
 
 router.use(apiRateLimiter);
 
-// TODO: Add notification routes here
+// Get all notifications for the authenticated user
+router.get('/', getNotifications);
 
-export default router;
+// Mark a notification as read
+router.patch('/:id/read', markAsRead);
+
+export default router; 
