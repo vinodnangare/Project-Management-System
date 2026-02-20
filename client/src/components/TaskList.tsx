@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
 import { useGetTasksQuery } from '../services/api';
 import '../styles/TaskList.css';
-
-interface TaskListProps {
-  onTaskSelect: (taskId: string) => void;
-  selectedTaskId?: string;
-}
-
-interface Filters {
-  search: string;
-  status: string;
-  priority: string;
-}
+import type { TaskListProps, Filters } from '../types/components/TaskListProps';
 
 const getPriorityClass = (priority: string): string => {
   switch (priority) {

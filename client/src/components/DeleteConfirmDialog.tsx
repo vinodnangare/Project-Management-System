@@ -1,11 +1,5 @@
 import React from 'react';
-
-interface DeleteConfirmDialogProps {
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
+import type { DeleteConfirmDialogProps } from '../types/components/DeleteConfirmDialogProps';
 
 export const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
   title,

@@ -1,12 +1,5 @@
 import React from 'react';      
-
-interface TaskStatusControlProps {
-  currentStatus: string;
-  isAdmin: boolean;
-  isAssignedToUser: boolean;
-  isUpdating: boolean;
-  onStatusChange: (status: string) => void;
-}
+import type { TaskStatusControlProps } from '../types/components/TaskStatusControlProps';
 
 const STATUSES = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
 

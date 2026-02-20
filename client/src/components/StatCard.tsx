@@ -1,12 +1,5 @@
 import React from 'react';
-
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: string;
-  colorClass: string;
-  unit?: string;
-}
+import type { StatCardProps } from '../types/components/StatCardProps';
 
 export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, colorClass, unit }) => (
   <div className={`stat-card ${colorClass}`}>

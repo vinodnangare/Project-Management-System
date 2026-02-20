@@ -1,25 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGetLeadOwnersQuery } from '../services/api';
 import '../styles/components/LeadForm.css';
-
-interface LeadFormData {
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone?: string;
-  source: string;
-  stage: string;
-  priority: string;
-  owner_id?: string;
-}
-
-interface LeadFormProps {
-  initialData?: Partial<LeadFormData>;
-  onSubmit: (data: LeadFormData) => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  mode?: 'create' | 'edit';
-}
+import type { LeadFormData, LeadFormProps } from '../types/components/LeadFormProps';
 
 const LeadForm: React.FC<LeadFormProps> = ({
   initialData,

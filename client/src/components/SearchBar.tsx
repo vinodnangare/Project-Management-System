@@ -1,15 +1,6 @@
 import React from 'react';
 import '../styles/components/SearchBar.css';
-
-interface SearchBarProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  onClear?: () => void;
-  disabled?: boolean;
-  autoFocus?: boolean;
-  className?: string;
-}
+import type { SearchBarProps } from '../types/components/SearchBarProps';
 
 const SearchBar: React.FC<SearchBarProps> = ({
   value,

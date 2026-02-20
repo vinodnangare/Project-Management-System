@@ -1,19 +1,13 @@
 import React from 'react';
 import '../styles/components/StageSelector.css';
-
-interface StageSelectorProps {
-  currentStage: string;
-  onChange: (stage: string) => void;
-  disabled?: boolean;
-  size?: 'small' | 'medium' | 'large';
-}
+import type { StageSelectorProps } from '../types/components/StageSelectorProps';
 
 const stages = [
-  { value: 'new', label: 'New', color: '#3b82f6', icon: '🆕' },
-  { value: 'qualified', label: 'Qualified', color: '#8b5cf6', icon: '✅' },
-  { value: 'in_progress', label: 'In Progress', color: '#f59e0b', icon: '🔄' },
-  { value: 'won', label: 'Won', color: '#10b981', icon: '🎉' },
-  { value: 'lost', label: 'Lost', color: '#ef4444', icon: '❌' },
+  { value: 'new', label: 'New', color: '#3b82f6', icon: '\ud83c\udd95' },
+  { value: 'qualified', label: 'Qualified', color: '#8b5cf6', icon: '\u2705' },
+  { value: 'in_progress', label: 'In Progress', color: '#f59e0b', icon: '\ud83d\udd04' },
+  { value: 'won', label: 'Won', color: '#10b981', icon: '\ud83c\udf89' },
+  { value: 'lost', label: 'Lost', color: '#ef4444', icon: '\u274c' },
 ];
 
 const StageSelector: React.FC<StageSelectorProps> = ({

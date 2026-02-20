@@ -1,18 +1,8 @@
 import React from 'react';
+// @ts-ignore: If recharts is not installed, install it with npm install recharts
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import '../styles/components/FunnelChart.css';
-
-interface FunnelData {
-  stage: string;
-  count: number;
-  percentage?: number;
-}
-
-interface FunnelChartProps {
-  data: FunnelData[];
-  isLoading?: boolean;
-  title?: string;
-}
+import type { FunnelData, FunnelChartProps } from '../types/components/FunnelChartTypes';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444'];
 

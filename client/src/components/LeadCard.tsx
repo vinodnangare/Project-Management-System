@@ -1,27 +1,7 @@
 import React from 'react';
 import '../styles/components/LeadCard.css';
-
-interface Lead {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone?: string;
-  source: string;
-  stage: string;
-  priority: string;
-  owner_name?: string;
-  created_at: string;
-}
-
-interface LeadCardProps {
-  lead: Lead;
-  onClick?: () => void;
-  onStageChange?: (newStage: string) => void;
-  draggable?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragEnd?: (e: React.DragEvent) => void;
-}
+import type { Lead } from '../types/components/Lead';
+import type { LeadCardProps } from '../types/components/LeadCardProps';
 
 const LeadCard: React.FC<LeadCardProps> = ({
   lead,

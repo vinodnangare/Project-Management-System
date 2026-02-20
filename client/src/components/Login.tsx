@@ -4,10 +4,7 @@ import { useAppDispatch } from '../hooks/redux';
 import { setCredentials } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Auth.css';
-
-interface LoginProps {
-  onSwitchToRegister: () => void;
-}
+import type { LoginProps } from '../types/components/LoginProps';
 
 export default function Login({ onSwitchToRegister }: LoginProps) {
   const dispatch = useAppDispatch();

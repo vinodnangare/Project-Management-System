@@ -2,18 +2,7 @@ import React, { useState } from 'react';
 import { useGetAdminTimeLogsQuery } from '../services/api';
 import DatePicker from './DatePicker';
 import '../styles/AdminTimeLogs.css';
-
-interface TimeLog {
-  id: string;
-  user_id: string;
-  full_name: string;
-  task_id: string | null;
-  hours_worked: number;
-  date: string;
-  description: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import type { TimeLog } from '../types/components/AdminTimeLogsTypes';
 
 const AdminTimeLogs: React.FC = () => {
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -45,7 +34,7 @@ const AdminTimeLogs: React.FC = () => {
               {timeLogs.length === 0 ? (
                 <tr><td colSpan={5} className="atl-empty">No logs for this date.</td></tr>
               ) : (
-                timeLogs.map((log: any) => (
+                timeLogs.map((log: TimeLog) => (
                   <tr key={log.id} className="atl-row">
                     <td className="atl-emp">
                       <div className="atl-avatar">{log.full_name[0]}</div>

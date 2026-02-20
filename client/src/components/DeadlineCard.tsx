@@ -1,12 +1,5 @@
 import React from 'react';
-
-interface DeadlineCardProps {
-  index: number;
-  title: string;
-  dueDate: Date;
-  priority: string;
-  onSelect?: (taskId: string) => void;
-}
+import type { DeadlineCardProps } from '../types/components/DeadlineCardProps';
 
 export const DeadlineCard: React.FC<DeadlineCardProps> = ({ 
   index, 
