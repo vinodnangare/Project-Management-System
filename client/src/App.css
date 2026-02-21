@@ -88,6 +88,22 @@ h1, h2, h3, .brand-title {
   background: rgba(10, 15, 31, 0.6);
 }
 
+/* Light theme scrollbar styles */
+html[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(14, 165, 233, 0.35);
+  border-radius: 999px;
+  border: 2px solid rgba(244, 247, 251, 0.9);
+}
+
+html[data-theme='light'] ::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.6);
+}
+
+html[data-theme='light'] ::selection {
+  background: rgba(14, 165, 233, 0.35);
+  color: #0f172a;
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
