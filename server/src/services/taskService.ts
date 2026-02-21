@@ -51,6 +51,7 @@ const formatTaskResponse = async (task: ITask): Promise<TaskType> => {
 export const getAssignableUsers = async (): Promise<Array<{ id: string; full_name: string; email: string }>> => {
   const users = await User.find({
     role: 'employee',
+    // role: { $in: ['employee', 'manager'] },
     is_active: true
   }).select('full_name email');
 

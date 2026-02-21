@@ -60,7 +60,30 @@ app.get('/api/tasks/reports/export', verifyJwt, taskController.exportReport);
 
 app.get('/api/tasks/assigned/me', verifyJwt, taskController.getMyAssignedTasks);
 
+// Assignable users endpoint - must be before :id routes
+app.get('/api/tasks/users/assignable', verifyJwt, taskController.getAssignableUsers);
+
+// Task CRUD operations
+app.post('/api/tasks', verifyJwt, taskController.createTask);
+app.get('/api/tasks/:id', verifyJwt, taskController.getTaskById);
+app.patch('/api/tasks/:id', verifyJwt, taskController.updateTask);
+app.delete('/api/tasks/:id', verifyJwt, taskController.deleteTask);
+
+// Task assignees
+app.get('/api/tasks/:taskId/assignees', verifyJwt, taskController.getTaskAssignees);
+app.post('/api/tasks/:taskId/assignees', verifyJwt, taskController.addTaskAssignee);
 app.delete('/api/tasks/:taskId/assignees/:userId', verifyJwt, taskController.removeTaskAssignee);
+
+// Task comments
+app.get('/api/tasks/:taskId/comments', verifyJwt, taskController.getTaskComments);
+app.post('/api/tasks/:taskId/comments', verifyJwt, taskController.addComment);
+
+// Task activities
+app.get('/api/tasks/:taskId/activities', verifyJwt, taskController.getTaskActivities);
+
+// Task docs
+app.get('/api/tasks/:taskId/docs', verifyJwt, taskController.getTaskDoc);
+app.put('/api/tasks/:taskId/docs', verifyJwt, taskController.upsertTaskDoc);
 
 app.post('/api/tasks/:taskId/subtasks', verifyJwt, subtaskController.createSubtask);
 
