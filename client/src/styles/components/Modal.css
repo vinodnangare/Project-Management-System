@@ -120,17 +120,32 @@
 }
 
 .modal-content::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: rgba(10, 15, 31, 0.4);
   border-radius: 4px;
 }
 
 .modal-content::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(79, 134, 255, 0.35);
   border-radius: 4px;
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(79, 134, 255, 0.5);
+}
+
+/* Light theme scrollbar styles */
+html[data-theme='light'] .modal-content::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.6);
+  border-radius: 4px;
+}
+
+html[data-theme='light'] .modal-content::-webkit-scrollbar-thumb {
+  background: rgba(14, 165, 233, 0.35);
+  border-radius: 4px;
+}
+
+html[data-theme='light'] .modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 165, 233, 0.5);
 }
 
 /* Responsive Design */
