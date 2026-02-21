@@ -2,11 +2,7 @@ import { useState } from 'react';
 import jsPDF from 'jspdf';
 import { useGetReportSummaryQuery, useGetEmployeePerformanceQuery, useGetTaskCompletionQuery } from '../services/api';
 import '../styles/Reports.css';
-
-interface DateRange {
-  startDate: string;
-  endDate: string;
-}
+import type { DateRange } from '../types/components/ReportsTypes';
 
 export const Reports: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({

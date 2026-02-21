@@ -2,11 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useGetAssignableUsersQuery, useCreateTaskMutation } from '../services/api';
 import '../styles/TaskForm.css';
-
-interface TaskFormProps {
-  onTaskCreated?: (taskId: string) => void;
-  onClose?: () => void;
-}
+import type { TaskFormProps } from '../types/components/TaskFormProps';
 
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
 

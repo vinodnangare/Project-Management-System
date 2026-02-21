@@ -1,20 +1,6 @@
 import React from 'react';
 import '../styles/components/LeadTimeline.css';
-
-interface TimelineEvent {
-  id: string;
-  type: 'created' | 'stage_change' | 'note' | 'email' | 'call' | 'meeting' | 'updated';
-  title: string;
-  description?: string;
-  user_name?: string;
-  timestamp: string;
-  metadata?: Record<string, any>;
-}
-
-interface LeadTimelineProps {
-  events: TimelineEvent[];
-  isLoading?: boolean;
-}
+import type { TimelineEvent, LeadTimelineProps } from '../types/components/LeadTimelineProps';
 
 const LeadTimeline: React.FC<LeadTimelineProps> = ({ events, isLoading }) => {
   const getEventIcon = (type: string) => {

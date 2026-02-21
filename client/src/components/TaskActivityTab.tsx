@@ -1,9 +1,6 @@
 import React from 'react';
 import { formatIST } from '../utils/formatters';
-
-interface TaskActivityTabProps {
-  activities: any[];
-}
+import type { TaskActivityTabProps } from '../types/components/TaskActivityTabProps';
 
 const getActivityActionText = (action: string): string => {
   const actionMap: { [key: string]: string } = {

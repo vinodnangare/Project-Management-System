@@ -1,18 +1,8 @@
 import React from 'react';
+// @ts-ignore: If recharts is not installed, install it with npm install recharts
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import '../styles/components/ConversionChart.css';
-
-interface ConversionData {
-  date: string;
-  conversions: number;
-  rate?: number;
-}
-
-interface ConversionChartProps {
-  data: ConversionData[];
-  isLoading?: boolean;
-  title?: string;
-}
+import type { ConversionData, ConversionChartProps } from '../types/components/ConversionChartTypes';
 
 const ConversionChart: React.FC<ConversionChartProps> = ({
   data,

@@ -1,12 +1,7 @@
 import React from 'react';
 import { useMarkNotificationAsReadMutation, type Notification } from '../services/api';
 import '../styles/NotificationDropdown.css';
-
-interface NotificationDropdownProps {
-  notifications: Notification[];
-  isLoading: boolean;
-  onClose: () => void;
-}
+import type { NotificationDropdownProps } from '../types/components/NotificationDropdownProps';
 
 const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   notifications,

@@ -2,26 +2,7 @@ import { useMemo } from 'react';
 import { useAppSelector } from '../hooks/redux';
 import { useGetTasksQuery, useGetTimeLogsQuery } from '../services/api';
 import '../styles/EmployeeDashboard.css';
-
-interface UpcomingDeadline {
-  id: string;
-  title: string;
-  dueDate: string;
-  priority: string;
-}
-
-interface EmployeeDashboardStats {
-  totalTasks: number;
-  tasksCompleted: number;
-  tasksInProgress: number;
-  tasksTodo: number;
-  tasksInReview: number;
-  tasksOverdue: number;
-  tasksDueToday: number;
-  hoursWorked: number;
-  completionRate: number;
-  upcomingDeadlines: UpcomingDeadline[];
-}
+import type { UpcomingDeadline, EmployeeDashboardStats } from '../types/components/EmployeeDashboardTypes';
 
 const EmployeeDashboard = () => {
   const { user } = useAppSelector((state) => state.auth);

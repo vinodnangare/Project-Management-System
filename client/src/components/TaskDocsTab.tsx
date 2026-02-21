@@ -1,11 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useGetTaskDocQuery, useUpsertTaskDocMutation } from '../services/api';
-
-interface TaskDocsTabProps {
-  taskId: string;
-  isAdmin: boolean;
-}
+import type { TaskDocsTabProps } from '../types/components/TaskDocsTabProps';
 
 export const TaskDocsTab: React.FC<TaskDocsTabProps> = ({ taskId, isAdmin }) => {
   const { data: doc, isLoading, error } = useGetTaskDocQuery(taskId, {

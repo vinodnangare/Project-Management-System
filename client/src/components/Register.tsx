@@ -5,10 +5,7 @@ import { setCredentials } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { validatePassword } from '../utils/validators';
 import '../styles/Auth.css';
-
-interface RegisterProps {
-  onSwitchToLogin: () => void;
-}
+import type { RegisterProps } from '../types/components/RegisterProps';
 
 export default function Register({ onSwitchToLogin }: RegisterProps) {
   const dispatch = useAppDispatch();

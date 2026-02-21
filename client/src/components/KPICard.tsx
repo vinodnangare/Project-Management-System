@@ -1,19 +1,6 @@
 import React from 'react';
 import '../styles/components/KPICard.css';
-
-interface KPICardProps {
-  title: string;
-  value: string | number;
-  change?: {
-    value: number;
-    type: 'increase' | 'decrease';
-  };
-  icon?: string;
-  color?: string;
-  subtitle?: string;
-  isLoading?: boolean;
-  onClick?: () => void;
-}
+import type { KPICardProps } from '../types/components/KPICardProps';
 
 const KPICard: React.FC<KPICardProps> = ({
   title,

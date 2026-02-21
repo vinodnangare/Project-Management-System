@@ -1,15 +1,5 @@
 import React from 'react';
-
-interface TaskDetailsTabProps {
-  task: any;
-  assignees: any[];
-  availableUsers: any[];
-  user: any;
-  isAdmin: boolean;
-  onAddAssignee: (userId: string) => void;
-  onRemoveAssignee: (userId: string) => void;
-  statusControl: React.ReactNode;
-}
+import type { TaskDetailsTabProps } from '../types/components/TaskDetailsTabProps';
 
 export const TaskDetailsTab: React.FC<TaskDetailsTabProps> = ({
   task,

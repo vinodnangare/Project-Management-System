@@ -1,17 +1,6 @@
 import React, { useEffect } from 'react';
 import '../styles/components/Modal.css';
-
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title?: string;
-  children: React.ReactNode;
-  size?: 'small' | 'medium' | 'large' | 'fullscreen';
-  showCloseButton?: boolean;
-  closeOnBackdropClick?: boolean;
-  closeOnEscape?: boolean;
-  className?: string;
-}
+import type { ModalProps } from '../types/components/ModalProps';
 
 const Modal: React.FC<ModalProps> = ({
   isOpen,

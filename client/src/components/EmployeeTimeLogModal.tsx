@@ -1,13 +1,7 @@
 import React, { useEffect } from 'react';
 import { useGetUserTimeLogsAdminQuery } from '../services/api';
 import '../styles/EmployeeTimeLogModal.css';
-
-interface EmployeeTimeLogModalProps {
-  employeeId: string;
-  employeeName: string;
-  open: boolean;
-  onClose: () => void;
-}
+import type { EmployeeTimeLogModalProps } from '../types/components/EmployeeTimeLogModalProps';
 
 const EmployeeTimeLogModal: React.FC<EmployeeTimeLogModalProps> = ({ employeeId, employeeName, open, onClose }) => {
   const thirtyDaysAgo = new Date();

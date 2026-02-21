@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
 import '../styles/components/BulkActions.css';
-
-interface BulkActionsProps {
-  selectedCount: number;
-  onAssign?: () => void;
-  onChangeStage?: (stage: string) => void;
-  onChangePriority?: (priority: string) => void;
-  onDelete?: () => void;
-  onClearSelection: () => void;
-}
+import type { BulkActionsProps } from '../types/components/BulkActionsProps';
 
 const BulkActions: React.FC<BulkActionsProps> = ({
   selectedCount,

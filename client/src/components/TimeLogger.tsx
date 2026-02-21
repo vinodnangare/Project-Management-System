@@ -1,27 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useGetTasksQuery, useGetTimeLogsQuery, useLogTimeMutation } from '../services/api';
 import '../styles/TimeLogger.css';
-
-interface TimeLog {
-  id: string;
-  user_id: string;
-  user?: {
-    id: string;
-    email: string;
-    full_name: string;
-    role: string;
-  };
-  task_id: string | null;
-  hours_worked: number;
-  date: string;
-  description: string | null;
-  created_at: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-}
+import type { TimeLog } from '../types/components/TimeLog';
+import type { Task } from '../types/components/Task';
 
 export const TimeLogger: React.FC = () => {
   const thirtyDaysAgo = new Date();

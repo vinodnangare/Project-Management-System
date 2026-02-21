@@ -1,29 +1,7 @@
 import React from 'react';
 import '../styles/components/LeadTable.css';
-
-interface Lead {
-  id: string;
-  company_name: string;
-  contact_name: string;
-  email: string;
-  phone?: string;
-  source: string;
-  stage: string;
-  priority: string;
-  owner_name?: string;
-  created_at: string;
-}
-
-interface LeadTableProps {
-  leads: Lead[];
-  selectedLeads?: Set<string>;
-  onSelectLead?: (leadId: string) => void;
-  onSelectAll?: (checked: boolean) => void;
-  onRowClick?: (leadId: string) => void;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  onSort?: (column: string) => void;
-}
+import type { Lead } from '../types/components/Lead';
+import type { LeadTableProps } from '../types/components/LeadTableProps';
 
 const LeadTable: React.FC<LeadTableProps> = ({
   leads,

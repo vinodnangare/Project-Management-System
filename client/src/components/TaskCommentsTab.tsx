@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-
-interface TaskCommentsTabProps {
-  comments: any[];
-  onAddComment: (comment: string) => Promise<void>;
-  isAdding: boolean;
-}
+import type { TaskCommentsTabProps } from '../types/components/TaskCommentsTabProps';
 
 export const TaskCommentsTab: React.FC<TaskCommentsTabProps> = ({
   comments,

@@ -1,10 +1,5 @@
 import React from 'react';
-
-interface TabsProps {
-  activeTab: 'details' | 'subtasks' | 'comments' | 'activity';
-  onTabChange: (tab: 'details' | 'subtasks' | 'comments' | 'activity') => void;
-  children: React.ReactNode;
-}
+import type { TabsProps } from '../types/components/TabsProps';
 
 export const TabContainer: React.FC<TabsProps> = ({ activeTab, onTabChange, children }) => {
   const tabs = ['details', 'subtasks', 'comments', 'activity'] as const;
