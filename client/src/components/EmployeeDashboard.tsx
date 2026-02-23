@@ -3,9 +3,12 @@ import { useAppSelector } from '../hooks/redux';
 import { useGetTasksQuery, useGetTimeLogsQuery } from '../services/api';
 import '../styles/EmployeeDashboard.css';
 import type { UpcomingDeadline, EmployeeDashboardStats } from '../types/components/EmployeeDashboardTypes';
+import MeetingsListPage from '../modules/meetings/pages/MeetingsListPage';
+import MeetingNotes from '../modules/meetings/components/MeetingNotes';
 
 const EmployeeDashboard = () => {
   const { user } = useAppSelector((state) => state.auth);
+  // Meetings removed (dummy data)
   
   // Fetch tasks and time logs using RTK Query
   const { data: tasksResponse, isLoading: tasksLoading } = useGetTasksQuery({ page: 1, limit: 100 });
@@ -193,13 +196,8 @@ const EmployeeDashboard = () => {
           </section>
         )}
 
-        {stats.totalTasks === 0 && (
-          <section className="empty-state">
-            <div className="empty-icon">🎉</div>
-            <h3>No Tasks Assigned</h3>
-            <p>You have no assigned tasks. Enjoy your time or pick a new one!</p>
-          </section>
-        )}
+        {/* Removed empty state for no tasks */}
+        {/* Removed meetings section from dashboard, now accessible via navbar */}
       </main>
     </div>
   );
