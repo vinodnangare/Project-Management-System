@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react';
+import MeetingsListPage from './modules/meetings/pages/MeetingsListPage';
+import MeetingDetailPage from './modules/meetings/pages/MeetingDetailPage';
+import MeetingCalendarPage from './modules/meetings/pages/MeetingCalendarPage';
+import MeetingFormPage from './modules/meetings/pages/MeetingFormPage';
 import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import TaskList from './components/TaskList';
@@ -154,27 +158,23 @@ function AuthenticatedLayout({
                 <button
                   className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
                   onClick={() => navigate('/tasks')}
-                >
-                  📋 Tasks
-                </button>
+                >📋 Tasks</button>
                 <button
                   className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
                   onClick={() => navigate('/leads')}
-                >
-                  🎯 Leads
-                </button>
+                >🎯 Leads</button>
+                <button
+                  className={`nav-btn ${currentPath === '/meetings' ? 'active' : ''}`}
+                  onClick={() => navigate('/meetings')}
+                >📅 Meetings</button>
                 <button
                   className={`nav-btn ${currentPath === '/admin/analytics' ? 'active' : ''}`}
                   onClick={() => navigate('/admin/analytics')}
-                >
-                  📊 Analytics
-                </button>
+                >📊 Analytics</button>
                 <button
                   className={`nav-btn ${currentPath === '/admin/reports' ? 'active' : ''}`}
                   onClick={() => navigate('/admin/reports')}
-                >
-                  📈 Reports
-                </button>
+                >📈 Reports</button>
               </>
             )}
 
@@ -202,21 +202,19 @@ function AuthenticatedLayout({
                 <button
                   className={`nav-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
                   onClick={() => navigate('/dashboard')}
-                >
-                  🎯 Dashboard
-                </button>
+                >🎯 Dashboard</button>
                 <button
                   className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
                   onClick={() => navigate('/tasks')}
-                >
-                  📋 Tasks
-                </button>
+                >📋 Tasks</button>
+                <button
+                  className={`nav-btn ${currentPath === '/meetings' ? 'active' : ''}`}
+                  onClick={() => navigate('/meetings')}
+                >📅 Meetings</button>
                 <button
                   className={`nav-btn ${currentPath === '/time-log' ? 'active' : ''}`}
                   onClick={() => navigate('/time-log')}
-                >
-                  ⏱️ Time
-                </button>
+                >⏱️ Time</button>
               </>
             )}
           </div>
@@ -299,6 +297,12 @@ function AuthenticatedLayout({
                   </section>
                 </div>
               } />
+              {/* Meetings routes for admin */}
+              <Route path="/meetings" element={<MeetingsListPage />} />
+              <Route path="/meetings/calendar" element={<MeetingCalendarPage />} />
+              <Route path="/meetings/new" element={<MeetingFormPage />} />
+              <Route path="/meetings/:id/edit" element={<MeetingFormPage />} />
+              <Route path="/meetings/:id" element={<MeetingDetailPage />} />
               <Route path="/" element={<Navigate to="/admin/analytics" replace />} />
               <Route path="*" element={<Navigate to="/admin/analytics" replace />} />
             </>
@@ -360,6 +364,10 @@ function AuthenticatedLayout({
                   </section>
                 </div>
               } />
+              {/* Meetings routes for employee (view only) */}
+              <Route path="/meetings" element={<MeetingsListPage />} />
+              <Route path="/meetings/calendar" element={<MeetingCalendarPage />} />
+              <Route path="/meetings/:id" element={<MeetingDetailPage />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </>
