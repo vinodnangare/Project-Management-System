@@ -22,11 +22,17 @@ export const meetingsApi = createApi({
         url: '/meetings',
         params,
       }),
-      providesTags: ['Meeting'],
+      providesTags: (result) =>
+        result?.data
+          ? [
+              ...result.data.map(({ id }) => ({ type: 'Meeting' as const, id })),
+              { type: 'Meeting', id: 'LIST' }
+            ]
+          : [{ type: 'Meeting', id: 'LIST' }],
     }),
     getMeeting: builder.query<{ success: boolean; data: IMeeting }, string>({
       query: (id) => `/meetings/${id}`,
-      providesTags: ['Meeting'],
+      providesTags: (result, error, id) => [{ type: 'Meeting', id }],
     }),
     createMeeting: builder.mutation<{ success: boolean; data: IMeeting }, ICreateMeeting>({
       query: (data) => ({
@@ -34,7 +40,7 @@ export const meetingsApi = createApi({
         method: 'POST',
         body: data,
       }),
-      invalidatesTags: ['Meeting'],
+      invalidatesTags: [{ type: 'Meeting', id: 'LIST' }],
     }),
     updateMeeting: builder.mutation<{ success: boolean; data: IMeeting }, { id: string; data: Partial<ICreateMeeting> }>({
       query: ({ id, data }) => ({
@@ -42,14 +48,20 @@ export const meetingsApi = createApi({
         method: 'PATCH',
         body: data,
       }),
-      invalidatesTags: ['Meeting'],
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Meeting', id },
+        { type: 'Meeting', id: 'LIST' }
+      ],
     }),
     deleteMeeting: builder.mutation<{ success: boolean }, string>({
       query: (id) => ({
         url: `/meetings/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Meeting'],
+      invalidatesTags: (result, error, id) => [
+        { type: 'Meeting', id },
+        { type: 'Meeting', id: 'LIST' }
+      ],
     }),
     getUpcomingMeetings: builder.query<{ success: boolean; data: IMeeting[] }, number | void>({
       query: (limit = 5) => `/meetings/upcoming?limit=${limit}`,
