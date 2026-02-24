@@ -1,80 +1,70 @@
 import { useEffect, useState } from 'react';
-import MeetingsListPage from './modules/meetings/pages/MeetingsListPage';
-import MeetingDetailPage from './modules/meetings/pages/MeetingDetailPage';
-import MeetingCalendarPage from './modules/meetings/pages/MeetingCalendarPage';
-import MeetingFormPage from './modules/meetings/pages/MeetingFormPage';
-import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+
+import Sidebar from './components/Sidebar';
 import TaskList from './components/TaskList';
 import TaskDetail from './components/TaskDetail';
 import TaskForm from './components/TaskForm';
 import Login from './components/Login';
 import Register from './components/Register';
 import TimeLogger from './components/TimeLogger';
-import AdminStats from './components/AdminStats.tsx';
-import Reports from './components/Reports.tsx';
-import EmployeeDashboard from './components/EmployeeDashboard.tsx';
+import AdminStats from './components/AdminStats';
+import Reports from './components/Reports';
+import EmployeeDashboard from './components/EmployeeDashboard';
 import LeadDashboard from './pages/LeadDashboard';
 import LeadPipeline from './pages/LeadPipeline';
 import LeadList from './pages/LeadList';
 import LeadDetail from './pages/LeadDetail';
 import ProfileModal from './components/ProfileModal';
 import NotificationBell from './components/NotificationBell';
+
+import MeetingsListPage from './modules/meetings/pages/MeetingsListPage';
+import MeetingDetailPage from './modules/meetings/pages/MeetingDetailPage';
+import MeetingCalendarPage from './modules/meetings/pages/MeetingCalendarPage';
+import MeetingFormPage from './modules/meetings/pages/MeetingFormPage';
+
 import { useAppDispatch, useAppSelector } from './hooks/redux';
 import { openTaskForm, closeTaskForm, setSelectedTask } from './store/slices/uiSlice';
-import { logout, setCredentials } from './store/slices/authSlice';
+import { logout } from './store/slices/authSlice';
 import { openProfileModal } from './store/slices/uiModalSlice';
+
 import './App.css';
 
 function App() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user, token } = useAppSelector((state) => state.auth);
 
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const selectedTaskId = useAppSelector((state) => state.ui.selectedTaskId);
   const showTaskForm = useAppSelector((state) => state.ui.showTaskForm);
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  // =============================
+  // 🌙 DARK MODE STATE
+  // =============================
+  const [isDarkMode, setIsDarkMode] = useState(
+    localStorage.getItem('theme') !== 'light'
+  );
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && !storedUser) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      dispatch(logout());
-    }
-  }, [dispatch]);
+    const theme = isDarkMode ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [isDarkMode]);
 
+  // =============================
+  // Role Based Redirect
+  // =============================
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (!storedToken) return;
+    if (isAuthenticated && user && location.pathname === '/') {
+      const defaultRoute =
+        user.role === 'admin'
+          ? '/admin/analytics'
+          : user.role === 'manager'
+          ? '/leads'
+          : '/dashboard';
 
-    const controller = new AbortController();
-    fetch(`${apiBaseUrl}/auth/profile`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${storedToken}`,
-      },
-      signal: controller.signal,
-    })
-      .then((res) => {
-        if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          dispatch(logout());
-        }
-      })
-      .catch(() => {
-      });
-
-    return () => controller.abort();
-  }, [apiBaseUrl, dispatch]);
-
-  useEffect(() => {
-    if (isAuthenticated && user && (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register')) {
-      const defaultRoute = user.role === 'admin' ? '/admin/analytics' : user.role === 'manager' ? '/leads' : '/dashboard';
       navigate(defaultRoute, { replace: true });
     }
   }, [isAuthenticated, user, navigate, location.pathname]);
@@ -88,9 +78,9 @@ function App() {
     dispatch(closeTaskForm());
   };
 
-  const roleLabel = user?.role === 'admin' ? 'Admin' : user?.role === 'manager' ? 'Manager' : 'Employee';
-  const roleEmoji = user?.role === 'admin' ? '🛠️' : user?.role === 'manager' ? '👔' : '💻';
-
+  // =============================
+  // PUBLIC ROUTES
+  // =============================
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -101,281 +91,118 @@ function App() {
     );
   }
 
+  // =============================
+  // AUTHENTICATED LAYOUT
+  // =============================
   return (
-    <Routes>
-      <Route path="*" element={<AuthenticatedLayout 
-        user={user}
-        roleLabel={roleLabel}
-        roleEmoji={roleEmoji}
-        handleLogout={handleLogout}
-        dispatch={dispatch}
-        navigate={navigate}
-        location={location}
-        selectedTaskId={selectedTaskId}
-        showTaskForm={showTaskForm}
-        handleTaskCreated={handleTaskCreated}
-      />} />
-    </Routes>
-  );
-}
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar />
 
-function AuthenticatedLayout({ 
-  user, roleLabel, roleEmoji, handleLogout, dispatch, navigate, location,
-  selectedTaskId, showTaskForm, handleTaskCreated 
-}: any) {
-  const currentPath = location.pathname;
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme ? savedTheme === 'dark' : true;
-  });
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Toaster position="top-right" />
+        <ProfileModal />
 
-  useEffect(() => {
-    const theme = isDarkMode ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [isDarkMode]);
-  
-  return (
-    <div className="app-container">
-      <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
-      <header className="app-header">
-        <div className="header-brand">
-          <div className="brand-left">
-            <h1>📋 Task Management</h1>
-            <p className="brand-subtitle">{user?.full_name || user?.email}</p>
+        {/* Header */}
+        <header className="app-header">
+          <h1>📋 Task Management</h1>
+
+          <div className="header-actions">
+            <NotificationBell />
+
+            <button
+              onClick={() => setIsDarkMode((prev) => !prev)}
+              className="theme-toggle"
+            >
+              {isDarkMode ? '🌙 Dark' : '☀️ Light'}
+            </button>
+
+            <button onClick={() => dispatch(openProfileModal())}>
+              Profile
+            </button>
+
+            <button onClick={handleLogout}>
+              Logout
+            </button>
           </div>
-          <div className="header-role-chip">
-            <span className="role-emoji">{roleEmoji}</span>
-            <span className="role-text">{roleLabel}</span>
-          </div>
-        </div>
+        </header>
 
-        <nav className="app-nav">
-          <div className="nav-container">
-            {/* Admin Navigation */}
+        {/* Main */}
+        <main className="app-main">
+          <Routes>
+
+            {/* ================= ADMIN ================= */}
             {user?.role === 'admin' && (
               <>
-                <button
-                  className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
-                  onClick={() => navigate('/tasks')}
-                >📋 Tasks</button>
-                <button
-                  className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
-                  onClick={() => navigate('/leads')}
-                >🎯 Leads</button>
-                <button
-                  className={`nav-btn ${currentPath === '/meetings' ? 'active' : ''}`}
-                  onClick={() => navigate('/meetings')}
-                >📅 Meetings</button>
-                <button
-                  className={`nav-btn ${currentPath === '/admin/analytics' ? 'active' : ''}`}
-                  onClick={() => navigate('/admin/analytics')}
-                >📊 Analytics</button>
-                <button
-                  className={`nav-btn ${currentPath === '/admin/reports' ? 'active' : ''}`}
-                  onClick={() => navigate('/admin/reports')}
-                >📈 Reports</button>
+                <Route path="/admin/analytics" element={<AdminStats />} />
+                <Route path="/admin/reports" element={<Reports />} />
+                <Route path="/leads" element={<LeadDashboard />} />
+                <Route path="/leads/pipeline" element={<LeadPipeline />} />
+                <Route path="/leads/list" element={<LeadList />} />
+                <Route path="/leads/:id" element={<LeadDetail />} />
+                <Route path="/meetings" element={<MeetingsListPage />} />
+                <Route path="/meetings/:id" element={<MeetingDetailPage />} />
+                <Route path="/meetings/calendar" element={<MeetingCalendarPage />} />
+                <Route path="/meetings/new" element={<MeetingFormPage />} />
               </>
             )}
 
-            {/* Manager Navigation */}
+            {/* ================= MANAGER ================= */}
             {user?.role === 'manager' && (
               <>
-                <button
-                  className={`nav-btn ${currentPath === '/leads' ? 'active' : ''}`}
-                  onClick={() => navigate('/leads')}
-                >
-                  🎯 Leads
-                </button>
-                <button
-                  className={`nav-btn ${currentPath === '/reports' ? 'active' : ''}`}
-                  onClick={() => navigate('/reports')}
-                >
-                  📈 Reports
-                </button>
+                <Route path="/leads" element={<LeadDashboard />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/tasks" element={<TasksSection />} />
               </>
             )}
 
-            {/* Employee Navigation */}
+            {/* ================= EMPLOYEE ================= */}
             {user?.role === 'employee' && (
               <>
-                <button
-                  className={`nav-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
-                  onClick={() => navigate('/dashboard')}
-                >🎯 Dashboard</button>
-                <button
-                  className={`nav-btn ${currentPath === '/tasks' ? 'active' : ''}`}
-                  onClick={() => navigate('/tasks')}
-                >📋 Tasks</button>
-                <button
-                  className={`nav-btn ${currentPath === '/meetings' ? 'active' : ''}`}
-                  onClick={() => navigate('/meetings')}
-                >📅 Meetings</button>
-                <button
-                  className={`nav-btn ${currentPath === '/time-log' ? 'active' : ''}`}
-                  onClick={() => navigate('/time-log')}
-                >⏱️ Time</button>
+                <Route path="/dashboard" element={<EmployeeDashboard />} />
+                <Route path="/time-log" element={<TimeLogger />} />
+                <Route path="/tasks" element={<TasksSection />} />
+                <Route path="/meetings" element={<MeetingsListPage />} />
               </>
             )}
-          </div>
-        </nav>
 
-        <div className="header-actions">
-          <button
-            className={`btn-create-task ${user?.role !== 'admin' || currentPath !== '/tasks' ? 'btn-hidden' : ''}`}
-            onClick={() => dispatch(openTaskForm())}
-            disabled={user?.role !== 'admin' || currentPath !== '/tasks'}
-          >
-            ✚ New Task
-          </button>
-          <NotificationBell />
-          <button
-            className="btn-theme"
-            onClick={() => setIsDarkMode((prev) => !prev)}
-            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDarkMode ? '🌙 Dark' : '☀️ Light'}
-          </button>
-          <button
-            className="btn-profile"
-            onClick={() => dispatch(openProfileModal())}
-            aria-label="Profile"
-            title="My Profile"
-          >
-            <span className="profile-avatar">
-              {user?.profile_image_url ? (
-                <img
-                  src={user.profile_image_url}
-                  alt="Profile"
-                  className="profile-avatar-image"
-                />
-              ) : (
-                user?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()
-              )}
-            </span>
-          </button>
-          <button className="btn-logout" onClick={handleLogout}>
-            ⎇ Logout
-          </button>
-        </div>
-      </header>
+            {/* Shared Tasks Route */}
+            <Route path="/tasks" element={<TasksSection />} />
 
-      <ProfileModal />
-
-      <main className="app-main">
-        <Routes>
-          {/* Admin routes */}
-          {user?.role === 'admin' && (
-            <>
-              <Route path="/admin/analytics" element={<AdminStats />} />
-              <Route path="/leads" element={<LeadDashboard />} />
-              <Route path="/leads/pipeline" element={<LeadPipeline />} />
-              <Route path="/leads/list" element={<LeadList />} />
-              <Route path="/leads/:id" element={<LeadDetail />} />
-              <Route path="/admin/reports" element={<Reports />} /> 
-              <Route path="/tasks" element={
-                <div className="app-layout">
-                  <aside className="task-list-panel">
-                    <TaskList
-                      onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
-                      selectedTaskId={selectedTaskId || undefined}
-                    />
-                  </aside>
-                  <section className="task-detail-panel">
-                    {showTaskForm ? (
-                      <TaskForm
-                        onTaskCreated={handleTaskCreated}
-                        onClose={() => dispatch(closeTaskForm())}
-                      />
-                    ) : selectedTaskId ? (
-                      <TaskDetail taskId={selectedTaskId} />
-                    ) : (
-                      <div className="empty-state">
-                        <p>Select a task to view details or create a new one</p>
-                      </div>
-                    )}
-                  </section>
-                </div>
-              } />
-              {/* Meetings routes for admin */}
-              <Route path="/meetings" element={<MeetingsListPage />} />
-              <Route path="/meetings/calendar" element={<MeetingCalendarPage />} />
-              <Route path="/meetings/new" element={<MeetingFormPage />} />
-              <Route path="/meetings/:id/edit" element={<MeetingFormPage />} />
-              <Route path="/meetings/:id" element={<MeetingDetailPage />} />
-              <Route path="/" element={<Navigate to="/admin/analytics" replace />} />
-              <Route path="*" element={<Navigate to="/admin/analytics" replace />} />
-            </>
-          )}
-
-          {/* Manager routes */}
-          {user?.role === 'manager' && (
-            <>
-              <Route path="/leads" element={<LeadDashboard />} />
-              <Route path="/leads/pipeline" element={<LeadPipeline />} />
-              <Route path="/leads/list" element={<LeadList />} />
-              <Route path="/leads/:id" element={<LeadDetail />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/tasks" element={
-                <div className="app-layout">
-                  <aside className="task-list-panel">
-                    <TaskList
-                      onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
-                      selectedTaskId={selectedTaskId || undefined}
-                    />
-                  </aside>
-                  <section className="task-detail-panel">
-                    {selectedTaskId ? (
-                      <TaskDetail taskId={selectedTaskId} />
-                    ) : (
-                      <div className="empty-state">
-                        <p>Select a task to view details</p>
-                      </div>
-                    )}
-                  </section>
-                </div>
-              } />
-              <Route path="/" element={<Navigate to="/leads" replace />} />
-              <Route path="*" element={<Navigate to="/leads" replace />} />
-            </>
-          )}
-          
-          {/* Employee routes */}
-          {user?.role === 'employee' && (
-            <>
-              <Route path="/dashboard" element={<EmployeeDashboard />} />
-              <Route path="/time-log" element={<TimeLogger />} />
-              <Route path="/tasks" element={
-                <div className="app-layout">
-                  <aside className="task-list-panel">
-                    <TaskList
-                      onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
-                      selectedTaskId={selectedTaskId || undefined}
-                    />
-                  </aside>
-                  <section className="task-detail-panel">
-                    {selectedTaskId ? (
-                      <TaskDetail taskId={selectedTaskId} />
-                    ) : (
-                      <div className="empty-state">
-                        <p>Select a task to view details</p>
-                      </div>
-                    )}
-                  </section>
-                </div>
-              } />
-              {/* Meetings routes for employee (view only) */}
-              <Route path="/meetings" element={<MeetingsListPage />} />
-              <Route path="/meetings/calendar" element={<MeetingCalendarPage />} />
-              <Route path="/meetings/:id" element={<MeetingDetailPage />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </>
-          )}
-        </Routes>
-      </main>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
+
+  // =============================
+  // TASKS SECTION COMPONENT
+  // =============================
+  function TasksSection() {
+    return (
+      <div className="app-layout">
+        <aside>
+          <TaskList
+            onTaskSelect={(taskId) => dispatch(setSelectedTask(taskId))}
+            selectedTaskId={selectedTaskId || undefined}
+          />
+        </aside>
+
+        <section>
+          {showTaskForm ? (
+            <TaskForm
+              onTaskCreated={handleTaskCreated}
+              onClose={() => dispatch(closeTaskForm())}
+            />
+          ) : selectedTaskId ? (
+            <TaskDetail taskId={selectedTaskId} />
+          ) : (
+            <p>Select a task to view details</p>
+          )}
+        </section>
+      </div>
+    );
+  }
 }
 
 export default App;
