@@ -18,3 +18,5 @@ export { Lead } from './Lead.js';
 export type { ILead } from './Lead.js';
 export { Notification } from './Notification.js';
 export type { INotification } from './Notification.js';
+export { Meeting } from './Meeting.js';
+export type { IMeeting } from './Meeting.js';

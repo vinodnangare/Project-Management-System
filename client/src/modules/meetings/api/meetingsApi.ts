@@ -1,23 +1,34 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { IMeeting, ICreateMeeting } from '../types/meetingTypes';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export const meetingsApi = createApi({
   reducerPath: 'meetingsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Meeting'],
+  baseQuery: fetchBaseQuery({ 
+    baseUrl: API_BASE_URL,
+    prepareHeaders: (headers) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
+  tagTypes: ['Meeting', 'User'],
   endpoints: (builder) => ({
-    getMeetings: builder.query<IMeeting[], any>({
+    getMeetings: builder.query<{ success: boolean; data: IMeeting[]; meta?: any }, any>({
       query: (params) => ({
         url: '/meetings',
         params,
       }),
       providesTags: ['Meeting'],
     }),
-    getMeeting: builder.query<IMeeting, string>({
+    getMeeting: builder.query<{ success: boolean; data: IMeeting }, string>({
       query: (id) => `/meetings/${id}`,
       providesTags: ['Meeting'],
     }),
-    createMeeting: builder.mutation<IMeeting, ICreateMeeting>({
+    createMeeting: builder.mutation<{ success: boolean; data: IMeeting }, ICreateMeeting>({
       query: (data) => ({
         url: '/meetings',
         method: 'POST',
@@ -25,7 +36,7 @@ export const meetingsApi = createApi({
       }),
       invalidatesTags: ['Meeting'],
     }),
-    updateMeeting: builder.mutation<IMeeting, { id: string; data: Partial<ICreateMeeting> }>({
+    updateMeeting: builder.mutation<{ success: boolean; data: IMeeting }, { id: string; data: Partial<ICreateMeeting> }>({
       query: ({ id, data }) => ({
         url: `/meetings/${id}`,
         method: 'PATCH',
@@ -40,6 +51,22 @@ export const meetingsApi = createApi({
       }),
       invalidatesTags: ['Meeting'],
     }),
+    getUpcomingMeetings: builder.query<{ success: boolean; data: IMeeting[] }, number | void>({
+      query: (limit = 5) => `/meetings/upcoming?limit=${limit}`,
+      providesTags: ['Meeting'],
+    }),
+    getTodaysMeetings: builder.query<{ success: boolean; data: IMeeting[] }, void>({
+      query: () => '/meetings/today',
+      providesTags: ['Meeting'],
+    }),
+    getCalendarMeetings: builder.query<{ success: boolean; data: IMeeting[] }, { from: string; to: string }>({
+      query: ({ from, to }) => `/meetings/calendar?from=${from}&to=${to}`,
+      providesTags: ['Meeting'],
+    }),
+    getAssignableUsers: builder.query<{ success: boolean; data: Array<{ id: string; full_name: string; email: string }> }, void>({
+      query: () => '/meetings/users/assignable',
+      providesTags: ['User'],
+    }),
   }),
 });
 
@@ -49,4 +76,9 @@ export const {
   useCreateMeetingMutation,
   useUpdateMeetingMutation,
   useDeleteMeetingMutation,
+  useGetUpcomingMeetingsQuery,
+  useGetTodaysMeetingsQuery,
+  useGetCalendarMeetingsQuery,
+  useGetAssignableUsersQuery,
 } = meetingsApi;
+

@@ -15,6 +15,7 @@ import authRoutes from './routes/authRoutes.js';
 import timeLogRoutes from './routes/timeLogRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import meetingRoutes from './routes/meetingRoutes.js';
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
@@ -105,6 +106,9 @@ app.use('/api/leads', verifyJwt, leadRoutes);
 
 // Notification routes
 app.use('/api/notifications', verifyJwt, notificationRoutes);
+
+// Meeting routes
+app.use('/api/meetings', verifyJwt, meetingRoutes);
 
 app.use(errorHandler);
 

@@ -144,3 +144,7 @@ export interface Lead {
   created_at: string;
   updated_at: string;
 }
+
+// Meeting types
+export { MeetingType, MeetingStatus } from './meeting.js';
+export type { Meeting as MeetingInterface } from './meeting.js';
