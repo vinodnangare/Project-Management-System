@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import type { ICreateMeeting } from '../types/meetingTypes';
 
+const defaultForm: ICreateMeeting = {
+  title: '',
+  assignedTo: [],
+  startTime: '',
+  endTime: '',
+  meetingType: 'offline',
+};
+
 export function useMeetingForm(initial: Partial<ICreateMeeting> = {}) {
   const [form, setForm] = useState<ICreateMeeting>({
-    title: '',
-    assignedTo: '',
-    startTime: '',
-    endTime: '',
-    meetingType: 'online',
+    ...defaultForm,
     ...initial,
   });
 
@@ -15,5 +19,10 @@ export function useMeetingForm(initial: Partial<ICreateMeeting> = {}) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  return { form, setForm, updateField };
+  function resetForm() {
+    setForm({ ...defaultForm, ...initial });
+  }
+
+  return { form, setForm, updateField, resetForm };
 }
+
