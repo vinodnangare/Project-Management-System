@@ -40,11 +40,35 @@ export const MeetingForm: React.FC<MeetingFormProps> = ({ meetingId }) => {
         meetingLink: meeting.meetingLink || '',
         location: meeting.location || '',
         notes: meeting.notes || '',
+        recurrence: (meeting as any).recurrence || 'once',
+        notesFileName: (meeting as any).notesFileName || undefined,
+        notesFileBase64: undefined,
         client: meeting.client || undefined,
         lead: meeting.lead || undefined,
       });
     }
   }, [isEditMode, meetingResponse, setForm]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      toast.error('Only PDF files are allowed for meeting notes');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string | ArrayBuffer | null;
+      if (typeof result === 'string') {
+        // result is a data URL like: data:application/pdf;base64,JVBERi0x...
+        const base64 = result.split(',')[1] || '';
+        updateField('notesFileBase64', base64 as any);
+        updateField('notesFileName', file.name as any);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +206,22 @@ export const MeetingForm: React.FC<MeetingFormProps> = ({ meetingId }) => {
             />
           </div>
         </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="recurrence">Recurrence</label>
+            <select
+              id="recurrence"
+              value={form.recurrence || 'once'}
+              onChange={e => updateField('recurrence', e.target.value as any)}
+            >
+              <option value="once">Once</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Participants Section */}
@@ -225,7 +265,7 @@ export const MeetingForm: React.FC<MeetingFormProps> = ({ meetingId }) => {
         <h3 className="section-title">Additional Notes</h3>
         
         <div className="form-group">
-          <label htmlFor="notes">Meeting Notes <span className="hint">(optional)</span></label>
+          <label htmlFor="notes">Meeting message <span className="hint">(optional)</span></label>
           <textarea 
             id="notes"
             value={form.notes || ''} 
@@ -233,6 +273,24 @@ export const MeetingForm: React.FC<MeetingFormProps> = ({ meetingId }) => {
             placeholder="Add agenda, instructions, or any additional information..."
             rows={4}
           />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="notesFile">Upload Meeting notes (PDF)</label>
+          <input
+            id="notesFile"
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileChange}
+          />
+          {form.notesFileName && (
+            <div className="uploaded-file">
+              <span>{form.notesFileName}</span>
+              <button type="button" className="btn-link" onClick={() => { updateField('notesFileName', undefined as any); updateField('notesFileBase64', undefined as any); }}>
+                Remove
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

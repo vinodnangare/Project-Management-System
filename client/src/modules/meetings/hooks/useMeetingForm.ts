@@ -7,6 +7,9 @@ const defaultForm: ICreateMeeting = {
   startTime: '',
   endTime: '',
   meetingType: 'offline',
+  recurrence: 'once',
+  notesFileName: undefined,
+  notesFileBase64: undefined,
 };
 
 export function useMeetingForm(initial: Partial<ICreateMeeting> = {}) {
