@@ -16,6 +16,13 @@ export interface MeetingAssignee {
   email: string;
 }
 
+export interface UserNote {
+  userId: string;
+  userName?: string;
+  content: string;
+  updatedAt: string;
+}
+
 export interface Meeting {
   id: string;
   title: string;
@@ -36,6 +43,7 @@ export interface Meeting {
   meetingLink: string | null;
   status: MeetingStatus;
   notes: string | null;
+  userNotes: UserNote[];
   is_deleted: boolean;
   created_at: string;
   updated_at: string;

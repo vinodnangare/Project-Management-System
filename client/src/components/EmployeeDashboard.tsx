@@ -1,6 +1,16 @@
 import { useMemo } from 'react';
 import { useAppSelector } from '../hooks/redux';
 import { useGetTasksQuery, useGetTimeLogsQuery } from '../services/api';
+import { 
+  HiOutlineClipboardList, 
+  HiOutlineCheckCircle, 
+  HiOutlineClock, 
+  HiOutlineExclamationCircle,
+  HiOutlineCalendar,
+  HiOutlinePencilAlt,
+  HiOutlineEye,
+  HiOutlineChartBar
+} from 'react-icons/hi';
 import '../styles/EmployeeDashboard.css';
 import type { UpcomingDeadline, EmployeeDashboardStats } from '../types/components/EmployeeDashboardTypes';
 import MeetingsListPage from '../modules/meetings/pages/MeetingsListPage';
@@ -90,7 +100,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">Total Tasks</p>
               <p className="card-value">{stats.totalTasks}</p>
             </div>
-            <span className="card-icon">📋</span>
+            <HiOutlineClipboardList className="card-icon" />
           </div>
 
           <div className="stat-card color-green">
@@ -98,7 +108,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">Completed</p>
               <p className="card-value">{stats.tasksCompleted}</p>
             </div>
-            <span className="card-icon">✅</span>
+            <HiOutlineCheckCircle className="card-icon" />
           </div>
 
           <div className="stat-card color-purple">
@@ -106,7 +116,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">In Progress</p>
               <p className="card-value">{stats.tasksInProgress}</p>
             </div>
-            <span className="card-icon">⏳</span>
+            <HiOutlineClock className="card-icon" />
           </div>
 
           <div className="stat-card color-red">
@@ -114,7 +124,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">Overdue</p>
               <p className="card-value">{stats.tasksOverdue}</p>
             </div>
-            <span className="card-icon">🚨</span>
+            <HiOutlineExclamationCircle className="card-icon" />
           </div>
 
           <div className="stat-card color-orange">
@@ -122,7 +132,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">Due Today</p>
               <p className="card-value">{stats.tasksDueToday}</p>
             </div>
-            <span className="card-icon">📅</span>
+            <HiOutlineCalendar className="card-icon" />
           </div>
 
           <div className="stat-card color-yellow">
@@ -130,7 +140,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">To Do</p>
               <p className="card-value">{stats.tasksTodo}</p>
             </div>
-            <span className="card-icon">📝</span>
+            <HiOutlinePencilAlt className="card-icon" />
           </div>
 
           <div className="stat-card color-pink">
@@ -138,7 +148,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">In Review</p>
               <p className="card-value">{stats.tasksInReview}</p>
             </div>
-            <span className="card-icon">👀</span>
+            <HiOutlineEye className="card-icon" />
           </div>
 
           <div className="stat-card color-indigo">
@@ -146,7 +156,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">Hours Worked</p>
               <p className="card-value">{stats.hoursWorked}<span className="card-unit"> hrs</span></p>
             </div>
-            <span className="card-icon">⏱️</span>
+            <HiOutlineClock className="card-icon hours-icon" />
           </div>
 
           <div className="stat-card color-teal">
@@ -154,7 +164,7 @@ const EmployeeDashboard = () => {
               <p className="card-label">Completion Rate</p>
               <p className="card-value">{stats.completionRate}<span className="card-unit">%</span></p>
             </div>
-            <span className="card-icon">📊</span>
+            <HiOutlineChartBar className="card-icon" />
           </div>
         </section>
 
@@ -182,7 +192,7 @@ const EmployeeDashboard = () => {
                       <div>
                         <p className="deadline-title">{task.title}</p>
                         <p className="deadline-meta">
-                          📅 {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          <HiOutlineCalendar className="meta-icon" /> {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           <span className="dot" />
                           {daysLeft > 1 ? `${daysLeft} days left` : daysLeft === 1 ? 'Tomorrow' : 'Today'}
                         </p>

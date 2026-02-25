@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useGetUserTimeLogsAdminQuery } from '../services/api';
+import { HiOutlineClock } from 'react-icons/hi';
 import '../styles/EmployeeTimeLogModal.css';
 import type { EmployeeTimeLogModalProps } from '../types/components/EmployeeTimeLogModalProps';
 
@@ -23,7 +24,7 @@ const EmployeeTimeLogModal: React.FC<EmployeeTimeLogModalProps> = ({ employeeId,
     <div className="etl-modal-overlay">
       <div className="etl-modal premium-glass">
         <button className="etl-close-btn" onClick={onClose}>×</button>
-        <h2 className="etl-title">⏱️ {employeeName}'s Time Logs</h2>
+        <h2 className="etl-title"><HiOutlineClock className="title-icon" /> {employeeName}'s Time Logs</h2>
         {isLoading ? (
           <div className="etl-loading">Loading...</div>
         ) : error ? (

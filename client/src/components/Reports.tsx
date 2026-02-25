@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import { useGetReportSummaryQuery, useGetEmployeePerformanceQuery, useGetTaskCompletionQuery } from '../services/api';
+import {
+  HiOutlineChartBar,
+  HiOutlineRefresh,
+  HiOutlineDownload,
+  HiOutlineDocumentText,
+  HiOutlineDocument,
+  HiOutlineTrendingUp,
+  HiOutlineUserGroup,
+  HiOutlineChartPie,
+  HiOutlineStar
+} from 'react-icons/hi';
 import '../styles/Reports.css';
 import type { DateRange } from '../types/components/ReportsTypes';
 
@@ -435,19 +446,19 @@ export const Reports: React.FC = () => {
   return (
     <div className="reports-container">
       <div className="reports-header">
-        <h2>📊 Analytics & Reports</h2>
+        <h2><HiOutlineChartBar className="header-icon" /> Analytics & Reports</h2>
         <div className="header-actions">
           <button onClick={handleRefresh} className="refresh-btn">
-            🔄 Refresh
+            <HiOutlineRefresh className="btn-icon" /> Refresh
           </button>
           <button onClick={() => handleExport('json')} className="export-btn">
-            📥 Export JSON
+            <HiOutlineDownload className="btn-icon" /> Export JSON
           </button>
           <button onClick={() => handleExport('csv')} className="export-btn">
-            📄 Export CSV
+            <HiOutlineDocumentText className="btn-icon" /> Export CSV
           </button>
           <button onClick={() => handleExport('pdf')} className="export-btn">
-            🧾 Export PDF
+            <HiOutlineDocument className="btn-icon" /> Export PDF
           </button>
         </div>
       </div>
@@ -517,19 +528,19 @@ export const Reports: React.FC = () => {
           className={`tab ${activeTab === 'summary' ? 'active' : ''}`}
           onClick={() => setActiveTab('summary')}
         >
-          📈 Summary Report
+          <HiOutlineTrendingUp className="tab-icon" /> Summary Report
         </button>
         <button
           className={`tab ${activeTab === 'employee' ? 'active' : ''}`}
           onClick={() => setActiveTab('employee')}
         >
-          👥 Employee Performance
+          <HiOutlineUserGroup className="tab-icon" /> Employee Performance
         </button>
         <button
           className={`tab ${activeTab === 'completion' ? 'active' : ''}`}
           onClick={() => setActiveTab('completion')}
         >
-          📊 Task Completion Trends
+          <HiOutlineChartPie className="tab-icon" /> Task Completion Trends
         </button>
       </div>
 
@@ -625,7 +636,7 @@ export const Reports: React.FC = () => {
             ) : employeeData ? (
               <>
                 <div className="top-performers">
-                  <h3>🏆 Top Performers</h3>
+                  <h3><HiOutlineStar className="section-icon" /> Top Performers</h3>
                   <div className="performers-list">
                     {topPerformers.map((emp: any, index: number) => (
                       <div key={emp.id} className="performer-card">

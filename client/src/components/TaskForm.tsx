@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useGetAssignableUsersQuery, useCreateTaskMutation } from '../services/api';
+import { 
+  HiOutlineClipboardList, 
+  HiOutlineDocumentText, 
+  HiOutlineFlag, 
+  HiOutlineUserGroup, 
+  HiOutlineCalendar,
+  HiOutlineClock,
+  HiOutlinePlus
+} from 'react-icons/hi';
 import '../styles/TaskForm.css';
 import type { TaskFormProps } from '../types/components/TaskFormProps';
 
@@ -96,7 +105,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
 
       <form onSubmit={handleSubmit} className="task-form">
         <label className="field">
-          <span>📋 Title *</span>
+          <span><HiOutlineClipboardList className="field-icon" /> Title *</span>
           <input
             type="text"
             name="title"
@@ -108,7 +117,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
         </label>
 
         <label className="field">
-          <span>📝 Description</span>
+          <span><HiOutlineDocumentText className="field-icon" /> Description</span>
           <textarea
             name="description"
             value={formData.description}
@@ -120,7 +129,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
 
         <div className="form-row">
           <label className="field">
-            <span>🎯 Priority</span>
+            <span><HiOutlineFlag className="field-icon" /> Priority</span>
             <select name="priority" value={formData.priority} onChange={handleChange}>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
@@ -131,7 +140,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
           </label>
 
           <label className="field">
-            <span>👥 Assign to (multi-select)</span>
+            <span><HiOutlineUserGroup className="field-icon" /> Assign to (multi-select)</span>
             <div className="multi-select-container">
               {employees.length === 0 ? (
                 <div className="multi-select-empty">No employees available</div>
@@ -153,7 +162,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
 
         <div className="form-row">
           <label className="field">
-            <span>📅 Due Date</span>
+            <span><HiOutlineCalendar className="field-icon" /> Due Date</span>
             <input
               type="datetime-local"
               name="due_date"
@@ -163,7 +172,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
           </label>
 
           <label className="field">
-            <span>⏱️ Est. Hours</span>
+            <span><HiOutlineClock className="field-icon" /> Est. Hours</span>
             <input
               type="number"
               name="estimated_hours"
@@ -178,7 +187,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onClose }) =>
 
         <div className="form-actions">
           <button type="submit" disabled={loading} className="primary-btn">
-            {loading ? 'Creating…' : '✚ Create Task'}
+            {loading ? 'Creating...' : <><HiOutlinePlus className="btn-icon" /> Create Task</>}
           </button>
           {onClose && (
             <button type="button" onClick={onClose} className="secondary-btn">

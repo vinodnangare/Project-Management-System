@@ -21,9 +21,15 @@ import { TaskActivityTab } from './TaskActivityTab';
 import { TaskDocsTab } from './TaskDocsTab';
 import { TaskStatusControl } from './TaskStatusControl';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
+import { HiOutlineTrash, HiOutlineX } from 'react-icons/hi';
 import '../styles/TaskDetail.css';
 
-export const TaskDetail: React.FC<{ taskId: string }> = ({ taskId }) => {
+interface TaskDetailProps {
+  taskId: string;
+  onClose?: () => void;
+}
+
+export const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, onClose }) => {
   const dispatch = useAppDispatch();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   
@@ -126,7 +132,7 @@ export const TaskDetail: React.FC<{ taskId: string }> = ({ taskId }) => {
               onClick={() => setShowDeleteConfirm(true)}
               title="Delete Task"
             >
-              <span className="delete-task-icon">🗑️</span>
+              <HiOutlineTrash className="delete-task-icon" />
               <span className="delete-task-text">Delete Task</span>
             </button>
           )}
@@ -216,6 +222,14 @@ export const TaskDetail: React.FC<{ taskId: string }> = ({ taskId }) => {
           <TaskActivityTab activities={activities} />
         )}
       </div>
+
+      {onClose && (
+        <div className="task-detail-actions">
+          <button type="button" onClick={onClose} className="close-detail-btn">
+            <HiOutlineX className="btn-icon" /> Close
+          </button>
+        </div>
+      )}
 
       {showDeleteConfirm && (
         <DeleteConfirmDialog

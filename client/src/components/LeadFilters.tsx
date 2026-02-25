@@ -1,4 +1,5 @@
 import React from 'react';
+import { HiOutlineX } from 'react-icons/hi';
 import '../styles/components/LeadFilters.css';
 import type { FilterOptions, LeadFiltersProps } from '../types/components/LeadFiltersProps';
 
@@ -73,7 +74,7 @@ const LeadFilters: React.FC<LeadFiltersProps> = ({
             onClick={onReset}
             className="btn-reset-filters"
           >
-            ✕ Clear Filters
+            <HiOutlineX className="btn-icon" /> Clear Filters
           </button>
         )}
       </div>

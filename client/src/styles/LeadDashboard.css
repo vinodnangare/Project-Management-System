@@ -1,83 +1,90 @@
+/* ============================================
+   Lead Dashboard - Uses Design System
+   ============================================ */
+
 .dashboard-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 30px 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: var(--space-6) var(--space-4);
+  background: var(--color-bg-primary);
   min-height: 100vh;
-}
-
-html[data-theme='light'] .dashboard-container {
-  background: radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.12), transparent 45%),
-    radial-gradient(circle at 90% 15%, rgba(20, 184, 166, 0.1), transparent 40%),
-    var(--bg);
 }
 
 .dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
-  animation: slideDown 0.5s ease-out;
+  margin-bottom: var(--space-8);
 }
 
 .dashboard-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
+  flex-shrink: 0;
 }
 
 .dashboard-header > div {
   flex: 1;
+  min-width: 0;
 }
 
 .dashboard-header h1 {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 10px;
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
 }
 
 .welcome-text {
-  font-size: 16px;
-  color: #6b7280;
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
 }
 
 .btn-view-pipeline {
-  padding: 10px 20px;
-  background: #3b82f6;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-accent);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 15px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
 }
 
 .btn-view-pipeline:hover {
-  background: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-add-lead {
-  padding: 10px 20px;
-  background: #10b981;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-success);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 15px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
 }
 
 .btn-add-lead:hover {
-  background: #059669;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  filter: brightness(1.1);
 }
 
 /* Loading and Error States */
@@ -88,16 +95,16 @@ html[data-theme='light'] .dashboard-container {
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  font-size: 18px;
-  color: #6b7280;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
 }
 
 .error-state {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--color-error-muted);
+  color: var(--color-error);
 }
 
 /* KPI Card Styles */
@@ -521,17 +528,10 @@ html[data-theme='light'] .stats-text p strong {
   }
 }
 
+/* Dashboard Container - Uses Design System Variables */
 .dashboard-container {
-  --accent: #0ea5e9;
-  --accent-2: #2dd4bf;
-  --accent-warm: #14b8a6;
-  --panel: #0f1b33;
-  --card: #0b1528;
-  --text: #e6edf6;
-  --muted: #9aa7bd;
-  --shadow: 0 20px 45px rgba(5, 10, 20, 0.55);
   background: transparent;
-  color: var(--text);
+  color: var(--color-text-primary);
 }
 
 .dashboard-header h1,
@@ -540,7 +540,7 @@ html[data-theme='light'] .stats-text p strong {
 .funnel-count,
 .velocity-value,
 .stats-text strong {
-  color: var(--text);
+  color: var(--color-text-primary);
 }
 
 .welcome-text,
@@ -550,19 +550,19 @@ html[data-theme='light'] .stats-text p strong {
 .velocity-label,
 .stats-text p,
 .chart-placeholder {
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 
 .dashboard-actions .btn-view-pipeline,
 .dashboard-actions .btn-add-lead {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #0b1224;
+  background: var(--color-accent);
+  color: white;
   border: none;
-  box-shadow: 0 12px 30px rgba(14, 165, 233, 0.25);
+  box-shadow: var(--shadow-md);
 }
 
 .dashboard-actions .btn-add-lead {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(34, 197, 94, 0.9));
+  background: var(--color-success);
 }
 
 .loading-state,
@@ -571,18 +571,18 @@ html[data-theme='light'] .stats-text p strong {
 .kpi-card,
 .chart-container,
 .quick-stats {
-  background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: var(--shadow);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .error-state {
-  background: rgba(239, 68, 68, 0.12);
-  color: #fecaca;
+  background: var(--color-error-muted);
+  color: var(--color-error);
 }
 
 .kpi-card {
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
 }
 
 .kpi-card.kpi-total,
@@ -593,32 +593,32 @@ html[data-theme='light'] .stats-text p strong {
 .kpi-card.kpi-time,
 .kpi-card.kpi-week,
 .kpi-card.kpi-month {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(45, 212, 191, 0.12));
+  background: var(--color-accent-muted);
 }
 
 .kpi-card.kpi-won {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(45, 212, 191, 0.18));
+  background: var(--color-success-muted);
 }
 
 .kpi-card.kpi-lost {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(248, 113, 113, 0.15));
+  background: var(--color-error-muted);
 }
 
 .kpi-card.kpi-month {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(20, 184, 166, 0.2));
+  background: var(--color-accent-muted);
 }
 
 .kpi-value {
-  color: var(--text);
+  color: var(--color-text-primary);
 }
 
 .funnel-bar-wrap,
 .velocity-bar-wrap {
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-bg-tertiary);
 }
 
 .velocity-bar.velocity-bar-rate {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: var(--color-accent);
 }
 
 .velocity-bar.velocity-bar-time {
@@ -634,7 +634,7 @@ html[data-theme='light'] .stats-text p strong {
 }
 
 .stats-text p strong {
-  color: var(--accent-2);
+  color: var(--color-accent);
 }
 
 .chart-placeholder {

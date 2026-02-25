@@ -1,4 +1,5 @@
 import React from 'react';
+import { HiOutlineUser, HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker } from 'react-icons/hi';
 import '../styles/components/LeadCard.css';
 import type { Lead } from '../types/components/Lead';
 import type { LeadCardProps } from '../types/components/LeadCardProps';
@@ -47,24 +48,24 @@ const LeadCard: React.FC<LeadCardProps> = ({
 
       <div className="card-content">
         <div className="card-info-row">
-          <span className="info-icon">👤</span>
+          <HiOutlineUser className="info-icon" />
           <span className="info-text">{lead.contact_name}</span>
         </div>
 
         <div className="card-info-row">
-          <span className="info-icon">📧</span>
+          <HiOutlineMail className="info-icon" />
           <span className="info-text email">{lead.email}</span>
         </div>
 
         {lead.phone && (
           <div className="card-info-row">
-            <span className="info-icon">📞</span>
+            <HiOutlinePhone className="info-icon" />
             <span className="info-text">{lead.phone}</span>
           </div>
         )}
 
         <div className="card-info-row">
-          <span className="info-icon">📍</span>
+          <HiOutlineLocationMarker className="info-icon" />
           <span className="info-text capitalize">{lead.source}</span>
         </div>
       </div>
@@ -72,7 +73,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
       <div className="card-footer">
         <div className="footer-left">
           <span className="owner-badge">
-            {lead.owner_name ? `👤 ${lead.owner_name}` : '⚪ Unassigned'}
+            {lead.owner_name ? <><HiOutlineUser className="owner-icon" /> {lead.owner_name}</> : 'Unassigned'}
           </span>
         </div>
         <div className="footer-right">

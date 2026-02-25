@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { closeProfileModal } from '../store/slices/uiModalSlice';
 import Profile from './Profile';
+import { HiOutlineX } from 'react-icons/hi';
 import '../styles/ProfileModal.css';
 
 const ProfileModal = () => {
@@ -59,7 +60,7 @@ const ProfileModal = () => {
             onClick={handleClose}
             aria-label="Close"
           >
-            ✕
+            <HiOutlineX />
           </button>
         </div>
 

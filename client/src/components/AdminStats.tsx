@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useGetTaskStatsQuery, useGetTasksQuery, useDeleteEmployeeMutation, useRegisterMutation, useGetAssignableUsersQuery } from '../services/api';
+import { HiOutlineChartBar, HiOutlineClock, HiOutlineUserAdd, HiOutlineX, HiOutlineTrash, HiOutlineCheck } from 'react-icons/hi';
 import '../styles/AdminStats.css';
 import AdminTimeLogs from './AdminTimeLogs'; 
 import EmployeeTimeLogModal from './EmployeeTimeLogModal';
@@ -135,28 +136,34 @@ export const AdminStats: React.FC = () => {
           className={activeTab === 'dashboard' ? 'active' : ''}
           onClick={() => setActiveTab('dashboard')}
         >
-          📊 Dashboard
+          <HiOutlineChartBar className="tab-icon" />
+          Dashboard
         </button>
         <button
           className={activeTab === 'timelogs' ? 'active' : ''}
           onClick={() => setActiveTab('timelogs')}
         >
-          ⏱️ Time Logs
+          <HiOutlineClock className="tab-icon" />
+          Time Logs
         </button>
       </div>
       {activeTab === 'dashboard' ? (
         <>
-          <h2 className="stats-title">📊 Task Management Dashboard</h2>
+          <h2 className="stats-title">Task Management Dashboard</h2>
           {registerSuccess && <div className="success-message">{registerSuccess}</div>}
           {/* Add Employee Section */}
           <div className="add-employee-section">
             <div className="section-header">
-              <h3>👥 Employee Management</h3>
+              <h3>Employee Management</h3>
               <button
                 className="btn-add-employee"
                 onClick={() => setShowAddEmployee(!showAddEmployee)}
               >
-                {showAddEmployee ? '✕ Cancel' : '➕ Add New Employee'}
+                {showAddEmployee ? (
+                  <><HiOutlineX className="btn-icon" /> Cancel</>
+                ) : (
+                  <><HiOutlineUserAdd className="btn-icon" /> Add Employee</>
+                )}
               </button>
             </div>
             {showAddEmployee && (
@@ -227,7 +234,11 @@ export const AdminStats: React.FC = () => {
                   </div>
                 </div>
                 <button type="submit" className="btn-submit-employee" disabled={isRegistering}>
-                  {isRegistering ? '⏳ Adding...' : '✓ Add Employee'}
+                  {isRegistering ? (
+                    <><span className="spinner"></span> Adding...</>
+                  ) : (
+                    <><HiOutlineCheck className="btn-icon" /> Add Employee</>
+                  )}
                 </button>
               </form>
             )}
@@ -321,7 +332,11 @@ export const AdminStats: React.FC = () => {
                               disabled={!employeeId || deletingId === employeeId}
                               title={employeeId ? 'Delete employee' : 'Missing employee id'}
                             >
-                              {deletingId === employeeId ? '⏳' : '🗑️'}
+                              {deletingId === employeeId ? (
+                                <span className="spinner small"></span>
+                              ) : (
+                                <HiOutlineTrash className="delete-icon" />
+                              )}
                             </button>
                           </td>
                         </tr>
@@ -357,7 +372,11 @@ export const AdminStats: React.FC = () => {
                     onClick={handleDeleteEmployee}
                     disabled={isDeleting}
                   >
-                    {isDeleting ? '⏳ Deleting...' : '🗑️ Delete'}
+                    {isDeleting ? (
+                      <><span className="spinner small"></span> Deleting...</>
+                    ) : (
+                      <><HiOutlineTrash className="btn-icon" /> Delete</>
+                    )}
                   </button>
                 </div>
               </div>

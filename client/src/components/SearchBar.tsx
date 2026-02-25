@@ -1,4 +1,5 @@
 import React from 'react';
+import { HiOutlineSearch, HiOutlineX } from 'react-icons/hi';
 import '../styles/components/SearchBar.css';
 import type { SearchBarProps } from '../types/components/SearchBarProps';
 
@@ -18,7 +19,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
   return (
     <div className={`search-bar ${className}`}>
-      <span className="search-icon">🔍</span>
+      <HiOutlineSearch className="search-icon" />
       <input
         type="text"
         value={value}
@@ -36,7 +37,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           disabled={disabled}
           aria-label="Clear search"
         >
-          ✕
+          <HiOutlineX />
         </button>
       )}
     </div>

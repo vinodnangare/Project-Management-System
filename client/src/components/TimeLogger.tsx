@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useGetTasksQuery, useGetTimeLogsQuery, useLogTimeMutation } from '../services/api';
+import {
+  HiOutlineCalendar,
+  HiOutlineClock,
+  HiOutlineClipboardList,
+  HiOutlineDocumentText,
+  HiOutlineSave
+} from 'react-icons/hi';
 import '../styles/TimeLogger.css';
 import type { TimeLog } from '../types/components/TimeLog';
 import type { Task } from '../types/components/Task';
@@ -128,7 +135,7 @@ export const TimeLogger: React.FC = () => {
           <form onSubmit={handleSubmit} className="time-form">
             <div className="form-row">
               <label className="field">
-                <span>📅 Date</span>
+                <span><HiOutlineCalendar className="field-icon" /> Date</span>
                 <input
                   type="date"
                   value={date}
@@ -139,7 +146,7 @@ export const TimeLogger: React.FC = () => {
               </label>
 
               <label className="field">
-                <span>⏰ Hours</span>
+                <span><HiOutlineClock className="field-icon" /> Hours</span>
                 <input
                   type="number"
                   value={hoursWorked}
@@ -154,7 +161,7 @@ export const TimeLogger: React.FC = () => {
             </div>
 
             <label className="field">
-              <span>📋 Task (optional)</span>
+              <span><HiOutlineClipboardList className="field-icon" /> Task (optional)</span>
               <select value={taskId} onChange={(e) => setTaskId(e.target.value)}>
                 <option value="">No specific task</option>
                 {tasks.map((task) => (
@@ -166,7 +173,7 @@ export const TimeLogger: React.FC = () => {
             </label>
 
             <label className="field">
-              <span>📝 Description</span>
+              <span><HiOutlineDocumentText className="field-icon" /> Description</span>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -176,7 +183,7 @@ export const TimeLogger: React.FC = () => {
             </label>
 
             <button type="submit" disabled={loading} className="primary-btn">
-              {loading ? 'Saving…' : '💾 Log Time'}
+              {loading ? 'Saving...' : <><HiOutlineSave className="btn-icon" /> Log Time</>}
             </button>
           </form>
         </article>
@@ -189,7 +196,7 @@ export const TimeLogger: React.FC = () => {
 
           {sortedLogs.length === 0 ? (
             <div className="empty-block">
-              <div className="empty-icon">🕒</div>
+              <div className="empty-icon"><HiOutlineClock /></div>
               <p>No time logs yet. Start with today’s entry.</p>
             </div>
           ) : (
@@ -208,7 +215,7 @@ export const TimeLogger: React.FC = () => {
 
                   {log.task_id && (
                     <span className="task-chip">
-                      📋 {tasks.find((t) => t.id === log.task_id)?.title || 'Task'}
+                      <HiOutlineClipboardList className="log-icon" /> {tasks.find((t) => t.id === log.task_id)?.title || 'Task'}
                     </span>
                   )}
                 </article>

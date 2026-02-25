@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { HiOutlineSun, HiOutlineMoon, HiOutlineUser, HiOutlineLogout } from 'react-icons/hi';
 
 import Sidebar from './components/Sidebar';
 import TaskList from './components/TaskList';
@@ -41,7 +42,7 @@ function App() {
   const showTaskForm = useAppSelector((state) => state.ui.showTaskForm);
 
   // =============================
-  // 🌙 DARK MODE STATE
+  // Dark mode state
   // =============================
   const [isDarkMode, setIsDarkMode] = useState(
     localStorage.getItem('theme') !== 'light'
@@ -104,7 +105,7 @@ function App() {
 
         {/* Header */}
         <header className="app-header">
-          <h1>📋 Task Management</h1>
+          <h1>Project Management</h1>
 
           <div className="header-actions">
             <NotificationBell />
@@ -112,16 +113,27 @@ function App() {
             <button
               onClick={() => setIsDarkMode((prev) => !prev)}
               className="theme-toggle"
+              aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {isDarkMode ? '🌙 Dark' : '☀️ Light'}
+              {isDarkMode ? <HiOutlineMoon className="icon" /> : <HiOutlineSun className="icon" />}
             </button>
 
-            <button onClick={() => dispatch(openProfileModal())}>
-              Profile
+            <button 
+              onClick={() => dispatch(openProfileModal())}
+              className="header-btn"
+              aria-label="Open profile"
+            >
+              <HiOutlineUser className="icon" />
+              <span>Profile</span>
             </button>
 
-            <button onClick={handleLogout}>
-              Logout
+            <button 
+              onClick={handleLogout}
+              className="header-btn header-btn--danger"
+              aria-label="Logout"
+            >
+              <HiOutlineLogout className="icon" />
+              <span>Logout</span>
             </button>
           </div>
         </header>
@@ -140,9 +152,10 @@ function App() {
                 <Route path="/leads/list" element={<LeadList />} />
                 <Route path="/leads/:id" element={<LeadDetail />} />
                 <Route path="/meetings" element={<MeetingsListPage />} />
+                <Route path="/meetings/new" element={<MeetingFormPage />} />
+                <Route path="/meetings/:id/edit" element={<MeetingFormPage />} />
                 <Route path="/meetings/:id" element={<MeetingDetailPage />} />
                 <Route path="/meetings/calendar" element={<MeetingCalendarPage />} />
-                <Route path="/meetings/new" element={<MeetingFormPage />} />
               </>
             )}
 
@@ -162,6 +175,7 @@ function App() {
                 <Route path="/time-log" element={<TimeLogger />} />
                 <Route path="/tasks" element={<TasksSection />} />
                 <Route path="/meetings" element={<MeetingsListPage />} />
+                <Route path="/meetings/:id" element={<MeetingDetailPage />} />
               </>
             )}
 
@@ -179,6 +193,8 @@ function App() {
   // TASKS SECTION COMPONENT
   // =============================
   function TasksSection() {
+    const isAdmin = user?.role === 'admin';
+    
     return (
       <div className="app-layout">
         <aside>
@@ -189,15 +205,28 @@ function App() {
         </aside>
 
         <section>
-          {showTaskForm ? (
+          {showTaskForm && isAdmin ? (
             <TaskForm
               onTaskCreated={handleTaskCreated}
               onClose={() => dispatch(closeTaskForm())}
             />
           ) : selectedTaskId ? (
-            <TaskDetail taskId={selectedTaskId} />
+            <TaskDetail 
+              taskId={selectedTaskId} 
+              onClose={() => dispatch(setSelectedTask(null))}
+            />
           ) : (
-            <p>Select a task to view details</p>
+            <div className="empty-task-section">
+              <p>Select a task to view details</p>
+              {isAdmin && (
+                <button 
+                  className="create-task-btn"
+                  onClick={() => dispatch(openTaskForm())}
+                >
+                  + Create Task
+                </button>
+              )}
+            </div>
           )}
         </section>
       </div>

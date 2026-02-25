@@ -1,6 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGetLeadStatsQuery, type LeadStats } from '../services/api';
+import {
+  HiOutlineExclamationCircle,
+  HiOutlinePlus,
+  HiOutlineChartBar,
+  HiOutlineClipboardList,
+  HiOutlineLightningBolt,
+  HiOutlineCheckCircle,
+  HiOutlineXCircle,
+  HiOutlineTrendingUp,
+  HiOutlineClock,
+  HiOutlineStar,
+  HiOutlineCalendar,
+  HiOutlineFlag
+} from 'react-icons/hi';
 import '../styles/LeadDashboard.css';
 
 export const LeadDashboard: React.FC = () => {
@@ -26,7 +40,7 @@ export const LeadDashboard: React.FC = () => {
     return (
       <div className="dashboard-container">
         <div className="error-state">
-          <p>⚠️ {errorMessage}</p>
+          <p><HiOutlineExclamationCircle className="inline-icon" /> {errorMessage}</p>
         </div>
       </div>
     );
@@ -88,10 +102,10 @@ export const LeadDashboard: React.FC = () => {
             className="btn-add-lead"
             onClick={() => navigate('/leads/list?new=1')}
           >
-            ➕ Add Lead
+            <HiOutlinePlus className="btn-icon" /> Add Lead
           </button>
           <button className="btn-view-pipeline" onClick={() => navigate('/leads/pipeline')}>
-            📊 View Pipeline
+            <HiOutlineChartBar className="btn-icon" /> View Pipeline
           </button>
         </div>
       </div>
@@ -101,7 +115,7 @@ export const LeadDashboard: React.FC = () => {
         <div className="kpi-grid">
           <div className="kpi-card kpi-total">
             <div className="kpi-header">
-              <span className="kpi-icon">📋</span>
+              <HiOutlineClipboardList className="kpi-icon" />
               <h3 className="kpi-label">Total Leads</h3>
             </div>
             <div className="kpi-value">{safeStats.totalLeads}</div>
@@ -114,7 +128,7 @@ export const LeadDashboard: React.FC = () => {
 
           <div className="kpi-card kpi-active">
             <div className="kpi-header">
-              <span className="kpi-icon">⚡</span>
+              <HiOutlineLightningBolt className="kpi-icon" />
               <h3 className="kpi-label">Active Leads</h3>
             </div>
             <div className="kpi-value">{safeStats.activeLeads}</div>
@@ -122,7 +136,7 @@ export const LeadDashboard: React.FC = () => {
 
           <div className="kpi-card kpi-won">
             <div className="kpi-header">
-              <span className="kpi-icon">✅</span>
+              <HiOutlineCheckCircle className="kpi-icon" />
               <h3 className="kpi-label">Won Leads</h3>
             </div>
             <div className="kpi-value">{safeStats.wonLeads}</div>
@@ -135,7 +149,7 @@ export const LeadDashboard: React.FC = () => {
 
           <div className="kpi-card kpi-lost">
             <div className="kpi-header">
-              <span className="kpi-icon">❌</span>
+              <HiOutlineXCircle className="kpi-icon" />
               <h3 className="kpi-label">Lost Leads</h3>
             </div>
             <div className="kpi-value">{safeStats.lostLeads}</div>
@@ -148,7 +162,7 @@ export const LeadDashboard: React.FC = () => {
         <div className="secondary-kpi-grid">
           <div className="kpi-card kpi-conversion">
             <div className="kpi-header">
-              <span className="kpi-icon">📈</span>
+              <HiOutlineTrendingUp className="kpi-icon" />
               <h3 className="kpi-label">Conversion Rate</h3>
             </div>
             <div className="kpi-value">{Math.round(safeStats.conversionRate * 100)}%</div>
@@ -156,7 +170,7 @@ export const LeadDashboard: React.FC = () => {
 
           <div className="kpi-card kpi-time">
             <div className="kpi-header">
-              <span className="kpi-icon">⏱️</span>
+              <HiOutlineClock className="kpi-icon" />
               <h3 className="kpi-label">Avg Time to Convert</h3>
             </div>
             <div className="kpi-value">{Math.round(safeStats.averageTimeToConvert)}</div>
@@ -165,7 +179,7 @@ export const LeadDashboard: React.FC = () => {
 
           <div className="kpi-card kpi-week">
             <div className="kpi-header">
-              <span className="kpi-icon">⭐</span>
+              <HiOutlineStar className="kpi-icon" />
               <h3 className="kpi-label">New This Week</h3>
             </div>
             <div className="kpi-value">{safeStats.newLeadsThisWeek}</div>
@@ -173,7 +187,7 @@ export const LeadDashboard: React.FC = () => {
 
           <div className="kpi-card kpi-month">
             <div className="kpi-header">
-              <span className="kpi-icon">📅</span>
+              <HiOutlineCalendar className="kpi-icon" />
               <h3 className="kpi-label">New This Month</h3>
             </div>
             <div className="kpi-value">{safeStats.newLeadsThisMonth}</div>
@@ -183,7 +197,7 @@ export const LeadDashboard: React.FC = () => {
 
       <section className="charts-section">
         <div className="chart-container">
-          <div className="chart-title">🎯 Funnel Overview</div>
+          <div className="chart-title"><HiOutlineFlag className="chart-icon" /> Funnel Overview</div>
           <div className="funnel-chart">
             {funnelStages.map((stage) => {
               const count = Number(stageCounts[stage.key]) || 0;
@@ -205,7 +219,7 @@ export const LeadDashboard: React.FC = () => {
         </div>
 
         <div className="chart-container">
-          <div className="chart-title">📊 Conversion Velocity</div>
+          <div className="chart-title"><HiOutlineChartBar className="chart-icon" /> Conversion Velocity</div>
           <div className="velocity-chart">
             <div className="velocity-row">
               <div className="velocity-label">Conversion Rate</div>

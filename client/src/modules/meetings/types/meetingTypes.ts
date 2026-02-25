@@ -4,6 +4,13 @@ export interface IMeetingAssignee {
   email: string;
 }
 
+export interface IUserNote {
+  userId: string;
+  userName?: string;
+  content: string;
+  updatedAt: string;
+}
+
 export interface IMeeting {
   id: string;
   title: string;
@@ -24,6 +31,7 @@ export interface IMeeting {
   meetingLink?: string;
   status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
   notes?: string;
+  userNotes?: IUserNote[];
   is_deleted?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -45,6 +53,7 @@ export interface ICreateMeeting {
   meetingLink?: string | null;
   status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
   notes?: string | null;
+  userNote?: string | null;
   /** Recurrence for the meeting: once, daily, weekly or monthly */
   recurrence?: 'once' | 'daily' | 'weekly' | 'monthly';
   /** Optional uploaded meeting notes file (base64) and original filename */

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGetTasksQuery } from '../services/api';
+import { HiOutlineSearch, HiOutlineX, HiOutlineClipboardList, HiOutlineCalendar, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 import '../styles/TaskList.css';
 import type { TaskListProps, Filters } from '../types/components/TaskListProps';
 
@@ -85,13 +86,16 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
 
       <div className="filters-section">
         <div className="filter-group">
-          <input
-            type="text"
-            placeholder="🔍 Search tasks..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="filter-input search-input"
-          />
+          <div className="search-wrapper">
+            <HiOutlineSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="filter-input search-input"
+            />
+          </div>
         </div>
 
         <div className="filter-group">
@@ -123,19 +127,20 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
 
         {hasActiveFilters && (
           <button onClick={clearFilters} className="clear-filters-btn">
-            ✕ Clear Filters
+            <HiOutlineX className="btn-icon" />
+            Clear
           </button>
         )}
       </div>
 
       {tasks.length === 0 ? (
         <div className="empty-block">
-          <div className="empty-icon">📋</div>
+          <HiOutlineClipboardList className="empty-icon" />
           <p>No tasks found. Create one to get started!</p>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="empty-block">
-          <div className="empty-icon">🔍</div>
+          <HiOutlineSearch className="empty-icon" />
           <p>No tasks match your filters.</p>
           <button onClick={clearFilters} className="clear-filters-btn">
             Clear Filters
@@ -174,7 +179,8 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
                 </div>
                 {task.due_date && (
                   <p className="task-due">
-                    📅 {daysLeft !== null
+                    <HiOutlineCalendar className="due-icon" />
+                    {daysLeft !== null
                       ? daysLeft > 0
                         ? `${daysLeft}d left`
                         : daysLeft === 0
@@ -195,7 +201,8 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
             disabled={true}
             className="pag-btn"
           >
-            ← Previous
+            <HiOutlineChevronLeft className="pag-icon" />
+            Previous
           </button>
           <span className="pag-info">
             {pagination.page} / {pagination.pages}
@@ -204,7 +211,8 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
             disabled={true}
             className="pag-btn"
           >
-            Next →
+            Next
+            <HiOutlineChevronRight className="pag-icon" />
           </button>
         </div>
       )}

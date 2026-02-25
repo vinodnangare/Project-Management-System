@@ -1,6 +1,7 @@
 import React from 'react';
 // @ts-ignore: If recharts is not installed, install it with npm install recharts
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { HiOutlineTrendingUp } from 'react-icons/hi';
 import '../styles/components/ConversionChart.css';
 import type { ConversionData, ConversionChartProps } from '../types/components/ConversionChartTypes';
 
@@ -26,7 +27,8 @@ const ConversionChart: React.FC<ConversionChartProps> = ({
       <div className="conversion-chart-container">
         {title && <h3 className="chart-title">{title}</h3>}
         <div className="chart-empty">
-          <p>📈 No data available</p>
+          <HiOutlineTrendingUp className="empty-icon" />
+          <p>No data available</p>
         </div>
       </div>
     );

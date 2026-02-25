@@ -1,4 +1,5 @@
 import React from 'react';
+import { HiOutlineCalendar } from 'react-icons/hi';
 import type { DeadlineCardProps } from '../types/components/DeadlineCardProps';
 
 export const DeadlineCard: React.FC<DeadlineCardProps> = ({ 
@@ -20,7 +21,8 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
         <div>
           <p className="deadline-title">{title}</p>
           <p className="deadline-meta">
-            📅 {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            <HiOutlineCalendar className="meta-icon" />
+            {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             <span className="dot" />
             {daysLeftText}
           </p>

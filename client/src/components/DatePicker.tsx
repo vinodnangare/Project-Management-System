@@ -1,4 +1,5 @@
 import React from 'react';
+import { HiOutlineCalendar } from 'react-icons/hi';
 import '../styles/components/DatePicker.css';
 import type { DatePickerProps } from '../types/components/DatePickerProps';
 
@@ -35,7 +36,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
           required={required}
           className="date-picker-input"
         />
-        <span className="date-picker-icon">📅</span>
+        <HiOutlineCalendar className="date-picker-icon" />
       </div>
 
       {error && <span className="date-picker-error">{error}</span>}

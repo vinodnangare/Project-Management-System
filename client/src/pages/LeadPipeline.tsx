@@ -2,21 +2,38 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useGetLeadsQuery, useUpdateLeadStageMutation, type Lead } from '../services/api';
+import {
+  HiOutlineSparkles,
+  HiOutlineChatAlt2,
+  HiOutlineDocumentText,
+  HiOutlineCheckCircle,
+  HiOutlineXCircle,
+  HiOutlineExclamationCircle,
+  HiOutlineArrowLeft,
+  HiOutlineRefresh,
+  HiOutlineUser,
+  HiOutlineMail,
+  HiOutlinePhone,
+  HiOutlineGlobeAlt,
+  HiOutlineUserGroup,
+  HiOutlineSpeakerphone,
+  HiOutlinePencil
+} from 'react-icons/hi';
 import '../styles/LeadPipeline.css';
 
 interface StageColumn {
   name: string;
   value: string;
   color: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 const stages: StageColumn[] = [
-  { name: 'New', value: 'new', color: '#3b82f6', icon: '🆕' },
-  { name: 'In Discussion', value: 'in_discussion', color: '#8b5cf6', icon: '💬' },
-  { name: 'Quoted', value: 'quoted', color: '#f59e0b', icon: '🧾' },
-  { name: 'Won', value: 'won', color: '#10b981', icon: '✅' },
-  { name: 'Lost', value: 'lost', color: '#ef4444', icon: '❌' }
+  { name: 'New', value: 'new', color: '#3b82f6', icon: <HiOutlineSparkles /> },
+  { name: 'In Discussion', value: 'in_discussion', color: '#8b5cf6', icon: <HiOutlineChatAlt2 /> },
+  { name: 'Quoted', value: 'quoted', color: '#f59e0b', icon: <HiOutlineDocumentText /> },
+  { name: 'Won', value: 'won', color: '#10b981', icon: <HiOutlineCheckCircle /> },
+  { name: 'Lost', value: 'lost', color: '#ef4444', icon: <HiOutlineXCircle /> }
 ];
 
 export const LeadPipeline: React.FC = () => {
@@ -122,7 +139,7 @@ export const LeadPipeline: React.FC = () => {
     return (
       <div className="pipeline-container">
         <div className="error-state">
-          <p>⚠️ {errorMessage}</p>
+          <p><HiOutlineExclamationCircle className="inline-icon" /> {errorMessage}</p>
         </div>
       </div>
     );
@@ -133,7 +150,7 @@ export const LeadPipeline: React.FC = () => {
       <div className="pipeline-header">
         <div className="header-left">
           <button className="btn-back" onClick={() => navigate('/leads')}>
-            ← Back
+            <HiOutlineArrowLeft className="btn-icon" /> Back
           </button>
           <h1>Lead Pipeline</h1>
         </div>
@@ -142,7 +159,7 @@ export const LeadPipeline: React.FC = () => {
             Total: <strong>{leads.length}</strong>
           </span>
           <button className="btn-refresh" onClick={() => refetch()}>
-            🔄 Refresh
+            <HiOutlineRefresh className="btn-icon" /> Refresh
           </button>
         </div>
       </div>
@@ -197,17 +214,17 @@ export const LeadPipeline: React.FC = () => {
 
                       <div className="card-body">
                         <div className="contact-info">
-                          <p className="contact-name">👤 {lead.contact_name}</p>
-                          <p className="contact-email">📧 {lead.email}</p>
-                          {lead.phone && <p className="contact-phone">📞 {lead.phone}</p>}
+                          <p className="contact-name"><HiOutlineUser className="contact-icon" /> {lead.contact_name}</p>
+                          <p className="contact-email"><HiOutlineMail className="contact-icon" /> {lead.email}</p>
+                          {lead.phone && <p className="contact-phone"><HiOutlinePhone className="contact-icon" /> {lead.phone}</p>}
                         </div>
 
                         <div className="card-meta">
                           <span className="source-tag">
-                            {lead.source === 'web' && '🌐'}
-                            {lead.source === 'referral' && '🤝'}
-                            {lead.source === 'campaign' && '📢'}
-                            {lead.source === 'manual' && '✍️'}
+                            {lead.source === 'web' && <HiOutlineGlobeAlt className="source-icon" />}
+                            {lead.source === 'referral' && <HiOutlineUserGroup className="source-icon" />}
+                            {lead.source === 'campaign' && <HiOutlineSpeakerphone className="source-icon" />}
+                            {lead.source === 'manual' && <HiOutlinePencil className="source-icon" />}
                             {' '}{lead.source}
                           </span>
                         </div>
@@ -215,7 +232,7 @@ export const LeadPipeline: React.FC = () => {
 
                       <div className="card-footer">
                         {lead.owner_name && (
-                          <span className="owner">👤 {lead.owner_name}</span>
+                          <span className="owner"><HiOutlineUser className="owner-icon" /> {lead.owner_name}</span>
                         )}
                         <span className="created-date">{formatDate(lead.created_at)}</span>
                       </div>

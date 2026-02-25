@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { updateUser } from '../store/slices/authSlice';
 import { useUpdateProfileMutation, useUploadProfileImageMutation } from '../services/api';
+import { HiOutlineCheckCircle, HiOutlineXCircle } from 'react-icons/hi';
 import '../styles/Profile.css';
 
 const Profile = () => {
@@ -158,11 +159,11 @@ const Profile = () => {
 
       {successMessage && (
         <div className="alert alert-success">
-          ✓ {successMessage}
+          <HiOutlineCheckCircle className="alert-icon" /> {successMessage}
         </div>
       )}
 
-      {localError && <div className="alert alert-error">✗ {localError}</div>}
+      {localError && <div className="alert alert-error"><HiOutlineXCircle className="alert-icon" /> {localError}</div>}
 
       {/* Profile Image Section */}
       <div className="profile-image-section">

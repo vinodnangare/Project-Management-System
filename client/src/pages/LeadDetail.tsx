@@ -2,6 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGetLeadByIdQuery, useUpdateLeadMutation, useDeleteLeadMutation, useGetAssignableUsersQuery, type Lead } from '../services/api';
+import {
+  HiOutlineExclamationCircle,
+  HiOutlineArrowLeft,
+  HiOutlinePencil,
+  HiOutlineTrash,
+  HiOutlineCheck,
+  HiOutlineX,
+  HiOutlineClipboardList
+} from 'react-icons/hi';
 import '../styles/LeadDetail.css';
 
 export const LeadDetail: React.FC = () => {
@@ -184,9 +193,9 @@ export const LeadDetail: React.FC = () => {
     return (
       <div className="lead-detail-container">
         <div className="error-state">
-          <p>⚠️ {errorMessage}</p>
+          <p><HiOutlineExclamationCircle className="inline-icon" /> {errorMessage}</p>
           <button onClick={() => navigate('/leads/list')} className="btn-back-error">
-            ← Back to List
+            <HiOutlineArrowLeft className="btn-icon" /> Back to List
           </button>
         </div>
       </div>
@@ -198,7 +207,7 @@ export const LeadDetail: React.FC = () => {
       <div className="detail-header">
         <div className="header-left">
           <button className="btn-back" onClick={() => navigate('/leads/list')}>
-            ← Back
+            <HiOutlineArrowLeft className="btn-icon" /> Back
           </button>
           <div className="header-info">
             <h1>{lead.company_name}</h1>
@@ -209,19 +218,19 @@ export const LeadDetail: React.FC = () => {
           {!isEditing ? (
             <>
               <button className="btn-edit" onClick={handleEdit}>
-                ✏️ Edit
+                <HiOutlinePencil className="btn-icon" /> Edit
               </button>
               <button className="btn-delete" onClick={handleDelete}>
-                🗑️ Delete
+                <HiOutlineTrash className="btn-icon" /> Delete
               </button>
             </>
           ) : (
             <>
               <button className="btn-save" onClick={handleSave}>
-                ✓ Save
+                <HiOutlineCheck className="btn-icon" /> Save
               </button>
               <button className="btn-cancel" onClick={handleCancelEdit}>
-                ✕ Cancel
+                <HiOutlineX className="btn-icon" /> Cancel
               </button>
             </>
           )}
@@ -235,7 +244,7 @@ export const LeadDetail: React.FC = () => {
               className={`lead-tab ${activeTab === 'info' ? 'active' : ''}`}
               onClick={() => setActiveTab('info')}
             >
-              📋 Information
+              <HiOutlineClipboardList className="tab-icon" /> Information
             </button>
           </div>
 
@@ -429,7 +438,7 @@ export const LeadDetail: React.FC = () => {
                   <div className="notes-header">
                     <h3>Notes</h3>
                     {isSavingNotes && (
-                      <span className="saving-indicator">💾 Saving...</span>
+                      <span className="saving-indicator">Saving...</span>
                     )}
                   </div>
 
