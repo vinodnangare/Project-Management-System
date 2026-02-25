@@ -14,6 +14,9 @@ router.get('/calendar', meetingController.getCalendarMeetings);
 // Assignable users endpoint - must be before :id routes
 router.get('/users/assignable', meetingController.getAssignableUsers);
 
+// Diagnostic endpoint - check if meeting exists (admin only)
+router.get('/status/:id', meetingController.checkMeetingStatus);
+
 // Related entity meetings
 router.get('/lead/:leadId', meetingController.getMeetingsByLead);
 router.get('/client/:clientId', meetingController.getMeetingsByClient);

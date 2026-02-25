@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
+import mongoose from 'mongoose';
+import { Meeting } from '../models/Meeting.js';
 import * as meetingService from '../services/meetingService.js';
 import {
   createMeetingSchema,
@@ -450,5 +452,72 @@ export const getAssignableUsers = async (
   } catch (error) {
     console.error('Error fetching assignable users:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch assignable users' });
+  }
+};
+
+// Diagnostic endpoint - check if meeting exists (admin only)
+export const checkMeetingStatus = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    // Only admins can use this endpoint
+    if (req.user.role !== 'admin') {
+      res.status(403).json({ success: false, error: 'Only admins can use this endpoint' });
+      return;
+    }
+
+    const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        status: 'invalid_id',
+        message: 'Invalid MongoDB ObjectId format',
+        providedId: id
+      });
+      return;
+    }
+
+    // Check if meeting exists (including deleted ones)
+    const meeting = await Meeting.findById(id);
+
+    if (!meeting) {
+      res.status(404).json({
+        success: false,
+        status: 'not_found',
+        message: 'Meeting does not exist in database',
+        meetingId: id
+      });
+      return;
+    }
+
+    // Meeting exists - return its status
+    res.status(200).json({
+      success: true,
+      status: 'found',
+      meetingId: id,
+      data: {
+        title: meeting.title || 'N/A',
+        is_deleted: meeting.is_deleted || false,
+        createdBy: meeting.createdBy?.toString() || 'N/A',
+        assignedTo: (meeting.assignedTo || []).map((id: any) => id.toString()),
+        dateCreated: meeting.dateCreated || 'N/A'
+      }
+    });
+  } catch (error) {
+    console.error('Error checking meeting status:', error);
+    res.status(500).json({
+      success: false,
+      status: 'error',
+      message: 'Failed to check meeting status',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };

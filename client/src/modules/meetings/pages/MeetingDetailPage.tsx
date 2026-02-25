@@ -19,20 +19,69 @@ import '../../../styles/MeetingsList.css';
 const MeetingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: response, isLoading, error } = useGetMeetingQuery(id || '', { skip: !id });
+  const [diagnosticResult, setDiagnosticResult] = React.useState<any>(null);
+  const [diagnosing, setDiagnosing] = React.useState(false);
+  
+  // Only fetch if we have a valid ID
+  const shouldSkip = !id || id.trim() === '';
+  const { data: response, isLoading, error, refetch } = useGetMeetingQuery(
+    id?.trim() || '', 
+    { skip: shouldSkip }
+  );
+  
   const [deleteMeeting] = useDeleteMeetingMutation();
   const user = useAppSelector((state) => state.auth.user);
   const isAdmin = user?.role === 'admin';
 
   const meeting = response?.data;
 
+  // Log errors for debugging
+  React.useEffect(() => {
+    if (error) {
+      console.error('Meeting fetch error:', error);
+    }
+  }, [error]);
+
+  // Diagnostic function for admins only
+  const runDiagnostics = async () => {
+    if (!isAdmin || !id) return;
+    
+    setDiagnosing(true);
+    try {
+      const response = await fetch(`/api/meetings/status/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('Diagnostic API error:', response.status, result);
+      }
+      
+      setDiagnosticResult(result);
+    } catch (err) {
+      console.error('Diagnostic fetch error:', err);
+      setDiagnosticResult({ 
+        error: 'Failed to run diagnostics', 
+        details: err instanceof Error ? err.message : String(err),
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setDiagnosing(false);
+    }
+  };
+
   const [adminNoteDraft, setAdminNoteDraft] = React.useState<string>('');
   const [myNoteDraft, setMyNoteDraft] = React.useState<string>('');
-  const [updateMeetingMutation, { isLoading: isUpdatingNote }] = useUpdateMeetingMutation();
+  const [updateMeetingMutation] = useUpdateMeetingMutation();
+  const adminSaveTimer = React.useRef<number | null>(null);
+  const personalSaveTimer = React.useRef<number | null>(null);
+  const isInitialMount = React.useRef(true);
 
   // Initialize notes from meeting data
   React.useEffect(() => {
-    if (!meeting) {
+    if (!meeting || !meeting.id) {
       setAdminNoteDraft('');
       setMyNoteDraft('');
       return;
@@ -44,7 +93,100 @@ const MeetingDetailPage: React.FC = () => {
     // Find current user's personal note
     const myNote = meeting.userNotes?.find(n => n.userId === user?.id);
     setMyNoteDraft(myNote?.content || '');
-  }, [meeting, user]);
+    isInitialMount.current = false;
+  }, [meeting?.id, user?.id]); // Only depend on IDs to avoid unnecessary updates // More specific dependencies
+
+  // Autosave admin notes with 1 second debounce
+  React.useEffect(() => {
+    // Skip if not admin, no meeting, or initial mount
+    if (!isAdmin || !meeting?.id || !adminNoteDraft.trim() || isInitialMount.current) {
+      return;
+    }
+
+    // Clear previous timer
+    if (adminSaveTimer.current !== null) {
+      window.clearTimeout(adminSaveTimer.current);
+    }
+
+    // Set new timer
+    adminSaveTimer.current = window.setTimeout(async () => {
+      if (!meeting?.id) return; // Double-check meeting ID exists
+      
+      try {
+        const result = await updateMeetingMutation({ 
+          id: meeting.id, 
+          data: { notes: adminNoteDraft || null } 
+        }).unwrap();
+        
+        if (result?.success) {
+          toast.success('Admin notes saved ✓', {
+            duration: 2000,
+            position: 'bottom-right'
+          });
+        }
+      } catch (err) {
+        console.error('Admin notes save error:', err);
+        toast.error('Failed to save admin notes', {
+          duration: 3000,
+          position: 'bottom-right'
+        });
+      }
+    }, 1000) as unknown as number;
+
+    // Cleanup: clear timer on unmount or when dependencies change
+    return () => {
+      if (adminSaveTimer.current !== null) {
+        window.clearTimeout(adminSaveTimer.current);
+        adminSaveTimer.current = null;
+      }
+    };
+  }, [adminNoteDraft, isAdmin, meeting?.id]); // Removed updateMeetingMutation
+
+  // Autosave personal notes with 1 second debounce
+  React.useEffect(() => {
+    // Skip if no meeting/user or initial mount
+    if (!meeting?.id || !user?.id || !myNoteDraft.trim() || isInitialMount.current) {
+      return;
+    }
+
+    // Clear previous timer
+    if (personalSaveTimer.current !== null) {
+      window.clearTimeout(personalSaveTimer.current);
+    }
+
+    // Set new timer
+    personalSaveTimer.current = window.setTimeout(async () => {
+      if (!meeting?.id || !user?.id) return; // Double-check IDs exist
+      
+      try {
+        const result = await updateMeetingMutation({ 
+          id: meeting.id, 
+          data: { userNote: myNoteDraft || null } 
+        }).unwrap();
+        
+        if (result?.success) {
+          toast.success('Personal notes saved ✓', {
+            duration: 2000,
+            position: 'bottom-right'
+          });
+        }
+      } catch (err) {
+        console.error('Personal notes save error:', err);
+        toast.error('Failed to save personal notes', {
+          duration: 3000,
+          position: 'bottom-right'
+        });
+      }
+    }, 1000) as unknown as number;
+
+    // Cleanup: clear timer on unmount or when dependencies change
+    return () => {
+      if (personalSaveTimer.current !== null) {
+        window.clearTimeout(personalSaveTimer.current);
+        personalSaveTimer.current = null;
+      }
+    };
+  }, [myNoteDraft, meeting?.id, user?.id]); // Removed updateMeetingMutation
 
   const formatDateTime = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('en-US', {
@@ -80,21 +222,135 @@ const MeetingDetailPage: React.FC = () => {
     }
   };
 
+
   if (isLoading) {
     return (
       <div className="meeting-detail-page">
-        <div className="loading-spinner">Loading meeting details...</div>
+        <div className="loading-spinner">
+          <div>Loading meeting details...</div>
+          {id && <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>Meeting ID: {id}</div>}
+        </div>
       </div>
     );
   }
 
   if (error || !meeting) {
+    const isEmployee = user?.role === 'employee';
+    const isAdmin = user?.role === 'admin';
+    
     return (
       <div className="meeting-detail-page">
         <Link to="/meetings" className="back-link">← Back to Meetings</Link>
         <div className="error-message">
           <h3>Meeting not found</h3>
-          <p>The meeting you're looking for doesn't exist or has been deleted.</p>
+          
+          {isEmployee ? (
+            <div>
+              <p>You are logged in as an <strong>Employee</strong>. You can only view meetings you are assigned to.</p>
+              <div style={{ marginTop: '12px', padding: '12px', background: '#fff3cd', borderRadius: '6px', textAlign: 'left' }}>
+                <strong>What to do:</strong>
+                <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                  <li>Ask an admin to assign you to this meeting</li>
+                  <li>Or go to <Link to="/meetings" style={{ color: '#2563eb', textDecoration: 'underline' }}>Meetings List</Link> to see meetings you're assigned to</li>
+                </ul>
+              </div>
+            </div>
+          ) : isAdmin ? (
+            <div>
+              <p>You are logged in as an <strong>Admin</strong>. This meeting either doesn't exist or has been deleted.</p>
+              <div style={{ marginTop: '12px', padding: '12px', background: '#f8d7da', borderRadius: '6px', textAlign: 'left' }}>
+                <strong>Possible reasons:</strong>
+                <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                  <li>The meeting has been permanently deleted</li>
+                  <li>The Meeting ID is incorrect or malformed</li>
+                  <li>Database connection issue</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <p>The meeting you're looking for doesn't exist, has been deleted, or you don't have permission to view it.</p>
+          )}
+
+          {id && (
+            <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(0,0,0,0.05)', borderRadius: '6px', fontSize: '0.85rem' }}>
+              <strong>Meeting ID:</strong> <code>{id}</code>
+            </div>
+          )}
+
+          {/* Debug Info */}
+          <div style={{ marginTop: '16px', padding: '12px', background: '#f0f0f0', borderRadius: '6px', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+            <strong>Debug Info:</strong>
+            <div style={{ marginTop: '6px', lineHeight: '1.8' }}>
+              <div>📌 Your User ID: <strong>{user?.id || 'Not logged in'}</strong></div>
+              <div>👤 Your Role: <strong>{user?.role || 'Unknown'}</strong></div>
+              <div>✉️ Your Email: <strong>{user?.email || 'N/A'}</strong></div>
+              <div>🔐 Token Status: <strong>{localStorage.getItem('token') ? '✓ Valid' : '✗ Missing'}</strong></div>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => refetch()} 
+            style={{
+              marginTop: '16px',
+              marginRight: '8px',
+              padding: '10px 16px',
+              background: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}
+          >
+            Try Again
+          </button>
+          <button 
+            onClick={() => navigate('/meetings')} 
+            style={{
+              marginTop: '16px',
+              marginRight: '8px',
+              padding: '10px 16px',
+              background: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}
+          >
+            Back to Meetings
+          </button>
+
+          {isAdmin && (
+            <button 
+              onClick={runDiagnostics}
+              disabled={diagnosing}
+              style={{
+                marginTop: '16px',
+                padding: '10px 16px',
+                background: diagnosing ? '#ccc' : '#f97316',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: diagnosing ? 'not-allowed' : 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500'
+              }}
+            >
+              {diagnosing ? 'Checking...' : '🔍 Run Diagnostics'}
+            </button>
+          )}
+
+          {diagnosticResult && (
+            <div style={{ marginTop: '16px', padding: '12px', background: diagnosticResult.success ? '#d1fae5' : '#fee2e2', borderRadius: '6px', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+              <strong>{diagnosticResult.success ? '✓ Meeting Found' : '✗ Meeting Not Found'}</strong>
+              <pre style={{ marginTop: '8px', whiteSpace: 'pre-wrap', wordWrap: 'break-word', fontSize: '0.75rem', maxHeight: '200px', overflow: 'auto' }}>
+                {JSON.stringify(diagnosticResult, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -235,32 +491,8 @@ const MeetingDetailPage: React.FC = () => {
                 placeholder="Add official meeting notes visible to all participants..."
                 rows={4}
               />
-              <div className="editor-actions">
-                <button
-                  className="btn-secondary"
-                  onClick={() => setAdminNoteDraft(meeting.notes || '')}
-                  type="button"
-                >
-                  Reset
-                </button>
-                <button
-                  className="btn-primary"
-                  disabled={isUpdatingNote}
-                  onClick={async () => {
-                    try {
-                      const result = await updateMeetingMutation({ id: meeting.id, data: { notes: adminNoteDraft || null } }).unwrap();
-                      if (result.success) {
-                        toast.success('Admin notes saved');
-                      }
-                    } catch (err) {
-                      console.error('Save error:', err);
-                      toast.error('Failed to save notes');
-                    }
-                  }}
-                  type="button"
-                >
-                  {isUpdatingNote ? 'Saving...' : 'Save Admin Notes'}
-                </button>
+              <div className="editor-saving" aria-live="polite">
+                <span className="saving-indicator">✓ Auto-saving</span>
               </div>
             </div>
           ) : (
@@ -286,35 +518,8 @@ const MeetingDetailPage: React.FC = () => {
               placeholder="Add your personal notes about this meeting (only visible to you)..."
               rows={4}
             />
-            <div className="editor-actions">
-              <button
-                className="btn-secondary"
-                onClick={() => {
-                  const myNote = meeting.userNotes?.find(n => n.userId === user?.id);
-                  setMyNoteDraft(myNote?.content || '');
-                }}
-                type="button"
-              >
-                Reset
-              </button>
-              <button
-                className="btn-primary"
-                disabled={isUpdatingNote}
-                onClick={async () => {
-                  try {
-                    const result = await updateMeetingMutation({ id: meeting.id, data: { userNote: myNoteDraft || null } as any }).unwrap();
-                    if (result.success) {
-                      toast.success('Personal notes saved');
-                    }
-                  } catch (err) {
-                    console.error('Save error:', err);
-                    toast.error('Failed to save notes');
-                  }
-                }}
-                type="button"
-              >
-                {isUpdatingNote ? 'Saving...' : 'Save My Notes'}
-              </button>
+            <div className="editor-saving" aria-live="polite">
+              <span className="saving-indicator">✓ Auto-saving</span>
             </div>
           </div>
         </div>
