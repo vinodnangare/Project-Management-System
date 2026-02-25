@@ -157,6 +157,12 @@ export const getMeetingById = async (
   userRole: string
 ): Promise<MeetingType | null> => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(meetingId)) {
+      console.warn(`Invalid meeting ID format: ${meetingId}`);
+      return null;
+    }
+
     const conditions: any = {
       _id: new mongoose.Types.ObjectId(meetingId),
       is_deleted: false
@@ -169,7 +175,18 @@ export const getMeetingById = async (
 
     const meeting = await Meeting.findOne(conditions);
 
-    if (!meeting) return null;
+    if (!meeting) {
+      // Log why meeting wasn't found (for debugging)
+      const deletedMeeting = await Meeting.findById(new mongoose.Types.ObjectId(meetingId));
+      if (deletedMeeting?.is_deleted) {
+        console.log(`Meeting ${meetingId} is deleted`);
+      } else if (userRole === 'employee' && deletedMeeting) {
+        console.log(`Employee ${userId} not assigned to meeting ${meetingId}`);
+      } else {
+        console.log(`Meeting ${meetingId} not found in database`);
+      }
+      return null;
+    }
 
     return formatMeetingResponse(meeting);
   } catch (error) {

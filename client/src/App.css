@@ -170,12 +170,13 @@
 
 /* Meeting Form */
 .meeting-form-page {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: var(--space-8);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: var(--space-6) 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .meeting-form-page h2 {

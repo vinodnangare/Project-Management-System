@@ -33,6 +33,8 @@ export const meetingsApi = createApi({
     getMeeting: builder.query<{ success: boolean; data: IMeeting }, string>({
       query: (id) => `/meetings/${id}`,
       providesTags: (result, error, id) => [{ type: 'Meeting', id }],
+      // Cache data for 5 minutes and retry once on failure
+      keepUnusedDataFor: 300,
     }),
     createMeeting: builder.mutation<{ success: boolean; data: IMeeting }, ICreateMeeting>({
       query: (data) => ({
