@@ -36,6 +36,9 @@ export interface Meeting {
   meetingLink: string | null;
   status: MeetingStatus;
   notes: string | null;
+  recurrence?: 'once' | 'daily' | 'weekly' | 'monthly';
+  notesFileName?: string | null;
+  notesFilePath?: string | null;
   is_deleted: boolean;
   created_at: string;
   updated_at: string;

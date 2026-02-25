@@ -20,6 +20,7 @@ router.get('/client/:clientId', meetingController.getMeetingsByClient);
 
 // CRUD operations
 router.get('/', meetingController.getAllMeetings);
+router.get('/:id/notes-file', meetingController.getMeetingNotesFile);
 router.get('/:id', meetingController.getMeetingById);
 router.post('/', meetingController.createMeeting);
 router.patch('/:id', meetingController.updateMeeting);

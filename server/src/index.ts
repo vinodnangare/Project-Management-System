@@ -21,8 +21,10 @@ const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Allow larger payloads (meeting notes may include base64 PDF attachments)
+const bodyLimit = process.env.REQUEST_BODY_LIMIT || '10mb';
+app.use(express.json({ limit: bodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 app.use(requestLogger);
 
 import * as authController from './controllers/authController.js';

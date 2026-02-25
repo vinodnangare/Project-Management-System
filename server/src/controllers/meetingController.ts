@@ -124,9 +124,11 @@ export const createMeeting = async (
     }
 
     console.error('Error creating meeting:', error);
+    const message = error instanceof Error ? error.message : JSON.stringify(error);
     res.status(500).json({
       success: false,
-      error: 'Failed to create meeting'
+      error: 'Failed to create meeting',
+      details: message
     });
   }
 };
@@ -450,5 +452,40 @@ export const getAssignableUsers = async (
   } catch (error) {
     console.error('Error fetching assignable users:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch assignable users' });
+  }
+};
+
+export const getMeetingNotesFile = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    const { id } = req.params;
+
+    const meeting = await meetingService.getMeetingById(Array.isArray(id) ? id[0] : id, req.user.id, req.user.role);
+    if (!meeting || !(meeting as any).notesFilePath) {
+      res.status(404).json({ success: false, error: 'Notes file not found' });
+      return;
+    }
+
+    const fileRel = (meeting as any).notesFilePath as string;
+    const filePath = require('path').resolve(process.cwd(), fileRel);
+
+    return res.sendFile(filePath, (err: any) => {
+      if (err) {
+        console.error('Error sending notes file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ success: false, error: 'Failed to send file' });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('getMeetingNotesFile error:', error);
+    res.status(500).json({ success: false, error: 'Failed to retrieve notes file' });
   }
 };

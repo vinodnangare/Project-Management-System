@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
 import { Meeting, IMeeting } from '../models/Meeting.js';
 import { User } from '../models/index.js';
 import { Lead } from '../models/Lead.js';
@@ -50,10 +52,34 @@ const formatMeetingResponse = async (meeting: IMeeting): Promise<MeetingType> =>
     meetingLink: meeting.meetingLink || null,
     status: meeting.status as MeetingStatus,
     notes: meeting.notes || null,
+    recurrence: (meeting as any).recurrence || 'once',
+    notesFileName: (meeting as any).notesFileName || null,
+    notesFilePath: (meeting as any).notesFilePath || null,
     is_deleted: meeting.is_deleted,
     created_at: meeting.created_at.toISOString(),
     updated_at: meeting.updated_at.toISOString()
   };
+};
+
+const saveBase64Pdf = async (base64: string, originalName: string, meetingId: string) => {
+  try {
+    const storageDir = path.join(process.cwd(), 'server', 'data', 'meeting_notes');
+    await fs.promises.mkdir(storageDir, { recursive: true });
+
+    const timestamp = Date.now();
+    const safeName = originalName.replace(/[^a-z0-9_.-]/gi, '_');
+    const fileName = `${meetingId}_${timestamp}_${safeName}`;
+    const filePath = path.join(storageDir, fileName);
+
+    const rawBase64 = base64.includes(',') ? base64.split(',')[1] : base64;
+    const buffer = Buffer.from(rawBase64, 'base64');
+    await fs.promises.writeFile(filePath, buffer);
+
+    return path.relative(process.cwd(), filePath).replace(/\\/g, '/');
+  } catch (error) {
+    console.error('saveBase64Pdf error:', error);
+    return null;
+  }
 };
 
 export const getAllMeetings = async (
@@ -164,7 +190,7 @@ export const createMeeting = async (
   meetingData: CreateMeetingRequest,
   createdBy: string
 ): Promise<MeetingType> => {
-  const meeting = await Meeting.create({
+  const meetingObj: any = {
     title: meetingData.title,
     description: meetingData.description || null,
     assignedTo: meetingData.assignedTo.map(id => new mongoose.Types.ObjectId(id)),
@@ -179,7 +205,23 @@ export const createMeeting = async (
     status: meetingData.status || 'scheduled',
     notes: meetingData.notes || null,
     is_deleted: false
-  });
+  };
+
+  if ((meetingData as any).recurrence) {
+    meetingObj.recurrence = (meetingData as any).recurrence;
+  }
+
+  const meeting = await Meeting.create(meetingObj);
+
+  // handle optional notes file (base64)
+  if ((meetingData as any).notesFileBase64 && (meetingData as any).notesFileName) {
+    const savedPath = await saveBase64Pdf((meetingData as any).notesFileBase64, (meetingData as any).notesFileName, meeting._id.toString());
+    if (savedPath) {
+      meeting.notesFileName = (meetingData as any).notesFileName;
+      meeting.notesFilePath = savedPath;
+      await meeting.save();
+    }
+  }
 
   return formatMeetingResponse(meeting);
 };
@@ -223,7 +265,33 @@ export const updateMeeting = async (
     if (meetingData.location !== undefined) updateData.location = meetingData.location;
     if (meetingData.meetingLink !== undefined) updateData.meetingLink = meetingData.meetingLink;
     if (meetingData.status !== undefined) updateData.status = meetingData.status;
-    if (meetingData.notes !== undefined) updateData.notes = meetingData.notes;
+    // If an employee is updating notes, append with author and timestamp instead of overwriting
+    if (meetingData.notes !== undefined) {
+      // If replaceNotes flag is provided and true, perform a full replace
+      const shouldReplace = (meetingData as any).replaceNotes === true;
+      if (userRole === 'employee' && !shouldReplace) {
+        const user = await User.findById(userId).select('full_name');
+        const author = user?.full_name || 'Employee';
+        const time = new Date().toISOString();
+        const existingNotes = existingMeeting.notes || '';
+        const appended = `${existingNotes}${existingNotes ? '\n\n' : ''}[${time} - ${author}]\n${meetingData.notes}`;
+        updateData.notes = appended;
+      } else {
+        // Admins or explicit replace operations will overwrite the notes blob
+        updateData.notes = meetingData.notes;
+      }
+    }
+
+    if ((meetingData as any).recurrence !== undefined) updateData.recurrence = (meetingData as any).recurrence;
+
+    // Handle notes file base64 if provided
+    if ((meetingData as any).notesFileBase64 && (meetingData as any).notesFileName) {
+      const savedPath = await saveBase64Pdf((meetingData as any).notesFileBase64, (meetingData as any).notesFileName, existingMeeting._id.toString());
+      if (savedPath) {
+        updateData.notesFileName = (meetingData as any).notesFileName;
+        updateData.notesFilePath = savedPath;
+      }
+    }
 
     const meeting = await Meeting.findByIdAndUpdate(
       meetingId,

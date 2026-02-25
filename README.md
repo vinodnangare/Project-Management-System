@@ -1,6 +1,6 @@
 # Task & Comment Management System
 
-A professional full-stack task management application built with **Node.js/Express**, **React**, **TypeScript**, **MySQL**, and **Redux Toolkit**.
+A professional full-stack task management application built with **Node.js/Express**, **React**, **TypeScript**, **MongoDB (Mongoose)**, and **Redux Toolkit**.
 
 > **Assignment project demonstrating enterprise-grade architecture, clean code principles, and professional development practices.**
 

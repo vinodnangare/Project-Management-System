@@ -15,6 +15,9 @@ export interface IMeeting extends Document {
   meetingLink?: string | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
   notes?: string | null;
+  recurrence?: 'once' | 'daily' | 'weekly' | 'monthly' | null;
+  notesFileName?: string | null;
+  notesFilePath?: string | null;
   is_deleted: boolean;
   created_at: Date;
   updated_at: Date;
@@ -89,6 +92,19 @@ const meetingSchema = new Schema<IMeeting>(
       type: String,
       default: null,
       maxlength: 5000
+    },
+    recurrence: {
+      type: String,
+      enum: ['once', 'daily', 'weekly', 'monthly'],
+      default: 'once'
+    },
+    notesFileName: {
+      type: String,
+      default: null
+    },
+    notesFilePath: {
+      type: String,
+      default: null
     },
     is_deleted: {
       type: Boolean,

@@ -58,6 +58,21 @@ export const createMeetingSchema = z.object({
     .string()
     .max(5000, 'Notes must be less than 5000 characters')
     .nullable()
+    .optional(),
+  replaceNotes: z
+    .boolean()
+    .optional(),
+  recurrence: z
+    .enum(['once', 'daily', 'weekly', 'monthly'])
+    .optional(),
+  notesFileName: z
+    .string()
+    .max(1024)
+    .nullable()
+    .optional(),
+  notesFileBase64: z
+    .string()
+    .nullable()
     .optional()
 }).refine((data) => {
   // Validate that startTime is before endTime
@@ -131,6 +146,21 @@ export const updateMeetingSchema = z.object({
   notes: z
     .string()
     .max(5000, 'Notes must be less than 5000 characters')
+    .nullable()
+    .optional(),
+  replaceNotes: z
+    .boolean()
+    .optional(),
+  recurrence: z
+    .enum(['once', 'daily', 'weekly', 'monthly'])
+    .optional(),
+  notesFileName: z
+    .string()
+    .max(1024)
+    .nullable()
+    .optional(),
+  notesFileBase64: z
+    .string()
     .nullable()
     .optional()
 });

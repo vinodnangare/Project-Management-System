@@ -1,0 +1,119 @@
+.sidebar {
+  width: 240px;
+  background: var(--card);
+  color: var(--text);
+  border-right: var(--border);
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: width 0.28s var(--transition), background 0.3s ease;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  box-shadow: var(--shadow);
+}
+
+.sidebar.collapsed {
+  width: 72px;
+}
+
+.sidebar-top {
+  padding: 8px 4px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.collapse-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--muted);
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.collapse-btn:hover {
+  background: rgba(0,0,0,0.04);
+}
+
+.sidebar-menu {
+  flex: 1;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 180ms var(--transition), transform 140ms var(--transition), color 180ms var(--transition);
+  border-radius: 10px;
+  color: var(--text);
+}
+
+.sidebar-item:hover {
+  background: linear-gradient(90deg, rgba(79,134,255,0.06), rgba(34,211,238,0.04));
+  transform: translateX(2px);
+}
+
+.sidebar-item.active {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(30,64,175,0.12);
+}
+
+.sidebar-icon {
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  color: var(--text);
+}
+
+.sidebar-item.active .sidebar-icon {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+.sidebar-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: inherit;
+  white-space: nowrap;
+}
+
+/* Tweak for collapsed state: center icons and hide labels */
+.sidebar.collapsed .sidebar-label {
+  display: none;
+}
+.sidebar.collapsed .sidebar-item {
+  justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-around;
+    border-right: none;
+    border-bottom: var(--border);
+    height: auto;
+    padding: 8px 6px;
+  }
+
+  .sidebar-item {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+}
