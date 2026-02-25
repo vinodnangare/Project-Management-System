@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGetSubtasksQuery, useCreateSubtaskMutation, useUpdateSubtaskStatusMutation, useDeleteSubtaskMutation } from '../services/api';
+import { HiOutlineX } from 'react-icons/hi';
 import '../styles/Subtasks.css';
 /*This component handles:*/
 
@@ -136,7 +137,7 @@ export const Subtasks: React.FC<{ taskId: string; taskStatus: string }> = ({ tas
                   disabled={loading}
                   title="Delete subtask"
                 >
-                  ✕
+                  <HiOutlineX />
                 </button>
               )}
             </div>

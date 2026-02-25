@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useGetLeadsQuery, useCreateLeadMutation, useDeleteLeadMutation, useGetLeadOwnersQuery, useUpdateLeadStageMutation, useUpdateLeadMutation, type Lead } from '../services/api';
 import BulkActions from '../components/BulkActions';
 import LeadForm from '../components/LeadForm';
+import { HiOutlineExclamationCircle, HiOutlinePlus, HiOutlineRefresh, HiOutlineSearch, HiOutlineArrowLeft } from 'react-icons/hi';
 import '../styles/LeadList.css';
 
 export const LeadList: React.FC = () => {
@@ -273,7 +274,7 @@ export const LeadList: React.FC = () => {
 
     return (
       <div className="lead-list-container">
-        <div className="error-state">⚠️ {errorMessage}</div>
+        <div className="error-state"><HiOutlineExclamationCircle className="inline-icon" /> {errorMessage}</div>
       </div>
     );
   }
@@ -283,25 +284,26 @@ export const LeadList: React.FC = () => {
       <div className="list-header">
         <div className="header-left">
           <button className="btn-back" onClick={() => navigate('/leads')}>
-            ← Back
+            <HiOutlineArrowLeft className="btn-icon" /> Back
           </button>
           <h1>All Leads</h1>
         </div>
         <div className="header-actions">
           <button className="btn-add-lead" onClick={() => setShowLeadForm(true)}>
-            ➕ Add Lead
+            <HiOutlinePlus className="btn-icon" /> Add Lead
           </button>
           <button className="btn-refresh" onClick={() => refetch()}>
-            🔄 Refresh
+            <HiOutlineRefresh className="btn-icon" /> Refresh
           </button>
         </div>
       </div>
 
       <div className="lead-filters-section">
         <div className="lead-search-box">
+          <HiOutlineSearch className="search-icon" />
           <input
             type="text"
-            placeholder="🔍 Search by name, email, phone..."
+            placeholder="Search by name, email, phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="lead-search-input"

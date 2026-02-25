@@ -1,4 +1,5 @@
 import React from 'react';
+import { HiOutlineTrash, HiOutlineClock } from 'react-icons/hi';
 import type { TaskDetailsTabProps } from '../types/components/TaskDetailsTabProps';
 
 export const TaskDetailsTab: React.FC<TaskDetailsTabProps> = ({
@@ -43,7 +44,7 @@ export const TaskDetailsTab: React.FC<TaskDetailsTabProps> = ({
                     onClick={() => onRemoveAssignee(assignee.id)}
                     title="Remove assignee"
                   >
-                    ✕
+                    <HiOutlineTrash />
                   </button>
                 )}
               </div>
@@ -86,7 +87,7 @@ export const TaskDetailsTab: React.FC<TaskDetailsTabProps> = ({
       {task.estimated_hours && (
         <div className="detail-group">
           <label>Estimated Hours</label>
-          <div className="detail-value">⏰ {task.estimated_hours}h</div>
+          <div className="detail-value"><HiOutlineClock className="detail-icon" /> {task.estimated_hours}h</div>
         </div>
       )}
       

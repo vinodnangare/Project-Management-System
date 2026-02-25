@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGetMeetingsQuery, useDeleteMeetingMutation, useUpdateMeetingMutation } from '../api/meetingsApi';
 import { useAppSelector } from '../../../hooks/redux';
 import toast from 'react-hot-toast';
+import { HiOutlineGlobeAlt, HiOutlineLocationMarker, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi';
 import type { IMeeting } from '../types/meetingTypes';
 import '../../../styles/MeetingsList.css';
 
@@ -30,7 +31,7 @@ const MeetingsListPage: React.FC = () => {
       try {
         await deleteMeeting(id).unwrap();
         toast.success('Meeting deleted successfully');
-        refetch();
+        // No need to call refetch() - invalidatesTags handles this automatically
       } catch (err) {
         toast.error('Failed to delete meeting');
         console.error(err);
@@ -42,7 +43,7 @@ const MeetingsListPage: React.FC = () => {
     try {
       await updateMeeting({ id, data: { status: newStatus as IMeeting['status'] } }).unwrap();
       toast.success('Status updated');
-      refetch();
+      // No need to call refetch() - invalidatesTags handles this automatically
     } catch (err) {
       toast.error('Failed to update status');
       console.error(err);
@@ -156,7 +157,7 @@ const MeetingsListPage: React.FC = () => {
                   </td>
                   <td>
                     <span className={`meeting-type ${meeting.meetingType}`}>
-                      {meeting.meetingType === 'online' ? '🌐 Online' : '📍 Offline'}
+                      {meeting.meetingType === 'online' ? <><HiOutlineGlobeAlt className="type-icon" /> Online</> : <><HiOutlineLocationMarker className="type-icon" /> Offline</>}
                     </span>
                   </td>
                   <td>{formatDateTime(meeting.startTime)}</td>
@@ -215,14 +216,14 @@ const MeetingsListPage: React.FC = () => {
                           onClick={() => navigate(`/meetings/${meeting.id}/edit`)}
                           title="Edit meeting"
                         >
-                          ✏️
+                          <HiOutlinePencil />
                         </button>
                         <button
                           className="btn-delete"
                           onClick={() => handleDelete(meeting.id, meeting.title)}
                           title="Delete meeting"
                         >
-                          🗑️
+                          <HiOutlineTrash />
                         </button>
                       </div>
                     </td>

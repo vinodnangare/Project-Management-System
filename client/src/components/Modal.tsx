@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { HiOutlineX } from 'react-icons/hi';
 import '../styles/components/Modal.css';
 import type { ModalProps } from '../types/components/ModalProps';
 
@@ -59,7 +60,7 @@ const Modal: React.FC<ModalProps> = ({
                 className="modal-close-btn"
                 aria-label="Close modal"
               >
-                ✕
+                <HiOutlineX />
               </button>
             )}
           </div>

@@ -1,5 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export interface IUserNote {
+  userId: mongoose.Types.ObjectId;
+  content: string;
+  updatedAt: Date;
+}
+
 export interface IMeeting extends Document {
   _id: mongoose.Types.ObjectId;
   title: string;
@@ -15,6 +21,7 @@ export interface IMeeting extends Document {
   meetingLink?: string | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
   notes?: string | null;
+  userNotes: IUserNote[];
   is_deleted: boolean;
   created_at: Date;
   updated_at: Date;
@@ -89,6 +96,25 @@ const meetingSchema = new Schema<IMeeting>(
       type: String,
       default: null,
       maxlength: 5000
+    },
+    userNotes: {
+      type: [{
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: true
+        },
+        content: {
+          type: String,
+          required: true,
+          maxlength: 5000
+        },
+        updatedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }],
+      default: []
     },
     is_deleted: {
       type: Boolean,

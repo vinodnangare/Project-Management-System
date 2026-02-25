@@ -1,4 +1,5 @@
-import React from 'react';      
+import React from 'react';
+import { HiOutlinePlay } from 'react-icons/hi';      
 import type { TaskStatusControlProps } from '../types/components/TaskStatusControlProps';
 
 const STATUSES = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
@@ -42,7 +43,7 @@ export const TaskStatusControl: React.FC<TaskStatusControlProps> = ({
           disabled={isUpdating}
           className="status-btn start-btn"
         >
-          ▶️ Start
+          <HiOutlinePlay /> Start
         </button>
       )}
       {currentStatus === 'IN_PROGRESS' && (

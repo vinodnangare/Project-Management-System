@@ -4,6 +4,15 @@ import { useAppDispatch } from '../hooks/redux';
 import { setCredentials } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { validatePassword } from '../utils/validators';
+import { 
+  HiOutlineUser, 
+  HiOutlineMail, 
+  HiOutlineLockClosed, 
+  HiOutlineCheckCircle,
+  HiOutlineExclamationCircle,
+  HiOutlineRefresh,
+  HiOutlineSparkles
+} from 'react-icons/hi';
 import '../styles/Auth.css';
 import type { RegisterProps } from '../types/components/RegisterProps';
 
@@ -67,25 +76,25 @@ export default function Register({ onSwitchToLogin }: RegisterProps) {
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-header">
-            <div className="auth-icon">👤</div>
+            <div className="auth-icon"><HiOutlineUser /></div>
             <h1>Task Management System</h1>
             <p className="auth-subtitle">Join Our Team</p>
           </div>
 
           {apiError && (
             <div className="auth-error">
-              <span>⚠️ {apiError}</span>
+              <span><HiOutlineExclamationCircle className="error-icon" /> {apiError}</span>
             </div>
           )}
           {passwordError && (
             <div className="auth-error">
-              <span>⚠️ {passwordError}</span>
+              <span><HiOutlineExclamationCircle className="error-icon" /> {passwordError}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="fullName">👤 Full Name</label>
+              <label htmlFor="fullName"><HiOutlineUser className="label-icon" /> Full Name</label>
               <input
                 id="fullName"
                 type="text"
@@ -99,7 +108,7 @@ export default function Register({ onSwitchToLogin }: RegisterProps) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="email">📧 Email Address</label>
+              <label htmlFor="email"><HiOutlineMail className="label-icon" /> Email Address</label>
               <input
                 id="email"
                 type="email"
@@ -113,7 +122,7 @@ export default function Register({ onSwitchToLogin }: RegisterProps) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">🔒 Password</label>
+              <label htmlFor="password"><HiOutlineLockClosed className="label-icon" /> Password</label>
               <input
                 id="password"
                 type="password"
@@ -127,7 +136,7 @@ export default function Register({ onSwitchToLogin }: RegisterProps) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmPassword">✓ Confirm Password</label>
+              <label htmlFor="confirmPassword"><HiOutlineCheckCircle className="label-icon" /> Confirm Password</label>
               <input
                 id="confirmPassword"
                 type="password"
@@ -141,7 +150,7 @@ export default function Register({ onSwitchToLogin }: RegisterProps) {
             </div>
 
             <button type="submit" disabled={loading} className="submit-btn">
-              <span>{loading ? '🔄 Creating Account...' : '✨ Create Account'}</span>
+              <span>{loading ? <><HiOutlineRefresh className="spin" /> Creating Account...</> : <><HiOutlineSparkles /> Create Account</>}</span>
             </button>
           </form>
 

@@ -1,18 +1,30 @@
 import React from 'react';
+import {
+  HiOutlineSparkles,
+  HiOutlineFlag,
+  HiOutlineDocumentText,
+  HiOutlineMail,
+  HiOutlinePhone,
+  HiOutlineUserGroup,
+  HiOutlinePencil,
+  HiOutlineBookmark,
+  HiOutlineChartBar,
+  HiOutlineUser
+} from 'react-icons/hi';
 import '../styles/components/LeadTimeline.css';
 import type { TimelineEvent, LeadTimelineProps } from '../types/components/LeadTimelineProps';
 
 const LeadTimeline: React.FC<LeadTimelineProps> = ({ events, isLoading }) => {
   const getEventIcon = (type: string) => {
     switch (type) {
-      case 'created': return '✨';
-      case 'stage_change': return '🎯';
-      case 'note': return '📝';
-      case 'email': return '📧';
-      case 'call': return '📞';
-      case 'meeting': return '👥';
-      case 'updated': return '✏️';
-      default: return '📌';
+      case 'created': return <HiOutlineSparkles />;
+      case 'stage_change': return <HiOutlineFlag />;
+      case 'note': return <HiOutlineDocumentText />;
+      case 'email': return <HiOutlineMail />;
+      case 'call': return <HiOutlinePhone />;
+      case 'meeting': return <HiOutlineUserGroup />;
+      case 'updated': return <HiOutlinePencil />;
+      default: return <HiOutlineBookmark />;
     }
   };
 
@@ -61,7 +73,8 @@ const LeadTimeline: React.FC<LeadTimelineProps> = ({ events, isLoading }) => {
   if (events.length === 0) {
     return (
       <div className="timeline-empty">
-        <p>📊 No activity yet</p>
+        <HiOutlineChartBar className="empty-icon" />
+        <p>No activity yet</p>
         <p className="empty-subtitle">Timeline will show all lead interactions and changes</p>
       </div>
     );
@@ -90,7 +103,7 @@ const LeadTimeline: React.FC<LeadTimelineProps> = ({ events, isLoading }) => {
 
             {event.user_name && (
               <div className="timeline-user">
-                <span className="user-icon">👤</span>
+                <HiOutlineUser className="user-icon" />
                 <span className="user-name">{event.user_name}</span>
               </div>
             )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGetLeadOwnersQuery } from '../services/api';
+import { HiOutlineX } from 'react-icons/hi';
 import '../styles/components/LeadForm.css';
 import type { LeadFormData, LeadFormProps } from '../types/components/LeadFormProps';
 
@@ -80,7 +81,7 @@ const LeadForm: React.FC<LeadFormProps> = ({
         <div className="form-header">
           <h2>{mode === 'create' ? 'Create New Lead' : 'Edit Lead'}</h2>
           <button className="btn-close" onClick={onCancel} type="button">
-            ✕
+            <HiOutlineX />
           </button>
         </div>
 

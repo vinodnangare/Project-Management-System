@@ -144,8 +144,8 @@ export const MeetingForm: React.FC<MeetingFormProps> = ({ meetingId }) => {
               value={form.meetingType} 
               onChange={e => updateField('meetingType', e.target.value as 'online' | 'offline')}
             >
-              <option value="online">🌐 Online Meeting</option>
-              <option value="offline">📍 In-Person Meeting</option>
+              <option value="online">Online Meeting</option>
+              <option value="offline">In-Person Meeting</option>
             </select>
           </div>
 

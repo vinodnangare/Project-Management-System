@@ -1,3 +1,7 @@
+/* ============================================
+   Profile Modal - Uses Design System
+   ============================================ */
+
 /* Modal Overlay */
 .modal-overlay {
   position: fixed;
@@ -12,7 +16,7 @@
   align-items: center;
   z-index: 9999;
   animation: fadeIn 0.2s ease-out;
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 @keyframes fadeIn {
@@ -26,9 +30,10 @@
 
 /* Modal Container */
 .modal-container {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
@@ -54,15 +59,15 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 24px 28px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-accent);
   color: white;
 }
 
 .modal-title-section {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   align-items: center;
   flex: 1;
 }
@@ -76,11 +81,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
   color: white;
   border: 3px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
 }
 
@@ -92,16 +97,16 @@
 
 .modal-title {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
   color: white;
 }
 
 .modal-subtitle {
-  margin: 4px 0 0 0;
-  font-size: 14px;
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--text-sm);
   color: rgba(255, 255, 255, 0.9);
-  font-weight: 400;
+  font-weight: var(--font-normal);
 }
 
 .modal-close-btn {
@@ -109,14 +114,14 @@
   border: none;
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 20px;
+  font-size: var(--text-xl);
   color: white;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
 }
 
@@ -131,7 +136,7 @@
 
 /* Modal Body */
 .modal-body {
-  padding: 28px;
+  padding: var(--space-6);
   overflow-y: auto;
   flex: 1;
 }
@@ -142,32 +147,17 @@
 }
 
 .modal-body::-webkit-scrollbar-track {
-  background: rgba(10, 15, 31, 0.4);
-  border-radius: 4px;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-  background: rgba(79, 134, 255, 0.35);
-  border-radius: 4px;
+  background: var(--color-accent-muted);
+  border-radius: var(--radius-sm);
 }
 
 .modal-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(79, 134, 255, 0.5);
-}
-
-/* Light theme scrollbar styles */
-html[data-theme='light'] .modal-body::-webkit-scrollbar-track {
-  background: rgba(226, 232, 240, 0.6);
-  border-radius: 4px;
-}
-
-html[data-theme='light'] .modal-body::-webkit-scrollbar-thumb {
-  background: rgba(14, 165, 233, 0.35);
-  border-radius: 4px;
-}
-
-html[data-theme='light'] .modal-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(14, 165, 233, 0.5);
+  background: var(--color-accent);
 }
 
 /* Profile Section inside Modal */
@@ -176,30 +166,18 @@ html[data-theme='light'] .modal-body::-webkit-scrollbar-thumb:hover {
   box-shadow: none;
   padding: 0;
   background: transparent;
+  border: none;
 }
 
 .modal-body .profile-header {
-  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 16px;
-  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .modal-body .profile-header h2 {
-  font-size: 18px;
-  color: var(--text, #e5e7eb);
-}
-
-/* Light mode modal header border */
-html[data-theme='light'] .modal-header {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-html[data-theme='light'] .modal-body .profile-header {
-  border-bottom: 2px solid rgba(15, 23, 42, 0.1);
-}
-
-html[data-theme='light'] .modal-body .profile-header h2 {
-  color: #333;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
 }
 
 /* Responsive Design */
@@ -212,7 +190,7 @@ html[data-theme='light'] .modal-body .profile-header h2 {
   .modal-container {
     max-width: 100%;
     max-height: 95vh;
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     animation: slideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -226,40 +204,40 @@ html[data-theme='light'] .modal-body .profile-header h2 {
   }
 
   .modal-header {
-    padding: 20px;
+    padding: var(--space-5);
   }
 
   .modal-avatar {
     width: 48px;
     height: 48px;
-    font-size: 20px;
+    font-size: var(--text-xl);
   }
 
   .modal-title {
-    font-size: 20px;
+    font-size: var(--text-xl);
   }
 
   .modal-body {
-    padding: 20px;
+    padding: var(--space-5);
   }
 }
 
 @media (max-width: 480px) {
   .modal-title-section {
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .modal-avatar {
     width: 44px;
     height: 44px;
-    font-size: 18px;
+    font-size: var(--text-lg);
   }
 
   .modal-title {
-    font-size: 18px;
+    font-size: var(--text-lg);
   }
 
   .modal-subtitle {
-    font-size: 13px;
+    font-size: var(--text-sm);
   }
 }

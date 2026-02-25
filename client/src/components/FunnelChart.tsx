@@ -1,6 +1,7 @@
 import React from 'react';
 // @ts-ignore: If recharts is not installed, install it with npm install recharts
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { HiOutlineChartBar } from 'react-icons/hi';
 import '../styles/components/FunnelChart.css';
 import type { FunnelData, FunnelChartProps } from '../types/components/FunnelChartTypes';
 
@@ -28,7 +29,8 @@ const FunnelChart: React.FC<FunnelChartProps> = ({
       <div className="funnel-chart-container">
         {title && <h3 className="chart-title">{title}</h3>}
         <div className="chart-empty">
-          <p>📊 No data available</p>
+          <HiOutlineChartBar className="empty-icon" />
+          <p>No data available</p>
         </div>
       </div>
     );

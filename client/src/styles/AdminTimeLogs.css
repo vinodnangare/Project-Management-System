@@ -1,10 +1,14 @@
+/* ============================================
+   Admin Time Logs - Uses Design System
+   ============================================ */
+
 .admin-time-logs.premium-glass {
-  background: rgba(255,255,255,0.7);
-  box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
-  backdrop-filter: blur(8px);
-  border-radius: 24px;
-  padding: 2.5rem 2rem 2rem 2rem;
-  margin: 2rem auto;
+  background: var(--color-bg-secondary);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) var(--space-6) var(--space-6) var(--space-6);
+  margin: var(--space-6) auto;
   max-width: 900px;
   min-height: 400px;
 }
@@ -12,13 +16,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-6);
 }
 .atl-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #222;
-  letter-spacing: 0.01em;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 .atl-table-wrapper {
   overflow-x: auto;
@@ -26,62 +30,63 @@
 .atl-table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 0.5rem;
-  font-size: 1.05rem;
+  border-spacing: 0 var(--space-2);
+  font-size: var(--text-base);
   background: transparent;
 }
 .atl-table th {
-  background: rgba(0,0,0,0.04);
-  color: #333;
-  font-weight: 600;
-  padding: 0.75rem 1rem;
-  border-radius: 12px 12px 0 0;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font-weight: var(--font-semibold);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   text-align: left;
 }
 .atl-row {
-  background: rgba(255,255,255,0.95);
-  box-shadow: 0 2px 8px 0 rgba(31,38,135,0.08);
-  border-radius: 12px;
-  transition: box-shadow 0.2s;
+  background: var(--color-bg-secondary);
+  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-lg);
+  transition: box-shadow var(--transition-fast);
 }
 .atl-row:hover {
-  box-shadow: 0 4px 16px 0 rgba(31,38,135,0.16);
+  box-shadow: var(--shadow-sm);
 }
 .atl-table td {
-  padding: 0.75rem 1rem;
+  padding: var(--space-3) var(--space-4);
   border-bottom: none;
   vertical-align: middle;
+  color: var(--color-text-primary);
 }
 .atl-emp {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 .atl-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6a82fb 0%, #fc5c7d 100%);
-  color: #fff;
+  background: var(--color-accent);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  font-weight: 700;
-  box-shadow: 0 2px 8px 0 rgba(31,38,135,0.10);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  box-shadow: var(--shadow-xs);
 }
 .atl-hours {
-  font-weight: 600;
-  color: #2d8cff;
+  font-weight: var(--font-semibold);
+  color: var(--color-accent);
 }
 .atl-empty {
   text-align: center;
-  color: #888;
+  color: var(--color-text-muted);
   font-style: italic;
 }
 .atl-loading, .atl-error {
   text-align: center;
-  font-size: 1.1rem;
-  color: #888;
-  margin-top: 2rem;
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  margin-top: var(--space-6);
 }

@@ -1,4 +1,11 @@
 import React, { useState } from 'react';
+import { 
+  HiOutlineUser, 
+  HiOutlineFlag, 
+  HiOutlineFire, 
+  HiOutlineTrash, 
+  HiOutlineX 
+} from 'react-icons/hi';
 import '../styles/components/BulkActions.css';
 import type { BulkActionsProps } from '../types/components/BulkActionsProps';
 
@@ -42,7 +49,7 @@ const BulkActions: React.FC<BulkActionsProps> = ({
               onClick={onAssign}
               title="Assign to owner"
             >
-              👤 Assign
+              <HiOutlineUser className="btn-icon" /> Assign
             </button>
           )}
 
@@ -52,7 +59,7 @@ const BulkActions: React.FC<BulkActionsProps> = ({
                 className="action-btn"
                 onClick={() => setShowStageMenu(!showStageMenu)}
               >
-                🎯 Change Stage
+                <HiOutlineFlag className="btn-icon" /> Change Stage
               </button>
               {showStageMenu && (
                 <div className="dropdown-menu">
@@ -72,7 +79,7 @@ const BulkActions: React.FC<BulkActionsProps> = ({
                 className="action-btn"
                 onClick={() => setShowPriorityMenu(!showPriorityMenu)}
               >
-                🔥 Change Priority
+                <HiOutlineFire className="btn-icon" /> Change Priority
               </button>
               {showPriorityMenu && (
                 <div className="dropdown-menu">
@@ -90,7 +97,7 @@ const BulkActions: React.FC<BulkActionsProps> = ({
               onClick={onDelete}
               title="Delete selected leads"
             >
-              🗑️ Delete
+              <HiOutlineTrash className="btn-icon" /> Delete
             </button>
           )}
 
@@ -98,7 +105,7 @@ const BulkActions: React.FC<BulkActionsProps> = ({
             className="action-btn-secondary"
             onClick={onClearSelection}
           >
-            ✕ Clear
+            <HiOutlineX className="btn-icon" /> Clear
           </button>
         </div>
       </div>

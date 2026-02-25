@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Meeting, IMeeting } from '../models/Meeting.js';
 import { User } from '../models/index.js';
 import { Lead } from '../models/Lead.js';
-import { Meeting as MeetingType, MeetingStatus, MeetingAssignee } from '../types/meeting.js';
+import { Meeting as MeetingType, MeetingStatus, MeetingAssignee, UserNote } from '../types/meeting.js';
 import { PaginationMeta } from '../types/index.js';
 import { CreateMeetingRequest, UpdateMeetingRequest } from '../validators/meeting.js';
 
@@ -30,6 +30,23 @@ const formatMeetingResponse = async (meeting: IMeeting): Promise<MeetingType> =>
   const creator = await User.findById(meeting.createdBy);
   const linkedLead = meeting.lead ? await Lead.findById(meeting.lead) : null;
 
+  // Format userNotes with user names
+  const userNotes: UserNote[] = [];
+  if (meeting.userNotes && meeting.userNotes.length > 0) {
+    const userIds = meeting.userNotes.map(n => n.userId);
+    const noteUsers = await User.find({ _id: { $in: userIds } });
+    const userMap = new Map(noteUsers.map(u => [u._id.toString(), u.full_name]));
+    
+    for (const note of meeting.userNotes) {
+      userNotes.push({
+        userId: note.userId.toString(),
+        userName: userMap.get(note.userId.toString()) || 'Unknown User',
+        content: note.content,
+        updatedAt: note.updatedAt.toISOString()
+      });
+    }
+  }
+
   return {
     id: meeting._id.toString(),
     title: meeting.title,
@@ -50,6 +67,7 @@ const formatMeetingResponse = async (meeting: IMeeting): Promise<MeetingType> =>
     meetingLink: meeting.meetingLink || null,
     status: meeting.status as MeetingStatus,
     notes: meeting.notes || null,
+    userNotes,
     is_deleted: meeting.is_deleted,
     created_at: meeting.created_at.toISOString(),
     updated_at: meeting.updated_at.toISOString()
@@ -178,6 +196,7 @@ export const createMeeting = async (
     meetingLink: meetingData.meetingLink || null,
     status: meetingData.status || 'scheduled',
     notes: meetingData.notes || null,
+    userNotes: [],
     is_deleted: false
   });
 
@@ -223,7 +242,49 @@ export const updateMeeting = async (
     if (meetingData.location !== undefined) updateData.location = meetingData.location;
     if (meetingData.meetingLink !== undefined) updateData.meetingLink = meetingData.meetingLink;
     if (meetingData.status !== undefined) updateData.status = meetingData.status;
-    if (meetingData.notes !== undefined) updateData.notes = meetingData.notes;
+    
+    // Handle notes based on role
+    // Admin notes (universal): only admin can update
+    if (meetingData.notes !== undefined && userRole === 'admin') {
+      updateData.notes = meetingData.notes;
+    }
+    
+    // Handle user-specific notes (for employees)
+    if ((meetingData as any).userNote !== undefined) {
+      const userNoteContent = (meetingData as any).userNote as string;
+      const userIdObj = new mongoose.Types.ObjectId(userId);
+      
+      // Find existing note for this user
+      const existingUserNotes = existingMeeting.userNotes || [];
+      const existingNoteIndex = existingUserNotes.findIndex(
+        n => n.userId.toString() === userId
+      );
+      
+      if (userNoteContent) {
+        if (existingNoteIndex >= 0) {
+          // Update existing note
+          existingUserNotes[existingNoteIndex] = {
+            userId: userIdObj,
+            content: userNoteContent,
+            updatedAt: new Date()
+          };
+        } else {
+          // Add new note
+          existingUserNotes.push({
+            userId: userIdObj,
+            content: userNoteContent,
+            updatedAt: new Date()
+          });
+        }
+      } else {
+        // Remove note if content is empty
+        if (existingNoteIndex >= 0) {
+          existingUserNotes.splice(existingNoteIndex, 1);
+        }
+      }
+      
+      updateData.userNotes = existingUserNotes;
+    }
 
     const meeting = await Meeting.findByIdAndUpdate(
       meetingId,

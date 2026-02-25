@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGetNotificationsQuery } from '../services/api';
 import NotificationDropdown from './NotificationDropdown';
+import { HiOutlineBell } from 'react-icons/hi';
 import '../styles/NotificationBell.css';
 
 const NotificationBell: React.FC = () => {
@@ -45,7 +46,7 @@ const NotificationBell: React.FC = () => {
         aria-label="Notifications"
       >
         <span className="notification-icon" aria-hidden="true">
-          🔔
+          <HiOutlineBell />
         </span>
 
         {unreadCount > 0 && (

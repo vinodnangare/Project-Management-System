@@ -3,6 +3,7 @@ import { useLoginMutation } from '../services/api';
 import { useAppDispatch } from '../hooks/redux';
 import { setCredentials } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineExclamationCircle } from 'react-icons/hi';
 import '../styles/Auth.css';
 import type { LoginProps } from '../types/components/LoginProps';
 
@@ -39,7 +40,6 @@ export default function Login({ onSwitchToRegister }: LoginProps) {
     try {
       const result = await login({ email, password }).unwrap();
       dispatch(setCredentials(result));
-      // Let App.tsx handle the redirect based on user role via useEffect
     } catch (err: any) {
       setLocalError(err?.data?.message || 'Login failed');
     }
@@ -47,56 +47,67 @@ export default function Login({ onSwitchToRegister }: LoginProps) {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-background">
-        <div className="gradient-orb orb-1"></div>
-        <div className="gradient-orb orb-2"></div>
-      </div>
-
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-header">
-            <div className="auth-icon">🔐</div>
-            <h1>Task Management System</h1>
-            <p className="auth-subtitle">Welcome Back</p>
+            <div className="auth-logo">
+              <span>PM</span>
+            </div>
+            <h1>Welcome back</h1>
+            <p className="auth-subtitle">Sign in to your account to continue</p>
           </div>
 
           {localError && (
             <div className="auth-error">
-              <span>⚠️ {localError}</span>
+              <HiOutlineExclamationCircle className="auth-error-icon" />
+              <span>{localError}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="email">📧 Email Address</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                className="form-input"
-              />
+              <label htmlFor="email">Email</label>
+              <div className="input-wrapper">
+                <HiOutlineMail className="input-icon" />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="form-input"
+                />
+              </div>
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">🔒 Password</label>
-              <input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                className="form-input"
-              />
+              <label htmlFor="password">Password</label>
+              <div className="input-wrapper">
+                <HiOutlineLockClosed className="input-icon" />
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="form-input"
+                />
+              </div>
             </div>
 
             <button type="submit" disabled={loading} className="submit-btn">
-              <span>{loading ? '🔄 Signing in...' : '✨ Sign In'}</span>
+              {loading ? (
+                <>
+                  <span className="spinner"></span>
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
             </button>
           </form>
 
