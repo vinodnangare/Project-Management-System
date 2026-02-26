@@ -1,8 +1,18 @@
 import mongoose from 'mongoose';
 import { Meeting, IMeeting } from '../models/Meeting.js';
+import { MeetingActivity } from '../models/MeetingActivity.js';
+import { RecurringMeetingTemplate } from '../models/RecurringMeetingTemplate.js';
 import { User } from '../models/index.js';
 import { Lead } from '../models/Lead.js';
-import { Meeting as MeetingType, MeetingStatus, MeetingAssignee, UserNote } from '../types/meeting.js';
+import {
+  Meeting as MeetingType,
+  MeetingStatus,
+  MeetingAssignee,
+  UserNote,
+  MeetingRecurrence,
+  MeetingActivity as MeetingActivityType,
+  MeetingActivityAction
+} from '../types/meeting.js';
 import { PaginationMeta } from '../types/index.js';
 import { CreateMeetingRequest, UpdateMeetingRequest } from '../validators/meeting.js';
 
@@ -17,6 +27,125 @@ interface QueryOptions {
   to?: string;
   search?: string;
 }
+
+interface MeetingSlot {
+  startTime: Date;
+  endTime: Date;
+}
+
+const RECURRENCE_OCCURRENCES: Record<MeetingRecurrence, number> = {
+  [MeetingRecurrence.ONCE]: 1,
+  [MeetingRecurrence.DAILY]: 365,
+  [MeetingRecurrence.WEEKLY]: 104,
+  [MeetingRecurrence.MONTHLY]: 36
+};
+
+export class MeetingConflictError extends Error {
+  statusCode = 409;
+}
+
+const hasTimeOverlap = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean =>
+  aStart < bEnd && aEnd > bStart;
+
+const addRecurrenceStep = (date: Date, recurrence: MeetingRecurrence): Date => {
+  const next = new Date(date);
+
+  switch (recurrence) {
+    case MeetingRecurrence.DAILY:
+      next.setDate(next.getDate() + 1);
+      return next;
+    case MeetingRecurrence.WEEKLY:
+      next.setDate(next.getDate() + 7);
+      return next;
+    case MeetingRecurrence.MONTHLY:
+      next.setMonth(next.getMonth() + 1);
+      return next;
+    default:
+      return next;
+  }
+};
+
+const buildMeetingSlots = (
+  startTime: Date,
+  endTime: Date,
+  recurrence: MeetingRecurrence,
+  includeFirst: boolean = true
+): MeetingSlot[] => {
+  const slots: MeetingSlot[] = [];
+  const occurrences = RECURRENCE_OCCURRENCES[recurrence] || 1;
+
+  let currentStart = new Date(startTime);
+  let currentEnd = new Date(endTime);
+
+  if (includeFirst) {
+    slots.push({ startTime: new Date(currentStart), endTime: new Date(currentEnd) });
+  }
+
+  for (let index = 1; index < occurrences; index++) {
+    currentStart = addRecurrenceStep(currentStart, recurrence);
+    currentEnd = addRecurrenceStep(currentEnd, recurrence);
+    slots.push({ startTime: new Date(currentStart), endTime: new Date(currentEnd) });
+  }
+
+  return slots;
+};
+
+const resolveAssigneeNames = async (ids: string[]): Promise<string[]> => {
+  if (!ids.length) return [];
+
+  const users = await User.find({ _id: { $in: ids.map((id) => new mongoose.Types.ObjectId(id)) } }).select('full_name email');
+  return users.map((user) => user.full_name || user.email || user._id.toString());
+};
+
+const validateNoAssigneeConflicts = async (
+  assignedTo: string[],
+  slot: MeetingSlot,
+  excludeMeetingId?: string
+): Promise<void> => {
+  if (!assignedTo.length) return;
+
+  const assignedObjectIds = assignedTo.map((id) => new mongoose.Types.ObjectId(id));
+  const conditions: any = {
+    is_deleted: false,
+    status: { $nin: [MeetingStatus.CANCELLED] },
+    assignedTo: { $in: assignedObjectIds },
+    startTime: { $lt: slot.endTime },
+    endTime: { $gt: slot.startTime }
+  };
+
+  if (excludeMeetingId) {
+    conditions._id = { $ne: new mongoose.Types.ObjectId(excludeMeetingId) };
+  }
+
+  const conflictingMeeting = await Meeting.findOne(conditions).select('startTime endTime assignedTo');
+  if (!conflictingMeeting) return;
+
+  const conflictingAssignees = conflictingMeeting.assignedTo
+    .map((id) => id.toString())
+    .filter((id) => assignedTo.includes(id));
+  const assigneeNames = await resolveAssigneeNames(conflictingAssignees);
+  const assigneeText = assigneeNames.length > 0 ? assigneeNames.join(', ') : 'One or more selected participants';
+
+  throw new MeetingConflictError(
+    `${assigneeText} already has a meeting between ${slot.startTime.toISOString()} and ${slot.endTime.toISOString()}`
+  );
+};
+
+const logMeetingActivity = async (data: {
+  meeting_id: string;
+  action: MeetingActivityAction;
+  old_value: string | null;
+  new_value: string | null;
+  performed_by: string;
+}): Promise<void> => {
+  await MeetingActivity.create({
+    meeting_id: new mongoose.Types.ObjectId(data.meeting_id),
+    action: data.action,
+    old_value: data.old_value,
+    new_value: data.new_value,
+    performed_by: new mongoose.Types.ObjectId(data.performed_by)
+  });
+};
 
 const formatMeetingResponse = async (meeting: IMeeting): Promise<MeetingType> => {
   // Fetch all assigned users
@@ -66,6 +195,8 @@ const formatMeetingResponse = async (meeting: IMeeting): Promise<MeetingType> =>
     location: meeting.location || null,
     meetingLink: meeting.meetingLink || null,
     status: meeting.status as MeetingStatus,
+    recurrence: (meeting.recurrence || MeetingRecurrence.ONCE) as MeetingRecurrence,
+    recurringTemplateId: meeting.recurringTemplateId?.toString() || null,
     notes: meeting.notes || null,
     userNotes,
     is_deleted: meeting.is_deleted,
@@ -199,23 +330,81 @@ export const createMeeting = async (
   meetingData: CreateMeetingRequest,
   createdBy: string
 ): Promise<MeetingType> => {
+  const recurrence = (meetingData.recurrence || MeetingRecurrence.ONCE) as MeetingRecurrence;
+  const startTime = new Date(meetingData.startTime);
+  const endTime = new Date(meetingData.endTime);
+  
+  // Calculate duration in minutes
+  const durationMs = endTime.getTime() - startTime.getTime();
+  const durationMinutes = Math.floor(durationMs / 60000);
+
+  // Validate first occurrence has no conflicts
+  await validateNoAssigneeConflicts(meetingData.assignedTo, { startTime, endTime });
+
+  let recurringTemplateId: mongoose.Types.ObjectId | null = null;
+
+  // For recurring meetings, create a template
+  if (recurrence !== MeetingRecurrence.ONCE) {
+    // Extract time in HH:mm format
+    const startTimeStr = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`;
+    const endTimeStr = `${String(endTime.getHours()).padStart(2, '0')}:${String(endTime.getMinutes()).padStart(2, '0')}`;
+
+    const template = await RecurringMeetingTemplate.create({
+      title: meetingData.title,
+      description: meetingData.description || null,
+      assignedTo: meetingData.assignedTo.map((id) => new mongoose.Types.ObjectId(id)),
+      createdBy: new mongoose.Types.ObjectId(createdBy),
+      client: meetingData.client ? new mongoose.Types.ObjectId(meetingData.client) : null,
+      lead: meetingData.lead ? new mongoose.Types.ObjectId(meetingData.lead) : null,
+      startTime: startTimeStr,
+      endTime: endTimeStr,
+      duration: durationMinutes,
+      meetingType: meetingData.meetingType,
+      location: meetingData.location || null,
+      meetingLink: meetingData.meetingLink || null,
+      notes: meetingData.notes || null,
+      recurrence: recurrence,
+      dayOfWeek: recurrence === MeetingRecurrence.WEEKLY ? startTime.getDay() : null,
+      dayOfMonth: recurrence === MeetingRecurrence.MONTHLY ? startTime.getDate() : null,
+      lastGeneratedDate: new Date(),
+      isActive: true,
+      is_deleted: false
+    });
+
+    recurringTemplateId = template._id;
+    console.log(`[MeetingService] Created recurring template ${template._id} for ${recurrence} meetings`);
+  }
+
+  // Create the first meeting instance
   const meeting = await Meeting.create({
     title: meetingData.title,
     description: meetingData.description || null,
-    assignedTo: meetingData.assignedTo.map(id => new mongoose.Types.ObjectId(id)),
+    assignedTo: meetingData.assignedTo.map((id) => new mongoose.Types.ObjectId(id)),
     createdBy: new mongoose.Types.ObjectId(createdBy),
     client: meetingData.client ? new mongoose.Types.ObjectId(meetingData.client) : null,
     lead: meetingData.lead ? new mongoose.Types.ObjectId(meetingData.lead) : null,
-    startTime: meetingData.startTime,
-    endTime: meetingData.endTime,
+    startTime,
+    endTime,
     meetingType: meetingData.meetingType,
     location: meetingData.location || null,
     meetingLink: meetingData.meetingLink || null,
-    status: meetingData.status || 'scheduled',
+    status: meetingData.status || MeetingStatus.SCHEDULED,
+    recurrence,
+    recurringTemplateId,
     notes: meetingData.notes || null,
     userNotes: [],
     is_deleted: false
   });
+
+  await logMeetingActivity({
+    meeting_id: meeting._id.toString(),
+    action: MeetingActivityAction.CREATED,
+    old_value: null,
+    new_value: recurrence === MeetingRecurrence.ONCE 
+      ? meeting.title 
+      : `${meeting.title} (Recurring: ${recurrence})`,
+    performed_by: createdBy
+  }).catch(console.error);
 
   return formatMeetingResponse(meeting);
 };
@@ -240,12 +429,70 @@ export const updateMeeting = async (
     const existingMeeting = await Meeting.findOne(conditions);
     if (!existingMeeting) return null;
 
+    const existingAssignedTo = existingMeeting.assignedTo.map((id) => id.toString());
+    const nextAssignedTo = meetingData.assignedTo ?? existingAssignedTo;
+    const nextStartTime = meetingData.startTime ?? existingMeeting.startTime;
+    const nextEndTime = meetingData.endTime ?? existingMeeting.endTime;
+    const nextRecurrence = (meetingData.recurrence ??
+      existingMeeting.recurrence ??
+      MeetingRecurrence.ONCE) as MeetingRecurrence;
+
+    if (nextStartTime >= nextEndTime) {
+      throw new Error('Start time must be before end time');
+    }
+
+    const shouldValidateConflict =
+      meetingData.assignedTo !== undefined ||
+      meetingData.startTime !== undefined ||
+      meetingData.endTime !== undefined;
+
+    if (shouldValidateConflict) {
+      await validateNoAssigneeConflicts(
+        nextAssignedTo,
+        { startTime: nextStartTime, endTime: nextEndTime },
+        meetingId
+      );
+    }
+
     const updateData: any = {};
+    const activityPromises: Array<Promise<void>> = [];
+
+    const queueActivity = (
+      action: MeetingActivityAction,
+      oldValue: string | null,
+      newValue: string | null
+    ) => {
+      if (oldValue === newValue) return;
+      activityPromises.push(
+        logMeetingActivity({
+          meeting_id: meetingId,
+          action,
+          old_value: oldValue,
+          new_value: newValue,
+          performed_by: userId
+        }).catch(console.error)
+      );
+    };
     
-    if (meetingData.title !== undefined) updateData.title = meetingData.title;
-    if (meetingData.description !== undefined) updateData.description = meetingData.description;
+    if (meetingData.title !== undefined) {
+      updateData.title = meetingData.title;
+      queueActivity(MeetingActivityAction.TITLE_CHANGED, existingMeeting.title, meetingData.title);
+    }
+    if (meetingData.description !== undefined) {
+      updateData.description = meetingData.description;
+      queueActivity(
+        MeetingActivityAction.DESCRIPTION_CHANGED,
+        existingMeeting.description || null,
+        meetingData.description || null
+      );
+    }
     if (meetingData.assignedTo !== undefined) {
-      updateData.assignedTo = meetingData.assignedTo.map(id => new mongoose.Types.ObjectId(id));
+      updateData.assignedTo = meetingData.assignedTo.map((id) => new mongoose.Types.ObjectId(id));
+      queueActivity(
+        MeetingActivityAction.ASSIGNEES_CHANGED,
+        existingAssignedTo.sort().join(','),
+        [...meetingData.assignedTo].sort().join(',')
+      );
     }
     if (meetingData.client !== undefined) {
       updateData.client = meetingData.client ? new mongoose.Types.ObjectId(meetingData.client) : null;
@@ -253,31 +500,72 @@ export const updateMeeting = async (
     if (meetingData.lead !== undefined) {
       updateData.lead = meetingData.lead ? new mongoose.Types.ObjectId(meetingData.lead) : null;
     }
-    if (meetingData.startTime !== undefined) updateData.startTime = meetingData.startTime;
-    if (meetingData.endTime !== undefined) updateData.endTime = meetingData.endTime;
-    if (meetingData.meetingType !== undefined) updateData.meetingType = meetingData.meetingType;
-    if (meetingData.location !== undefined) updateData.location = meetingData.location;
-    if (meetingData.meetingLink !== undefined) updateData.meetingLink = meetingData.meetingLink;
-    if (meetingData.status !== undefined) updateData.status = meetingData.status;
+    if (meetingData.startTime !== undefined || meetingData.endTime !== undefined) {
+      if (meetingData.startTime !== undefined) updateData.startTime = meetingData.startTime;
+      if (meetingData.endTime !== undefined) updateData.endTime = meetingData.endTime;
+      queueActivity(
+        MeetingActivityAction.TIME_CHANGED,
+        `${existingMeeting.startTime.toISOString()} - ${existingMeeting.endTime.toISOString()}`,
+        `${nextStartTime.toISOString()} - ${nextEndTime.toISOString()}`
+      );
+    }
+    if (meetingData.meetingType !== undefined) {
+      updateData.meetingType = meetingData.meetingType;
+      queueActivity(MeetingActivityAction.TYPE_CHANGED, existingMeeting.meetingType, meetingData.meetingType);
+    }
+    if (meetingData.location !== undefined) {
+      updateData.location = meetingData.location;
+      queueActivity(
+        MeetingActivityAction.LOCATION_CHANGED,
+        existingMeeting.location || null,
+        meetingData.location || null
+      );
+    }
+    if (meetingData.meetingLink !== undefined) {
+      updateData.meetingLink = meetingData.meetingLink;
+      queueActivity(
+        MeetingActivityAction.LINK_CHANGED,
+        existingMeeting.meetingLink || null,
+        meetingData.meetingLink || null
+      );
+    }
+    if (meetingData.status !== undefined) {
+      updateData.status = meetingData.status;
+      queueActivity(MeetingActivityAction.STATUS_CHANGED, existingMeeting.status, meetingData.status);
+    }
+    if (meetingData.recurrence !== undefined) {
+      updateData.recurrence = meetingData.recurrence;
+      queueActivity(
+        MeetingActivityAction.RECURRENCE_CHANGED,
+        existingMeeting.recurrence || MeetingRecurrence.ONCE,
+        meetingData.recurrence
+      );
+    }
     
     // Handle notes based on role
     // Admin notes (universal): only admin can update
     if (meetingData.notes !== undefined && userRole === 'admin') {
       updateData.notes = meetingData.notes;
+      queueActivity(
+        MeetingActivityAction.NOTES_UPDATED,
+        existingMeeting.notes || null,
+        meetingData.notes || null
+      );
     }
     
-    // Handle user-specific notes (for employees)
-    if ((meetingData as any).userNote !== undefined) {
-      const userNoteContent = (meetingData as any).userNote as string;
+    // Handle user-specific notes (for any user - employees and admins can save their own notes)
+    if (meetingData.userNote !== undefined) {
+      const userNoteContent = meetingData.userNote;
       const userIdObj = new mongoose.Types.ObjectId(userId);
       
-      // Find existing note for this user
-      const existingUserNotes = existingMeeting.userNotes || [];
+      // Clone existing notes array to avoid mutation issues
+      const existingUserNotes = [...(existingMeeting.userNotes || [])];
       const existingNoteIndex = existingUserNotes.findIndex(
         n => n.userId.toString() === userId
       );
+      const previousUserNote = existingNoteIndex >= 0 ? existingUserNotes[existingNoteIndex].content : null;
       
-      if (userNoteContent) {
+      if (userNoteContent !== null && userNoteContent.trim() !== '') {
         if (existingNoteIndex >= 0) {
           // Update existing note
           existingUserNotes[existingNoteIndex] = {
@@ -293,14 +581,14 @@ export const updateMeeting = async (
             updatedAt: new Date()
           });
         }
-      } else {
-        // Remove note if content is empty
-        if (existingNoteIndex >= 0) {
-          existingUserNotes.splice(existingNoteIndex, 1);
-        }
+        updateData.userNotes = existingUserNotes;
+        queueActivity(MeetingActivityAction.PERSONAL_NOTE_UPDATED, previousUserNote, userNoteContent);
+      } else if (existingNoteIndex >= 0) {
+        // Only remove note if it was explicitly cleared (null or empty string)
+        existingUserNotes.splice(existingNoteIndex, 1);
+        updateData.userNotes = existingUserNotes;
+        queueActivity(MeetingActivityAction.PERSONAL_NOTE_UPDATED, previousUserNote, null);
       }
-      
-      updateData.userNotes = existingUserNotes;
     }
 
     const meeting = await Meeting.findByIdAndUpdate(
@@ -310,6 +598,44 @@ export const updateMeeting = async (
     );
 
     if (!meeting) return null;
+
+    const shouldCreateFutureInstances =
+      meetingData.recurrence !== undefined &&
+      existingMeeting.recurrence === MeetingRecurrence.ONCE &&
+      meetingData.recurrence !== MeetingRecurrence.ONCE;
+
+    if (shouldCreateFutureInstances) {
+      const recurrence = meetingData.recurrence as MeetingRecurrence;
+      const futureSlots = buildMeetingSlots(nextStartTime, nextEndTime, recurrence, true).slice(1);
+      for (const slot of futureSlots) {
+        await validateNoAssigneeConflicts(nextAssignedTo, slot);
+      }
+
+      if (futureSlots.length > 0) {
+        await Meeting.insertMany(
+          futureSlots.map((slot) => ({
+            title: meeting.title,
+            description: meeting.description || null,
+            assignedTo: meeting.assignedTo,
+            createdBy: meeting.createdBy,
+            client: meeting.client || null,
+            lead: meeting.lead || null,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            meetingType: meeting.meetingType,
+            location: meeting.location || null,
+            meetingLink: meeting.meetingLink || null,
+            status: meeting.status || MeetingStatus.SCHEDULED,
+            recurrence: recurrence,
+            notes: meeting.notes || null,
+            userNotes: [],
+            is_deleted: false
+          }))
+        );
+      }
+    }
+
+    await Promise.all(activityPromises);
 
     return formatMeetingResponse(meeting);
   } catch (error) {
@@ -343,6 +669,14 @@ export const updateMeetingStatus = async (
 
     if (!meeting) return null;
 
+    await logMeetingActivity({
+      meeting_id: meeting._id.toString(),
+      action: MeetingActivityAction.STATUS_CHANGED,
+      old_value: null,
+      new_value: status,
+      performed_by: userId
+    }).catch(console.error);
+
     return formatMeetingResponse(meeting);
   } catch (error) {
     console.error('updateMeetingStatus error:', error);
@@ -374,6 +708,16 @@ export const deleteMeeting = async (
       { is_deleted: true },
       { new: true }
     );
+
+    if (result) {
+      await logMeetingActivity({
+        meeting_id: result._id.toString(),
+        action: MeetingActivityAction.DELETED,
+        old_value: 'active',
+        new_value: 'deleted',
+        performed_by: userId
+      }).catch(console.error);
+    }
 
     return !!result;
   } catch (error) {
@@ -523,6 +867,28 @@ export const getMeetingsByClient = async (
     console.error('getMeetingsByClient error:', error);
     throw error;
   }
+};
+
+export const getMeetingActivities = async (
+  meetingId: string
+): Promise<MeetingActivityType[]> => {
+  const activities = await MeetingActivity.find({
+    meeting_id: new mongoose.Types.ObjectId(meetingId)
+  })
+    .populate('performed_by', 'full_name email')
+    .sort({ created_at: -1 });
+
+  return activities.map((activity) => ({
+    id: activity._id.toString(),
+    meeting_id: meetingId,
+    action: activity.action as MeetingActivityAction,
+    old_value: activity.old_value || null,
+    new_value: activity.new_value || null,
+    performed_by: activity.performed_by._id.toString(),
+    performed_by_name: (activity.performed_by as any).full_name || null,
+    performed_by_email: (activity.performed_by as any).email || null,
+    created_at: activity.created_at.toISOString()
+  }));
 };
 
 export const getAssignableUsers = async (): Promise<Array<{ id: string; full_name: string; email: string }>> => {

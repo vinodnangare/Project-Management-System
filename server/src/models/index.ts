@@ -20,3 +20,7 @@ export { Notification } from './Notification.js';
 export type { INotification } from './Notification.js';
 export { Meeting } from './Meeting.js';
 export type { IMeeting } from './Meeting.js';
+export { MeetingActivity } from './MeetingActivity.js';
+export type { IMeetingActivity } from './MeetingActivity.js';
+export { RecurringMeetingTemplate } from './RecurringMeetingTemplate.js';
+export type { IRecurringMeetingTemplate } from './RecurringMeetingTemplate.js';

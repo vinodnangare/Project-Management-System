@@ -83,10 +83,28 @@ const MeetingsListPage: React.FC = () => {
   }
 
   if (error) {
+    const errorMessage = 'status' in error 
+      ? `Server error (${error.status})` 
+      : 'Network error - check your connection';
+    
     return (
       <div className="meetings-list-page">
-        <p style={{ color: 'red' }}>Error loading meetings. Please try again.</p>
-        <button onClick={() => refetch()}>Retry</button>
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <p style={{ color: '#dc2626', marginBottom: '12px' }}>Error loading meetings: {errorMessage}</p>
+          <button 
+            onClick={() => refetch()}
+            style={{
+              padding: '8px 16px',
+              background: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

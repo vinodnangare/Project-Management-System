@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { IMeeting, ICreateMeeting } from '../types/meetingTypes';
+import type { IMeeting, ICreateMeeting, IMeetingActivity } from '../types/meetingTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -15,7 +15,7 @@ export const meetingsApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Meeting', 'User'],
+  tagTypes: ['Meeting', 'User', 'MeetingActivity'],
   endpoints: (builder) => ({
     getMeetings: builder.query<{ success: boolean; data: IMeeting[]; meta?: any }, any>({
       query: (params) => ({
@@ -36,6 +36,10 @@ export const meetingsApi = createApi({
       // Cache data for 5 minutes and retry once on failure
       keepUnusedDataFor: 300,
     }),
+    getMeetingActivities: builder.query<{ success: boolean; data: IMeetingActivity[] }, string>({
+      query: (meetingId) => `/meetings/${meetingId}/activities`,
+      providesTags: (result, error, meetingId) => [{ type: 'MeetingActivity', id: meetingId }],
+    }),
     createMeeting: builder.mutation<{ success: boolean; data: IMeeting }, ICreateMeeting>({
       query: (data) => ({
         url: '/meetings',
@@ -52,7 +56,8 @@ export const meetingsApi = createApi({
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Meeting', id },
-        { type: 'Meeting', id: 'LIST' }
+        { type: 'Meeting', id: 'LIST' },
+        { type: 'MeetingActivity', id }
       ],
     }),
     deleteMeeting: builder.mutation<{ success: boolean }, string>({
@@ -87,6 +92,7 @@ export const meetingsApi = createApi({
 export const {
   useGetMeetingsQuery,
   useGetMeetingQuery,
+  useGetMeetingActivitiesQuery,
   useCreateMeetingMutation,
   useUpdateMeetingMutation,
   useDeleteMeetingMutation,

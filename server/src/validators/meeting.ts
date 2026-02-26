@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MeetingType, MeetingStatus } from '../types/meeting.js';
+import { MeetingType, MeetingStatus, MeetingRecurrence } from '../types/meeting.js';
 
 const MeetingTypeEnum = z.enum([
   MeetingType.ONLINE,
@@ -11,6 +11,13 @@ const MeetingStatusEnum = z.enum([
   MeetingStatus.COMPLETED,
   MeetingStatus.CANCELLED,
   MeetingStatus.RESCHEDULED
+]);
+
+const MeetingRecurrenceEnum = z.enum([
+  MeetingRecurrence.ONCE,
+  MeetingRecurrence.DAILY,
+  MeetingRecurrence.WEEKLY,
+  MeetingRecurrence.MONTHLY
 ]);
 
 export const createMeetingSchema = z.object({
@@ -54,6 +61,7 @@ export const createMeetingSchema = z.object({
     .nullable()
     .optional(),
   status: MeetingStatusEnum.default(MeetingStatus.SCHEDULED),
+  recurrence: MeetingRecurrenceEnum.default(MeetingRecurrence.ONCE),
   notes: z
     .string()
     .max(5000, 'Notes must be less than 5000 characters')
@@ -128,9 +136,15 @@ export const updateMeetingSchema = z.object({
     .nullable()
     .optional(),
   status: MeetingStatusEnum.optional(),
+  recurrence: MeetingRecurrenceEnum.optional(),
   notes: z
     .string()
     .max(5000, 'Notes must be less than 5000 characters')
+    .nullable()
+    .optional(),
+  userNote: z
+    .string()
+    .max(5000, 'Personal notes must be less than 5000 characters')
     .nullable()
     .optional()
 });
