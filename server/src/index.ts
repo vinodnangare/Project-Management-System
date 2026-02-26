@@ -16,6 +16,7 @@ import timeLogRoutes from './routes/timeLogRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import meetingRoutes from './routes/meetingRoutes.js';
+import { initMeetingScheduler } from './services/meetingSchedulerService.js';
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
@@ -118,6 +119,9 @@ const startServer = async () => {
     await connectDatabase();
     console.log('MongoDB connected successfully');
 
+    // Initialize recurring meeting scheduler (cron job)
+    initMeetingScheduler();
+
     app.listen(PORT, () => {
       console.log(`
 ╔═══════════════════════════════════════════════╗
@@ -125,6 +129,7 @@ const startServer = async () => {
 ║  Server running on http://localhost:${PORT}        ║
 ║  API: http://localhost:${PORT}/api              ║
 ║  Database: MongoDB                            ║
+║  Recurring Meeting Scheduler: Active          ║
 ╚═══════════════════════════════════════════════╝
       `);
     });

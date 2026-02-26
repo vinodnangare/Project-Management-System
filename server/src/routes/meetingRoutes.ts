@@ -13,6 +13,7 @@ router.get('/calendar', meetingController.getCalendarMeetings);
 
 // Assignable users endpoint - must be before :id routes
 router.get('/users/assignable', meetingController.getAssignableUsers);
+router.get('/:meetingId/activities', meetingController.getMeetingActivities);
 
 // Diagnostic endpoint - check if meeting exists (admin only)
 router.get('/status/:id', meetingController.checkMeetingStatus);

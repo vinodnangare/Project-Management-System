@@ -125,6 +125,14 @@ export const createMeeting = async (
       return;
     }
 
+    if (error instanceof meetingService.MeetingConflictError) {
+      res.status(409).json({
+        success: false,
+        error: error.message
+      });
+      return;
+    }
+
     console.error('Error creating meeting:', error);
     res.status(500).json({
       success: false,
@@ -172,6 +180,14 @@ export const updateMeeting = async (
         success: false,
         error: 'Validation error',
         details: error.issues
+      });
+      return;
+    }
+
+    if (error instanceof meetingService.MeetingConflictError) {
+      res.status(409).json({
+        success: false,
+        error: error.message
       });
       return;
     }
@@ -455,6 +471,48 @@ export const getAssignableUsers = async (
   }
 };
 
+export const getMeetingActivities = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    const { meetingId } = req.params;
+    const meeting = await meetingService.getMeetingById(
+      Array.isArray(meetingId) ? meetingId[0] : meetingId,
+      req.user.id,
+      req.user.role
+    );
+
+    if (!meeting) {
+      res.status(404).json({
+        success: false,
+        error: 'Meeting not found'
+      });
+      return;
+    }
+
+    const activities = await meetingService.getMeetingActivities(
+      Array.isArray(meetingId) ? meetingId[0] : meetingId
+    );
+
+    res.status(200).json({
+      success: true,
+      data: activities
+    });
+  } catch (error) {
+    console.error('Error fetching meeting activities:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch meeting activities'
+    });
+  }
+};
+
 // Diagnostic endpoint - check if meeting exists (admin only)
 export const checkMeetingStatus = async (
   req: Request,
@@ -508,7 +566,7 @@ export const checkMeetingStatus = async (
         is_deleted: meeting.is_deleted || false,
         createdBy: meeting.createdBy?.toString() || 'N/A',
         assignedTo: (meeting.assignedTo || []).map((id: any) => id.toString()),
-        dateCreated: meeting.dateCreated || 'N/A'
+        dateCreated: meeting.created_at?.toISOString() || 'N/A'
       }
     });
   } catch (error) {

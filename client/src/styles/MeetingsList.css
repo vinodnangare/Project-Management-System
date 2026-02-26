@@ -1221,3 +1221,61 @@
   margin-top: 8px;
   justify-content: flex-end;
 }
+
+.activity-timeline {
+  position: relative;
+  margin-top: 8px;
+}
+
+.activity-timeline::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #e5e7eb;
+}
+
+.activity-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.activity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2563eb;
+  margin-top: 7px;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-action {
+  color: #111827;
+  font-size: 0.92rem;
+}
+
+.activity-change {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: #4b5563;
+}
+
+.activity-change .arrow {
+  margin: 0 6px;
+}
+
+.activity-timestamp {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: #6b7280;
+}

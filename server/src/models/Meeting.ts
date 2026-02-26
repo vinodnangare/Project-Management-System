@@ -20,6 +20,8 @@ export interface IMeeting extends Document {
   location?: string | null;
   meetingLink?: string | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
+  recurrence: 'once' | 'daily' | 'weekly' | 'monthly';
+  recurringTemplateId?: mongoose.Types.ObjectId | null;
   notes?: string | null;
   userNotes: IUserNote[];
   is_deleted: boolean;
@@ -96,6 +98,18 @@ const meetingSchema = new Schema<IMeeting>(
       type: String,
       default: null,
       maxlength: 5000
+    },
+    recurrence: {
+      type: String,
+      enum: ['once', 'daily', 'weekly', 'monthly'],
+      default: 'once',
+      index: true
+    },
+    recurringTemplateId: {
+      type: Schema.Types.ObjectId,
+      ref: 'RecurringMeetingTemplate',
+      default: null,
+      index: true
     },
     userNotes: {
       type: [{

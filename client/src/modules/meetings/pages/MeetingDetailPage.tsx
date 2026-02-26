@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useGetMeetingQuery, useDeleteMeetingMutation, useUpdateMeetingMutation } from '../api/meetingsApi';
+import { useGetMeetingQuery, useDeleteMeetingMutation, useUpdateMeetingMutation, useGetMeetingActivitiesQuery } from '../api/meetingsApi';
 import { useAppSelector } from '../../../hooks/redux';
 import toast from 'react-hot-toast';
 import {
@@ -28,12 +28,17 @@ const MeetingDetailPage: React.FC = () => {
     id?.trim() || '', 
     { skip: shouldSkip }
   );
+  const { data: activitiesResponse } = useGetMeetingActivitiesQuery(
+    id?.trim() || '',
+    { skip: shouldSkip }
+  );
   
   const [deleteMeeting] = useDeleteMeetingMutation();
   const user = useAppSelector((state) => state.auth.user);
   const isAdmin = user?.role === 'admin';
 
   const meeting = response?.data;
+  const activities = activitiesResponse?.data || [];
 
   // Log errors for debugging
   React.useEffect(() => {
@@ -75,118 +80,104 @@ const MeetingDetailPage: React.FC = () => {
   const [adminNoteDraft, setAdminNoteDraft] = React.useState<string>('');
   const [myNoteDraft, setMyNoteDraft] = React.useState<string>('');
   const [updateMeetingMutation] = useUpdateMeetingMutation();
-  const adminSaveTimer = React.useRef<number | null>(null);
-  const personalSaveTimer = React.useRef<number | null>(null);
-  const isInitialMount = React.useRef(true);
+  const [isSavingAdminNotes, setIsSavingAdminNotes] = React.useState(false);
+  const [isSavingPersonalNotes, setIsSavingPersonalNotes] = React.useState(false);
+  const lastSavedAdminNote = React.useRef<string>('');
+  const lastSavedPersonalNote = React.useRef<string>('');
 
   // Initialize notes from meeting data
   React.useEffect(() => {
     if (!meeting || !meeting.id) {
       setAdminNoteDraft('');
       setMyNoteDraft('');
+      lastSavedAdminNote.current = '';
+      lastSavedPersonalNote.current = '';
       return;
     }
 
     // Admin notes (universal)
-    setAdminNoteDraft(meeting.notes || '');
+    const adminNote = meeting.notes || '';
+    setAdminNoteDraft(adminNote);
+    lastSavedAdminNote.current = adminNote;
 
     // Find current user's personal note
     const myNote = meeting.userNotes?.find(n => n.userId === user?.id);
-    setMyNoteDraft(myNote?.content || '');
-    isInitialMount.current = false;
-  }, [meeting?.id, user?.id]); // Only depend on IDs to avoid unnecessary updates // More specific dependencies
+    const personalNote = myNote?.content || '';
+    setMyNoteDraft(personalNote);
+    lastSavedPersonalNote.current = personalNote;
+  }, [meeting?.id, user?.id]); // Only depend on IDs to avoid unnecessary updates
 
-  // Autosave admin notes with 1 second debounce
-  React.useEffect(() => {
-    // Skip if not admin, no meeting, or initial mount
-    if (!isAdmin || !meeting?.id || !adminNoteDraft.trim() || isInitialMount.current) {
+  // Save admin notes handler
+  const handleSaveAdminNotes = async () => {
+    if (!meeting?.id || !isAdmin || adminNoteDraft === lastSavedAdminNote.current) {
+      if (adminNoteDraft === lastSavedAdminNote.current) {
+        toast.success('No changes to save', { duration: 2000, position: 'bottom-right' });
+      }
       return;
     }
 
-    // Clear previous timer
-    if (adminSaveTimer.current !== null) {
-      window.clearTimeout(adminSaveTimer.current);
-    }
-
-    // Set new timer
-    adminSaveTimer.current = window.setTimeout(async () => {
-      if (!meeting?.id) return; // Double-check meeting ID exists
+    setIsSavingAdminNotes(true);
+    try {
+      const result = await updateMeetingMutation({ 
+        id: meeting.id, 
+        data: { notes: adminNoteDraft || null } 
+      }).unwrap();
       
-      try {
-        const result = await updateMeetingMutation({ 
-          id: meeting.id, 
-          data: { notes: adminNoteDraft || null } 
-        }).unwrap();
-        
-        if (result?.success) {
-          toast.success('Admin notes saved ✓', {
-            duration: 2000,
-            position: 'bottom-right'
-          });
-        }
-      } catch (err) {
-        console.error('Admin notes save error:', err);
-        toast.error('Failed to save admin notes', {
-          duration: 3000,
+      if (result?.success) {
+        lastSavedAdminNote.current = adminNoteDraft;
+        toast.success('Admin notes saved successfully', {
+          duration: 2000,
           position: 'bottom-right'
         });
       }
-    }, 1000) as unknown as number;
+    } catch (err) {
+      console.error('Admin notes save error:', err);
+      toast.error('Failed to save admin notes', {
+        duration: 3000,
+        position: 'bottom-right'
+      });
+    } finally {
+      setIsSavingAdminNotes(false);
+    }
+  };
 
-    // Cleanup: clear timer on unmount or when dependencies change
-    return () => {
-      if (adminSaveTimer.current !== null) {
-        window.clearTimeout(adminSaveTimer.current);
-        adminSaveTimer.current = null;
+  // Save personal notes handler
+  const handleSavePersonalNotes = async () => {
+    if (!meeting?.id || !user?.id || myNoteDraft === lastSavedPersonalNote.current) {
+      if (myNoteDraft === lastSavedPersonalNote.current) {
+        toast.success('No changes to save', { duration: 2000, position: 'bottom-right' });
       }
-    };
-  }, [adminNoteDraft, isAdmin, meeting?.id]); // Removed updateMeetingMutation
-
-  // Autosave personal notes with 1 second debounce
-  React.useEffect(() => {
-    // Skip if no meeting/user or initial mount
-    if (!meeting?.id || !user?.id || !myNoteDraft.trim() || isInitialMount.current) {
       return;
     }
 
-    // Clear previous timer
-    if (personalSaveTimer.current !== null) {
-      window.clearTimeout(personalSaveTimer.current);
-    }
-
-    // Set new timer
-    personalSaveTimer.current = window.setTimeout(async () => {
-      if (!meeting?.id || !user?.id) return; // Double-check IDs exist
+    setIsSavingPersonalNotes(true);
+    try {
+      const result = await updateMeetingMutation({ 
+        id: meeting.id, 
+        data: { userNote: myNoteDraft } 
+      }).unwrap();
       
-      try {
-        const result = await updateMeetingMutation({ 
-          id: meeting.id, 
-          data: { userNote: myNoteDraft || null } 
-        }).unwrap();
-        
-        if (result?.success) {
-          toast.success('Personal notes saved ✓', {
-            duration: 2000,
-            position: 'bottom-right'
-          });
-        }
-      } catch (err) {
-        console.error('Personal notes save error:', err);
-        toast.error('Failed to save personal notes', {
-          duration: 3000,
+      if (result?.success) {
+        lastSavedPersonalNote.current = myNoteDraft;
+        toast.success('Personal notes saved successfully', {
+          duration: 2000,
           position: 'bottom-right'
         });
       }
-    }, 1000) as unknown as number;
+    } catch (err) {
+      console.error('Personal notes save error:', err);
+      toast.error('Failed to save personal notes', {
+        duration: 3000,
+        position: 'bottom-right'
+      });
+    } finally {
+      setIsSavingPersonalNotes(false);
+    }
+  };
 
-    // Cleanup: clear timer on unmount or when dependencies change
-    return () => {
-      if (personalSaveTimer.current !== null) {
-        window.clearTimeout(personalSaveTimer.current);
-        personalSaveTimer.current = null;
-      }
-    };
-  }, [myNoteDraft, meeting?.id, user?.id]); // Removed updateMeetingMutation
+  // Check if notes have unsaved changes
+  const hasUnsavedAdminNotes = adminNoteDraft !== lastSavedAdminNote.current;
+  const hasUnsavedPersonalNotes = myNoteDraft !== lastSavedPersonalNote.current;
 
   const formatDateTime = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('en-US', {
@@ -207,6 +198,25 @@ const MeetingDetailPage: React.FC = () => {
       rescheduled: { color: '#f59e0b', bg: '#fef3c7', label: 'Rescheduled' },
     };
     return statusMap[status] || { color: '#6b7280', bg: '#f3f4f6', label: status };
+  };
+
+  const getMeetingActionText = (action: string): string => {
+    const actionMap: Record<string, string> = {
+      CREATED: 'created the meeting',
+      TITLE_CHANGED: 'changed the title',
+      DESCRIPTION_CHANGED: 'updated the description',
+      TIME_CHANGED: 'changed the meeting time',
+      TYPE_CHANGED: 'changed the meeting type',
+      LOCATION_CHANGED: 'updated the location',
+      LINK_CHANGED: 'updated the meeting link',
+      STATUS_CHANGED: 'changed the status',
+      ASSIGNEES_CHANGED: 'updated participants',
+      NOTES_UPDATED: 'updated admin notes',
+      PERSONAL_NOTE_UPDATED: 'updated personal notes',
+      RECURRENCE_CHANGED: 'changed recurrence',
+      DELETED: 'deleted the meeting',
+    };
+    return actionMap[action] || action.toLowerCase().replace('_', ' ');
   };
 
   const handleDelete = async () => {
@@ -491,17 +501,39 @@ const MeetingDetailPage: React.FC = () => {
                 placeholder="Add official meeting notes visible to all participants..."
                 rows={4}
               />
-              <div className="editor-saving" aria-live="polite">
-                <span className="saving-indicator">✓ Auto-saving</span>
+              <div className="editor-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                {hasUnsavedAdminNotes && (
+                  <span style={{ color: '#f59e0b', fontSize: '0.85rem' }}>Unsaved changes</span>
+                )}
+                {!hasUnsavedAdminNotes && <span></span>}
+                <button
+                  onClick={handleSaveAdminNotes}
+                  disabled={isSavingAdminNotes || !hasUnsavedAdminNotes}
+                  style={{
+                    padding: '8px 16px',
+                    background: hasUnsavedAdminNotes ? '#2563eb' : '#9ca3af',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: hasUnsavedAdminNotes ? 'pointer' : 'not-allowed',
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  {isSavingAdminNotes ? 'Saving...' : 'Save Notes'}
+                </button>
               </div>
             </div>
           ) : (
-            <div className="notes-display">
-              {meeting.notes ? (
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{meeting.notes}</div>
-              ) : (
-                <div className="no-notes">No admin notes yet.</div>
-              )}
+            <div className="meeting-notes-editor">
+              <textarea
+                value={meeting.notes || ''}
+                readOnly
+                disabled
+                placeholder="No admin notes yet."
+                rows={4}
+                style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+              />
             </div>
           )}
         </div>
@@ -518,8 +550,27 @@ const MeetingDetailPage: React.FC = () => {
               placeholder="Add your personal notes about this meeting (only visible to you)..."
               rows={4}
             />
-            <div className="editor-saving" aria-live="polite">
-              <span className="saving-indicator">✓ Auto-saving</span>
+            <div className="editor-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+              {hasUnsavedPersonalNotes && (
+                <span style={{ color: '#f59e0b', fontSize: '0.85rem' }}>Unsaved changes</span>
+              )}
+              {!hasUnsavedPersonalNotes && <span></span>}
+              <button
+                onClick={handleSavePersonalNotes}
+                disabled={isSavingPersonalNotes || !hasUnsavedPersonalNotes}
+                style={{
+                  padding: '8px 16px',
+                  background: hasUnsavedPersonalNotes ? '#2563eb' : '#9ca3af',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: hasUnsavedPersonalNotes ? 'pointer' : 'not-allowed',
+                  fontSize: '0.9rem',
+                  fontWeight: '500'
+                }}
+              >
+                {isSavingPersonalNotes ? 'Saving...' : 'Save Notes'}
+              </button>
             </div>
           </div>
         </div>
@@ -536,6 +587,38 @@ const MeetingDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <div className="meeting-notes-card">
+        <h3><HiOutlineRefresh className="section-icon" /> Activity</h3>
+        <div className="notes-content">
+          {activities.length === 0 ? (
+            <div className="no-notes">No activity yet.</div>
+          ) : (
+            <div className="activity-timeline">
+              {activities.map((activity) => (
+                <div key={activity.id} className="activity-item">
+                  <div className="activity-dot"></div>
+                  <div className="activity-content">
+                    <div className="activity-action">
+                      <strong>{activity.performed_by_name || activity.performed_by_email || activity.performed_by}</strong> {getMeetingActionText(activity.action)}
+                    </div>
+                    {activity.old_value !== null && activity.new_value !== null && activity.old_value !== activity.new_value && (
+                      <div className="activity-change">
+                        <span className="old-value">{activity.old_value}</span>
+                        <span className="arrow">→</span>
+                        <span className="new_value">{activity.new_value}</span>
+                      </div>
+                    )}
+                    <div className="activity-timestamp">
+                      {formatDateTime(activity.created_at)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Meeting Link Info (for reference) */}
       {meeting.meetingType === 'online' && meeting.meetingLink && (
