@@ -1,5 +1,5 @@
 import React from 'react';
-import { Meeting } from '../types/meetingTypes';
+import type { Meeting } from '../types/meetingTypes';
 
 export interface MeetingListProps {
   meetings: Meeting[];
