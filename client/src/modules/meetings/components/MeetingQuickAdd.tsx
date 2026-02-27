@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Meeting } from '../types/meetingTypes';
+import type { Meeting } from '../types/meetingTypes';
 
 export interface MeetingQuickAddProps {
   onAdd: (meeting: Partial<Meeting>) => void;

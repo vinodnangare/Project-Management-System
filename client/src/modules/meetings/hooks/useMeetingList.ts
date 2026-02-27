@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Meeting } from '../types/meetingTypes';
+import type { Meeting } from '../types/meetingTypes';
 
 export function useMeetingList(initialMeetings: Meeting[] = []) {
   const [meetings, setMeetings] = useState<Meeting[]>(initialMeetings);
