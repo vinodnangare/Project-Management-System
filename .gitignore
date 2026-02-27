@@ -61,6 +61,5 @@ coverage/
 !QUICK_START.md
 
 
-*.json
 
 django_server/
