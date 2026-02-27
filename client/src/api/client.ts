@@ -10,6 +10,13 @@ export interface ApiError {
   data?: any;
 }
 
+// Store dispatch reference for logout handling
+let storeDispatch: any = null;
+
+export const setDispatchForClient = (dispatch: any) => {
+  storeDispatch = dispatch;
+};
+
 class ApiClient {
   private client: AxiosInstance;
 
@@ -34,17 +41,42 @@ class ApiClient {
 
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
+      async (error: AxiosError) => {
         const apiError: ApiError = {
           message: error.message,
           status: error.response?.status,
           data: error.response?.data
         };
+
+        // Handle 401 Unauthorized (token expired)
+        if (apiError.status === 401) {
+          // Clear auth from localStorage
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+
+          // Show error toast
+          toast.error('Session expired. Please login again.', {
+            duration: 3000,
+            position: 'top-right',
+          });
+
+          // Dispatch logout if store dispatch is available
+          if (storeDispatch) {
+            const { logout } = await import('../store/slices/authSlice');
+            storeDispatch(logout());
+          }
+
+          // Redirect to login after a delay
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 500);
+        }
         // Show toast for rate limit errors
-        if (apiError.status === 429) {
+        else if (apiError.status === 429) {
           const msg = apiError.data?.error || 'Too many requests. Please try again later.';
           toast.error(msg);
         }
+
         return Promise.reject(apiError);
       }
     );
