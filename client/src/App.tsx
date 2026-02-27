@@ -29,6 +29,9 @@ import { useAppDispatch, useAppSelector } from './hooks/redux';
 import { openTaskForm, closeTaskForm, setSelectedTask } from './store/slices/uiSlice';
 import { logout } from './store/slices/authSlice';
 import { openProfileModal } from './store/slices/uiModalSlice';
+import { setStoreDispatch } from './services/api';
+import { setDispatchForClient } from './api/client';
+import { setStoreDispatchForBaseQuery } from './api/baseQueryWithErrorHandling';
 
 import './App.css';
 
@@ -41,7 +44,14 @@ function App() {
   const selectedTaskId = useAppSelector((state) => state.ui.selectedTaskId);
   const showTaskForm = useAppSelector((state) => state.ui.showTaskForm);
 
-  // =============================
+  // Initialize store dispatch for API handlers on app mount
+  useEffect(() => {
+    setStoreDispatch(dispatch);
+    setDispatchForClient(dispatch);
+    setStoreDispatchForBaseQuery(dispatch);
+  }, [dispatch]);
+
+  // ============================
   // Dark mode state
   // =============================
   const [isDarkMode, setIsDarkMode] = useState(

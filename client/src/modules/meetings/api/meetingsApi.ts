@@ -1,20 +1,12 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { IMeeting, ICreateMeeting, IMeetingActivity } from '../types/meetingTypes';
+import { createBaseQueryWithErrorHandling } from '../../../api/baseQueryWithErrorHandling';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const baseQueryWithErrorHandling = createBaseQueryWithErrorHandling();
 
 export const meetingsApi = createApi({
   reducerPath: 'meetingsApi',
-  baseQuery: fetchBaseQuery({ 
-    baseUrl: API_BASE_URL,
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithErrorHandling,
   tagTypes: ['Meeting', 'User', 'MeetingActivity'],
   endpoints: (builder) => ({
     getMeetings: builder.query<{ success: boolean; data: IMeeting[]; meta?: any }, any>({
