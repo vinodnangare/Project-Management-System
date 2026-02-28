@@ -1,4 +1,4 @@
-import { RefObject } from 'react';
+import { type RefObject } from 'react';
 export interface TaskListProps {
   onTaskSelect: (taskId: string) => void;
   selectedTaskId?: string;
