@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { TokenExpiredError } from 'jsonwebtoken';
+import { isTokenBlacklisted } from '../services/tokenService.js';
 
 declare global {
   namespace Express {
@@ -13,7 +14,12 @@ declare global {
   }
 }
 
-export const verifyJwt = (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Verify JWT access token and check if it's blacklisted
+ * Extracts user info from the token payload
+ * Returns 401 if token is missing, invalid, expired, or blacklisted
+ */
+export const verifyJwt = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization || '';
     const parts = authHeader.split(' ');
@@ -26,11 +32,43 @@ export const verifyJwt = (req: Request, res: Response, next: NextFunction) => {
     const token = parts[1];
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
 
-    const payload = jwt.verify(token, secret) as {
-      id: string;
-      email: string;
-      role: 'admin' | 'manager' | 'employee';
-    };
+    let payload: any;
+    
+    try {
+      payload = jwt.verify(token, secret) as {
+        id: string;
+        email: string;
+        role: 'admin' | 'manager' | 'employee';
+        type?: string;
+      };
+    } catch (error) {
+      if (error instanceof TokenExpiredError) {
+        res.status(401).json({ 
+          success: false, 
+          error: 'Token expired',
+          code: 'TOKEN_EXPIRED'
+        });
+        return;
+      }
+      throw error;
+    }
+
+    // Check if this is an access token (new token system)
+    if (payload.type && payload.type !== 'access') {
+      res.status(401).json({ success: false, error: 'Unauthorized: Invalid token type' });
+      return;
+    }
+
+    // Check if token is blacklisted (for immediate invalidation when token changes)
+    const blacklisted = await isTokenBlacklisted(token);
+    if (blacklisted) {
+      res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized: Token has been invalidated',
+        code: 'TOKEN_INVALIDATED'
+      });
+      return;
+    }
 
     req.user = {
       id: payload.id,
@@ -40,6 +78,7 @@ export const verifyJwt = (req: Request, res: Response, next: NextFunction) => {
 
     next();
   } catch (err) {
+    console.error('Auth middleware error:', err);
     res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
   }
 };
