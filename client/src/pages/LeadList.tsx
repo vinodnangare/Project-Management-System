@@ -8,6 +8,12 @@ import { HiOutlineExclamationCircle, HiOutlinePlus, HiOutlineRefresh, HiOutlineS
 import '../styles/LeadList.css';
 
 export const LeadList: React.FC = () => {
+    // Listen for keyboard shortcut event to open lead form
+    useEffect(() => {
+      const handler = () => setShowLeadForm(true);
+      window.addEventListener('openLeadForm', handler);
+      return () => window.removeEventListener('openLeadForm', handler);
+    }, []);
   const navigate = useNavigate();
   const location = useLocation();
   const [page, setPage] = useState(1);
