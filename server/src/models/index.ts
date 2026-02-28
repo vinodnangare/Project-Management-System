@@ -24,3 +24,7 @@ export { MeetingActivity } from './MeetingActivity.js';
 export type { IMeetingActivity } from './MeetingActivity.js';
 export { RecurringMeetingTemplate } from './RecurringMeetingTemplate.js';
 export type { IRecurringMeetingTemplate } from './RecurringMeetingTemplate.js';
+export { RefreshToken } from './RefreshToken.js';
+export type { IRefreshToken } from './RefreshToken.js';
+export { TokenBlacklist } from './TokenBlacklist.js';
+export type { ITokenBlacklist } from './TokenBlacklist.js';
