@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HiOutlineSun, HiOutlineMoon, HiOutlineUser, HiOutlineLogout } from 'react-icons/hi';
@@ -40,9 +41,75 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Refs for focusing elements
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const selectedTaskId = useAppSelector((state) => state.ui.selectedTaskId);
   const showTaskForm = useAppSelector((state) => state.ui.showTaskForm);
+  // Keyboard Shortcuts
+  useKeyboardShortcuts([
+    // Create Meeting: Alt+Shift+M
+    {
+      key: 'm', alt: true, shift: true, action: () => {
+        // Only allow for admin/manager
+        if (user?.role === 'admin' || user?.role === 'manager') {
+          navigate('/meetings/new');
+        }
+      }
+    },
+    // Create Task: Alt+Shift+T
+    {
+      key: 't', alt: true, shift: true, action: () => {
+        if (user?.role === 'admin' || user?.role === 'manager') {
+          dispatch(openTaskForm());
+        }
+      }
+    },
+    // Save Notes: Alt+Shift+S (only on LeadDetail page, triggers blur on textarea to save)
+    {
+      key: 's', alt: true, shift: true, action: () => {
+        if (location.pathname.startsWith('/leads/') && document.activeElement?.tagName === 'TEXTAREA') {
+          (document.activeElement as HTMLTextAreaElement).blur();
+        } else {
+          // Try to find a notes textarea and blur it
+          const notesArea = document.querySelector('.notes-textarea') as HTMLTextAreaElement;
+          if (notesArea) notesArea.blur();
+        }
+      }
+    },
+    // Add Lead: Alt+Shift+L (only on /leads/list)
+    {
+      key: 'l', alt: true, shift: true, action: () => {
+        if (location.pathname.startsWith('/leads/list')) {
+          // Find the React LeadList instance and setShowLeadForm(true)
+          // As a fallback, use a custom event
+          window.dispatchEvent(new CustomEvent('openLeadForm'));
+        } else {
+          navigate('/leads/list?new=1');
+        }
+      }
+    },
+    // Add Employee: Alt+Shift+A (only on /admin/analytics)
+    {
+      key: 'a', alt: true, shift: true, action: () => {
+        if (user?.role === 'admin' && location.pathname === '/admin/analytics') {
+          window.dispatchEvent(new CustomEvent('openAddEmployee'));
+        } else if (user?.role === 'admin') {
+          navigate('/admin/analytics');
+          setTimeout(() => window.dispatchEvent(new CustomEvent('openAddEmployee')), 300);
+        }
+      }
+    },
+    // Toggle Sidebar: Alt+Shift+N
+    {
+      key: 'n', alt: true, shift: true, action: () => {
+        // Find sidebar toggle button and click it
+        const toggleBtn = document.querySelector('.sidebar__toggle') as HTMLButtonElement;
+        if (toggleBtn) toggleBtn.click();
+      }
+    },
+  ]);
 
   // Initialize store dispatch for API handlers on app mount
   useEffect(() => {
@@ -107,7 +174,10 @@ function App() {
   // =============================
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
+      {/* Sidebar with ref for keyboard shortcut */}
+      <div ref={sidebarRef} tabIndex={-1} style={{ outline: 'none' }}>
+        <Sidebar />
+      </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Toaster position="top-right" />
@@ -151,7 +221,6 @@ function App() {
         {/* Main */}
         <main className="app-main">
           <Routes>
-
             {/* ================= ADMIN ================= */}
             {user?.role === 'admin' && (
               <>

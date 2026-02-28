@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useGetTaskStatsQuery, useGetTasksQuery, useDeleteEmployeeMutation, useRegisterMutation, useGetAssignableUsersQuery } from '../services/api';
 import { HiOutlineChartBar, HiOutlineClock, HiOutlineUserAdd, HiOutlineX, HiOutlineTrash, HiOutlineCheck } from 'react-icons/hi';
@@ -7,6 +7,12 @@ import AdminTimeLogs from './AdminTimeLogs';
 import EmployeeTimeLogModal from './EmployeeTimeLogModal';
 
 export const AdminStats: React.FC = () => {
+    // Listen for keyboard shortcut event to open add employee form
+    useEffect(() => {
+      const handler = () => setShowAddEmployee(true);
+      window.addEventListener('openAddEmployee', handler);
+      return () => window.removeEventListener('openAddEmployee', handler);
+    }, []);
   const { data: stats, isLoading: loading, error, refetch } = useGetTaskStatsQuery();
   const { data: tasksData } = useGetTasksQuery({ page: 1, limit: 100 });
   const { data: assignableUsers = [] } = useGetAssignableUsersQuery();

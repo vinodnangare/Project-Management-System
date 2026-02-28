@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,type RefObject } from 'react';
 import { useGetTasksQuery } from '../services/api';
 import { HiOutlineSearch, HiOutlineX, HiOutlineClipboardList, HiOutlineCalendar, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 import '../styles/TaskList.css';
@@ -21,7 +21,11 @@ const getStatusClass = (status: string): string => {
   return `status-${status.toLowerCase().replace('_', '-')}`;
 };
 
-export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId }) => {
+interface TaskListWithRefProps extends TaskListProps {
+  searchInputRef?: RefObject<HTMLInputElement>;
+}
+
+export const TaskList: React.FC<TaskListWithRefProps> = ({ onTaskSelect, selectedTaskId, searchInputRef }) => {
   const { data: tasksData, isLoading: loading, error } = useGetTasksQuery({ page: 1, limit: 50 });
   const tasks = tasksData?.tasks || [];
   const pagination = tasksData?.meta;
@@ -94,6 +98,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onTaskSelect, selectedTaskId
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               className="filter-input search-input"
+              ref={searchInputRef}
             />
           </div>
         </div>
