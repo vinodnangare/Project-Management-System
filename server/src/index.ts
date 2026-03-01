@@ -6,6 +6,7 @@ console.log('MongoDB URI:', process.env.MONGO_URI ? 'configured' : 'using defaul
 import express, { Express } from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { connectDatabase } from './config/database.js';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
@@ -116,8 +117,35 @@ app.use('/api/notifications', verifyJwt, notificationRoutes);
 // Meeting routes
 app.use('/api/meetings', verifyJwt, meetingRoutes);
 
+// Determine the correct path to client build directory
+// When running from server: npm start (cd server && node dist/index.js)
+// __dirname would be server/dist, so ../../../client/dist
+// But we'll use multiple strategies for reliability
+
+const getClientDistPath = (): string => {
+  // Try relative path from current working directory first (most reliable for Render)
+  const cwdPath = path.join(process.cwd(), '..', 'client', 'dist');
+  if (fs.existsSync(cwdPath)) {
+    console.log('✅ Found client dist at CWD path:', cwdPath);
+    return cwdPath;
+  }
+
+  // Try path from current file location
+  const filePath = path.join(__dirname, '../../client/dist');
+  if (fs.existsSync(filePath)) {
+    console.log('✅ Found client dist at file path:', filePath);
+    return filePath;
+  }
+
+  // Fallback: assume standard structure
+  console.warn('⚠️ Client dist not found at expected locations, using fallback path');
+  return path.join(process.cwd(), 'client', 'dist');
+};
+
+const clientDistPath = getClientDistPath();
+console.log('📁 Using client dist path:', clientDistPath);
+
 // Serve React static files (frontend build)
-const clientDistPath = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientDistPath, {
   maxAge: '1d',
   etag: false
@@ -132,10 +160,20 @@ app.get('*', (req, res) => {
   }
   
   // Serve index.html for all other routes (React SPA)
-  res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
+  const indexPath = path.join(clientDistPath, 'index.html');
+  
+  if (!fs.existsSync(indexPath)) {
+    console.error('❌ index.html not found at:', indexPath);
+    return res.status(404).json({ 
+      success: false, 
+      error: 'Frontend build not found. Make sure "npm run build" was executed in client directory.' 
+    });
+  }
+
+  res.sendFile(indexPath, (err) => {
     if (err) {
-      // If index.html doesn't exist, return 404
-      res.status(404).json({ success: false, error: 'Frontend build not found. Please build the frontend first.' });
+      console.error('Error serving index.html:', err);
+      res.status(404).json({ success: false, error: 'Failed to load frontend' });
     }
   });
 });
