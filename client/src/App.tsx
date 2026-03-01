@@ -27,10 +27,11 @@ import MeetingCalendarPage from './modules/meetings/pages/MeetingCalendarPage';
 import MeetingFormPage from './modules/meetings/pages/MeetingFormPage';
 
 import { useAppDispatch, useAppSelector } from './hooks/redux';
+import { useTokenValidation } from './hooks/useTokenValidation';
 import { openTaskForm, closeTaskForm, setSelectedTask } from './store/slices/uiSlice';
 import { logout } from './store/slices/authSlice';
 import { openProfileModal } from './store/slices/uiModalSlice';
-import { setStoreDispatch } from './services/api';
+import { setStoreDispatch, useLogoutUserMutation } from './services/api';
 import { setDispatchForClient } from './api/client';
 import { setStoreDispatchForBaseQuery } from './api/baseQueryWithErrorHandling';
 
@@ -44,9 +45,16 @@ function App() {
   // Refs for focusing elements
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user, refreshToken } = useAppSelector((state) => state.auth);
   const selectedTaskId = useAppSelector((state) => state.ui.selectedTaskId);
   const showTaskForm = useAppSelector((state) => state.ui.showTaskForm);
+  
+  // Logout mutation
+  const [logoutUser] = useLogoutUserMutation();
+  
+  // Token validation - monitors localStorage and auto-refreshes tokens
+  useTokenValidation();
+  
   // Keyboard Shortcuts
   useKeyboardShortcuts([
     // Create Meeting: Alt+Shift+M
@@ -147,7 +155,17 @@ function App() {
     }
   }, [isAuthenticated, user, navigate, location.pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Call backend logout if we have a refresh token
+    const storedRefreshToken = refreshToken || localStorage.getItem('refreshToken');
+    if (storedRefreshToken) {
+      try {
+        await logoutUser({ refreshToken: storedRefreshToken }).unwrap();
+      } catch (error) {
+        // Ignore errors - we still want to logout locally
+        console.warn('Backend logout failed:', error);
+      }
+    }
     dispatch(logout());
     navigate('/login', { replace: true });
   };

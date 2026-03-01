@@ -17,8 +17,38 @@ export const setDispatchForClient = (dispatch: any) => {
   storeDispatch = dispatch;
 };
 
+// Token refresh helper
+const refreshAccessToken = async (): Promise<{ accessToken: string; refreshToken: string; expiresIn: number } | null> => {
+  const refreshToken = localStorage.getItem('refreshToken');
+  
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+      refreshToken
+    });
+
+    if (response.data.success && response.data.data) {
+      return {
+        accessToken: response.data.data.accessToken,
+        refreshToken: response.data.data.refreshToken,
+        expiresIn: response.data.data.expiresIn,
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Token refresh failed:', error);
+    return null;
+  }
+};
+
 class ApiClient {
   private client: AxiosInstance;
+  private isRefreshing = false;
+  private refreshPromise: Promise<any> | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -30,7 +60,7 @@ class ApiClient {
 
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
         if (token) {
           config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -48,9 +78,46 @@ class ApiClient {
           data: error.response?.data
         };
 
+        const originalRequest = error.config as any;
+
         // Handle 401 Unauthorized (token expired)
-        if (apiError.status === 401) {
+        if (apiError.status === 401 && !originalRequest._retry) {
+          const errorData = apiError.data as any;
+          
+          // Check if token is expired (not invalidated)
+          if (errorData?.code === 'TOKEN_EXPIRED' || errorData?.error === 'Token expired') {
+            originalRequest._retry = true;
+
+            // Prevent multiple simultaneous refresh attempts
+            if (!this.isRefreshing) {
+              this.isRefreshing = true;
+              this.refreshPromise = refreshAccessToken();
+            }
+
+            const newTokens = await this.refreshPromise;
+            this.isRefreshing = false;
+            this.refreshPromise = null;
+
+            if (newTokens) {
+              // Update tokens in localStorage
+              localStorage.setItem('accessToken', newTokens.accessToken);
+              localStorage.setItem('refreshToken', newTokens.refreshToken);
+
+              // Update Redux state
+              if (storeDispatch) {
+                const { updateTokens } = await import('../store/slices/authSlice');
+                storeDispatch(updateTokens(newTokens));
+              }
+
+              // Retry the original request with new token
+              originalRequest.headers['Authorization'] = `Bearer ${newTokens.accessToken}`;
+              return this.client(originalRequest);
+            }
+          }
+
           // Clear auth from localStorage
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
 

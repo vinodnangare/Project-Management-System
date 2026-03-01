@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt, { TokenExpiredError } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { isTokenBlacklisted } from '../services/tokenService.js';
+
+// Access TokenExpiredError from the default export
+const { TokenExpiredError } = jwt;
 
 declare global {
   namespace Express {
