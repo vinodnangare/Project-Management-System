@@ -39,7 +39,9 @@ export default function Login({ onSwitchToRegister }: LoginProps) {
 
     try {
       const result = await login({ email, password }).unwrap();
+      console.log('Login successful:', result);
       dispatch(setCredentials(result));
+    
     } catch (err: any) {
       setLocalError(err?.data?.message || 'Login failed');
     }
