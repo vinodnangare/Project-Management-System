@@ -5,8 +5,13 @@ console.log('MongoDB URI:', process.env.MONGO_URI ? 'configured' : 'using defaul
 
 import express, { Express } from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { connectDatabase } from './config/database.js';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { verifyJwt } from './middleware/authMiddleware.js';
 import { loginRateLimiter, registerRateLimiter } from './middleware/rateLimitMiddleware.js';
 import taskRoutes from './routes/taskRoutes.js';
@@ -110,6 +115,30 @@ app.use('/api/notifications', verifyJwt, notificationRoutes);
 
 // Meeting routes
 app.use('/api/meetings', verifyJwt, meetingRoutes);
+
+// Serve React static files (frontend build)
+const clientDistPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientDistPath, {
+  maxAge: '1d',
+  etag: false
+}));
+
+// Catch-all route: Serve index.html for any non-API routes
+// This enables React Router to handle client-side routing
+app.get('*', (req, res) => {
+  // Don't serve index.html for API routes that don't exist
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ success: false, error: 'API endpoint not found' });
+  }
+  
+  // Serve index.html for all other routes (React SPA)
+  res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
+    if (err) {
+      // If index.html doesn't exist, return 404
+      res.status(404).json({ success: false, error: 'Frontend build not found. Please build the frontend first.' });
+    }
+  });
+});
 
 app.use(errorHandler);
 
