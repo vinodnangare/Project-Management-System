@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { 
   register, 
   signIn, 
+  getProfile,
+  updateProfile,
   deleteEmployeeAccount, 
   uploadProfileImage,
   refreshToken,
@@ -26,6 +28,8 @@ router.post('/refresh', refreshToken);
 router.post('/validate', validateToken);
 
 // Protected endpoints (require valid access token)
+router.get('/profile', verifyJwt, getProfile);
+router.patch('/profile', verifyJwt, updateProfile);
 router.post('/profile/image', verifyJwt, upload.single('image'), uploadProfileImage);
 router.delete('/employees/:employeeId', verifyJwt, deleteEmployeeAccount);
 router.post('/logout', verifyJwt, logout);

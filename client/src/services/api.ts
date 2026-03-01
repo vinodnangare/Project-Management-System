@@ -198,24 +198,48 @@ export const api = createApi({
       invalidatesTags: ['Notification'],
     }),
     // Auth Endpoints
-    login: builder.mutation<{ user: User; token: string }, { email: string; password: string }>({
+    login: builder.mutation<{ user: User; accessToken: string; refreshToken: string; expiresIn: number }, { email: string; password: string }>({
       query: (credentials) => ({
         url: '/auth/login',
         method: 'POST',
         body: credentials,
       }),
-      transformResponse: (response: { success: boolean; data: { user: User; token: string } }) => response.data,
+      transformResponse: (response: { success: boolean; data: { user: User; accessToken: string; refreshToken: string; expiresIn: number } }) => response.data,
       invalidatesTags: ['Task', 'TimeLog', 'Comment', 'Activity', 'Stats', 'Profile'],
     }),
     
-    register: builder.mutation<{ user: User; token: string }, { email: string; password: string; password_confirm: string; full_name: string; role?: 'manager' | 'employee' }>({
+    register: builder.mutation<{ user: User; accessToken: string; refreshToken: string; expiresIn: number }, { email: string; password: string; password_confirm: string; full_name: string; role?: 'manager' | 'employee' }>({
       query: (data) => ({
         url: '/auth/register',
         method: 'POST',
         body: data,
       }),
-      transformResponse: (response: { success: boolean; data: { user: User; token: string } }) => response.data,
+      transformResponse: (response: { success: boolean; data: { user: User; accessToken: string; refreshToken: string; expiresIn: number } }) => response.data,
       invalidatesTags: ['Task', 'TimeLog', 'Comment', 'Activity', 'Stats', 'Profile'],
+    }),
+
+    refreshToken: builder.mutation<{ accessToken: string; refreshToken: string; expiresIn: number }, { refreshToken: string }>({
+      query: (data) => ({
+        url: '/auth/refresh',
+        method: 'POST',
+        body: data,
+      }),
+      transformResponse: (response: { success: boolean; data: { accessToken: string; refreshToken: string; expiresIn: number } }) => response.data,
+    }),
+
+    logoutUser: builder.mutation<void, { refreshToken: string }>({
+      query: (data) => ({
+        url: '/auth/logout',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    logoutAllDevices: builder.mutation<void, void>({
+      query: () => ({
+        url: '/auth/logout-all',
+        method: 'POST',
+      }),
     }),
 
     getProfile: builder.query<User, undefined>({
@@ -243,7 +267,7 @@ export const api = createApi({
         method: 'POST',
         body: formData,
         prepareHeaders: (headers: Headers) => {
-          const token = localStorage.getItem('token');
+          const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
           if (token) {
             headers.set('Authorization', `Bearer ${token}`);
           }
@@ -617,6 +641,9 @@ export const {
   // Auth
   useLoginMutation,
   useRegisterMutation,
+  useRefreshTokenMutation,
+  useLogoutUserMutation,
+  useLogoutAllDevicesMutation,
   useGetProfileQuery,
   useUpdateProfileMutation,
   useUploadProfileImageMutation,

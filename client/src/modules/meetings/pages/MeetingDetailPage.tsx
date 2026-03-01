@@ -55,7 +55,7 @@ const MeetingDetailPage: React.FC = () => {
     try {
       const response = await fetch(`/api/meetings/status/${id}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('accessToken') || localStorage.getItem('token')}`
         }
       });
       const result = await response.json();
@@ -294,7 +294,7 @@ const MeetingDetailPage: React.FC = () => {
               <div>📌 Your User ID: <strong>{user?.id || 'Not logged in'}</strong></div>
               <div>👤 Your Role: <strong>{user?.role || 'Unknown'}</strong></div>
               <div>✉️ Your Email: <strong>{user?.email || 'N/A'}</strong></div>
-              <div>🔐 Token Status: <strong>{localStorage.getItem('token') ? '✓ Valid' : '✗ Missing'}</strong></div>
+              <div>🔐 Token Status: <strong>{(localStorage.getItem('accessToken') || localStorage.getItem('token')) ? '✓ Valid' : '✗ Missing'}</strong></div>
             </div>
           </div>
 
