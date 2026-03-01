@@ -118,32 +118,60 @@ app.use('/api/notifications', verifyJwt, notificationRoutes);
 app.use('/api/meetings', verifyJwt, meetingRoutes);
 
 // Determine the correct path to client build directory
-// When running from server: npm start (cd server && node dist/index.js)
-// __dirname would be server/dist, so ../../../client/dist
-// But we'll use multiple strategies for reliability
-
 const getClientDistPath = (): string => {
-  // Try relative path from current working directory first (most reliable for Render)
-  const cwdPath = path.join(process.cwd(), '..', 'client', 'dist');
-  if (fs.existsSync(cwdPath)) {
-    console.log('✅ Found client dist at CWD path:', cwdPath);
-    return cwdPath;
+  // IMPORTANT: This runs from 'server/dist/index.js' via 'npm start'
+  // So __dirname is 'server/dist'
+  // We need to go up two levels: ../../client/dist
+  
+  // Strategy 1: Absolute path from __dirname (most reliable)
+  const dirnameResolution = path.resolve(__dirname, '..', '..', 'client', 'dist');
+  
+  // Strategy 2: Relative to process.cwd (which might be server/ or root/)
+  const cwdResolution = path.resolve(process.cwd(), 'client', 'dist');
+  
+  // Strategy 3: If cwd is server/, try ../client/dist  
+  const parentResolution = path.resolve(process.cwd(), '..', 'client', 'dist');
+
+  console.log('\n🔍 Searching for client dist directory...');
+  console.log(`   __dirname: ${__dirname}`);
+  console.log(`   cwd: ${process.cwd()}`);
+  console.log(`   Strategy 1 (__dirname resolution): ${dirnameResolution}`);
+  console.log(`   - Exists: ${fs.existsSync(dirnameResolution)}`);
+  
+  // Try each strategy
+  const strategies = [
+    { name: 'dirname resolution', path: dirnameResolution },
+    { name: 'cwd resolution', path: cwdResolution },
+    { name: 'parent resolution', path: parentResolution },
+  ];
+
+  for (const strategy of strategies) {
+    if (fs.existsSync(strategy.path)) {
+      const indexPath = path.join(strategy.path, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        console.log(`✅ Found client dist using ${strategy.name}:`);
+        console.log(`   Path: ${strategy.path}`);
+        console.log(`   index.html: ${fs.existsSync(indexPath)}\n`);
+        return strategy.path;
+      }
+    }
   }
 
-  // Try path from current file location
-  const filePath = path.join(__dirname, '../../client/dist');
-  if (fs.existsSync(filePath)) {
-    console.log('✅ Found client dist at file path:', filePath);
-    return filePath;
-  }
-
-  // Fallback: assume standard structure
-  console.warn('⚠️ Client dist not found at expected locations, using fallback path');
-  return path.join(process.cwd(), 'client', 'dist');
+  console.error('❌ Client dist not found in any location!');
+  console.error(`   Checked:`);
+  strategies.forEach(s => console.error(`     - ${s.path}`));
+  console.error(`\n   Make sure you ran: npm run build (from root or cd client && npm run build)\n`);
+  
+  // Return first strategy as fallback (will error later if index.html missing)
+  return dirnameResolution;
 };
 
 const clientDistPath = getClientDistPath();
-console.log('📁 Using client dist path:', clientDistPath);
+
+// Verify index.html exists
+const indexPath = path.join(clientDistPath, 'index.html');
+console.log(`🔎 Checking for index.html at: ${indexPath}`);
+console.log(`   Exists: ${fs.existsSync(indexPath)}\n`);
 
 // Serve React static files (frontend build)
 app.use(express.static(clientDistPath, {

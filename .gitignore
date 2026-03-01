@@ -9,10 +9,14 @@ node_modules/
 .env.*.local
 
 # Production builds
-dist/
+# IMPORTANT: server/dist is generated during build, but client/dist must be committed
+server/dist/
 build/
 .next/
 out/
+
+# Allow client/dist to be committed (needed for production)
+!client/dist/
 
 # Misc
 .DS_Store
