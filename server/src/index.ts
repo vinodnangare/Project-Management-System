@@ -119,30 +119,24 @@ app.use('/api/meetings', verifyJwt, meetingRoutes);
 
 // Determine the correct path to client build directory
 const getClientDistPath = (): string => {
-  // IMPORTANT: This runs from 'server/dist/index.js' via 'npm start'
-  // So __dirname is 'server/dist'
-  // We need to go up two levels: ../../client/dist
+  // This runs from 'node server/dist/index.js' with cwd at project root
+  // So we can use process.cwd() + 'client/dist' directly
   
-  // Strategy 1: Absolute path from __dirname (most reliable)
-  const dirnameResolution = path.resolve(__dirname, '..', '..', 'client', 'dist');
-  
-  // Strategy 2: Relative to process.cwd (which might be server/ or root/)
+  // Strategy 1: Direct from process.cwd (most reliable when run from root)
   const cwdResolution = path.resolve(process.cwd(), 'client', 'dist');
   
-  // Strategy 3: If cwd is server/, try ../client/dist  
-  const parentResolution = path.resolve(process.cwd(), '..', 'client', 'dist');
+  // Strategy 2: Absolute from __dirname (for edge cases)
+  const dirnameResolution = path.resolve(__dirname, '..', '..', 'client', 'dist');
 
   console.log('\n🔍 Searching for client dist directory...');
-  console.log(`   __dirname: ${__dirname}`);
   console.log(`   cwd: ${process.cwd()}`);
-  console.log(`   Strategy 1 (__dirname resolution): ${dirnameResolution}`);
-  console.log(`   - Exists: ${fs.existsSync(dirnameResolution)}`);
+  console.log(`   __dirname: ${__dirname}`);
+  console.log(`   Strategy 1 (cwd resolution): ${cwdResolution}`);
   
   // Try each strategy
   const strategies = [
-    { name: 'dirname resolution', path: dirnameResolution },
     { name: 'cwd resolution', path: cwdResolution },
-    { name: 'parent resolution', path: parentResolution },
+    { name: 'dirname resolution', path: dirnameResolution },
   ];
 
   for (const strategy of strategies) {
@@ -150,20 +144,19 @@ const getClientDistPath = (): string => {
       const indexPath = path.join(strategy.path, 'index.html');
       if (fs.existsSync(indexPath)) {
         console.log(`✅ Found client dist using ${strategy.name}:`);
-        console.log(`   Path: ${strategy.path}`);
-        console.log(`   index.html: ${fs.existsSync(indexPath)}\n`);
+        console.log(`   Path: ${strategy.path}\n`);
         return strategy.path;
       }
     }
   }
 
-  console.error('❌ Client dist not found in any location!');
-  console.error(`   Checked:`);
-  strategies.forEach(s => console.error(`     - ${s.path}`));
-  console.error(`\n   Make sure you ran: npm run build (from root or cd client && npm run build)\n`);
+  console.error('❌ Client dist not found!');
+  console.error(`   Checked: ${cwdResolution}`);
+  console.error(`   Also tried: ${dirnameResolution}`);
+  console.error(`\n⚠️  Make sure you ran: npm run build\n`);
   
-  // Return first strategy as fallback (will error later if index.html missing)
-  return dirnameResolution;
+  // Return cwd strategy as fallback
+  return cwdResolution;
 };
 
 const clientDistPath = getClientDistPath();
