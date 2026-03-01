@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon server/src/index.ts",
     "build": "node build.js",
+    "postinstall": "npm run build",
     "start": "node server/dist/index.js"
   },
   "devDependencies": {
