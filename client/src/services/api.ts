@@ -77,6 +77,14 @@ export interface Subtask {
   created_at: string;
 }
 
+export interface LeadStageDef {
+  _id: string;
+  name: string;
+  sequence: number;
+  color: string;
+  is_default: boolean;
+}
+
 export interface LeadStats {
   totalLeads: number;
   total?: number;
@@ -173,7 +181,7 @@ const baseQueryWithErrorHandling = createBaseQueryWithErrorHandling();
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithErrorHandling,
-  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc', 'Notification'],
+  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc', 'Notification', 'Lead', 'LeadStage'],
   endpoints: (builder) => ({
     // Notifications
     getNotifications: builder.query<
@@ -564,7 +572,37 @@ export const api = createApi({
     getLeadStats: builder.query<LeadStats, void>({
       query: () => '/leads/stats',
       transformResponse: (response: { success: boolean; data: LeadStats }) => response.data,
-      providesTags: ['Stats'],
+      providesTags: ['Stats', 'Lead'],
+    }),
+
+    // Lead Stages
+    getLeadStages: builder.query<LeadStageDef[], void>({
+      query: () => '/leads/settings/stages',
+      transformResponse: (response: { success: boolean; data: LeadStageDef[] }) => response.data,
+      providesTags: ['LeadStage'],
+    }),
+    createLeadStage: builder.mutation<LeadStageDef, Partial<LeadStageDef>>({
+      query: (body) => ({
+        url: '/leads/settings/stages',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['LeadStage'],
+    }),
+    updateLeadStageDef: builder.mutation<LeadStageDef, { id: string; data: Partial<LeadStageDef> }>({
+      query: ({ id, data }) => ({
+        url: `/leads/settings/stages/${id}`,
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['LeadStage'],
+    }),
+    deleteLeadStageDef: builder.mutation<{ success: boolean }, string>({
+      query: (id) => ({
+        url: `/leads/settings/stages/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['LeadStage'],
     }),
 
     getLeads: builder.query<{ leads: Lead[]; meta: any }, { page?: number; limit?: number; stage?: string; source?: string; owner?: string }>({
@@ -697,6 +735,10 @@ export const {
   
   // Leads
   useGetLeadStatsQuery,
+  useGetLeadStagesQuery,
+  useCreateLeadStageMutation,
+  useUpdateLeadStageDefMutation,
+  useDeleteLeadStageDefMutation,
   useGetLeadsQuery,
   useGetLeadOwnersQuery,
   useCreateLeadMutation,

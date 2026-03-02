@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useGetLeadOwnersQuery } from '../services/api';
+import { useGetLeadOwnersQuery, useGetLeadStagesQuery } from '../services/api';
 import { HiOutlineX } from 'react-icons/hi';
 import '../styles/components/LeadForm.css';
 import type { LeadFormData, LeadFormProps } from '../types/components/LeadFormProps';
@@ -12,13 +12,17 @@ const LeadForm: React.FC<LeadFormProps> = ({
   mode = 'create',
 }) => {
   const { data: owners = [], isLoading: ownersLoading } = useGetLeadOwnersQuery();
+  const { data: stages = [] } = useGetLeadStagesQuery();
+
+  const defaultStage = stages.find(s => s.is_default)?.name || stages[0]?.name || 'new';
+
   const [formData, setFormData] = useState<LeadFormData>({
     company_name: initialData?.company_name || '',
     contact_name: initialData?.contact_name || '',
     email: initialData?.email || '',
     phone: initialData?.phone || '',
     source: initialData?.source || 'web',
-    stage: initialData?.stage || 'new',
+    stage: initialData?.stage || defaultStage,
     priority: initialData?.priority || 'medium',
     owner_id: initialData?.owner_id || undefined,
   });
@@ -33,12 +37,14 @@ const LeadForm: React.FC<LeadFormProps> = ({
         email: initialData.email || '',
         phone: initialData.phone || '',
         source: initialData.source || 'web',
-        stage: initialData.stage || 'new',
+        stage: initialData.stage || defaultStage,
         priority: initialData.priority || 'medium',
         owner_id: initialData.owner_id || undefined,
       });
+    } else {
+      setFormData(prev => ({ ...prev, stage: defaultStage }));
     }
-  }, [initialData]);
+  }, [initialData, defaultStage]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof LeadFormData, string>> = {};
@@ -186,11 +192,11 @@ const LeadForm: React.FC<LeadFormProps> = ({
                   value={formData.stage}
                   onChange={(e) => handleChange('stage', e.target.value)}
                 >
-                  <option value="new">New</option>
-                  <option value="in_discussion">In Discussion</option>
-                  <option value="quoted">Quoted</option>
-                  <option value="won">Won</option>
-                  <option value="lost">Lost</option>
+                  {stages.map(stage => (
+                    <option key={stage.name} value={stage.name}>
+                      {stage.name.charAt(0).toUpperCase() + stage.name.slice(1).replace('_', ' ')}
+                    </option>
+                  ))}
                 </select>
                 <span className="form-hint">Current pipeline stage.</span>
               </div>

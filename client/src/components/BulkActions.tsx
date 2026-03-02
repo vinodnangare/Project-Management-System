@@ -8,6 +8,7 @@ import {
 } from 'react-icons/hi';
 import '../styles/components/BulkActions.css';
 import type { BulkActionsProps } from '../types/components/BulkActionsProps';
+import { useGetLeadStagesQuery } from '../services/api';
 
 const BulkActions: React.FC<BulkActionsProps> = ({
   selectedCount,
@@ -19,6 +20,7 @@ const BulkActions: React.FC<BulkActionsProps> = ({
 }) => {
   const [showStageMenu, setShowStageMenu] = useState(false);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
+  const { data: stages = [] } = useGetLeadStagesQuery();
 
   const handleStageChange = (stage: string) => {
     onChangeStage?.(stage);
@@ -63,11 +65,11 @@ const BulkActions: React.FC<BulkActionsProps> = ({
               </button>
               {showStageMenu && (
                 <div className="dropdown-menu">
-                  <button onClick={() => handleStageChange('new')}>New</button>
-                  <button onClick={() => handleStageChange('in_discussion')}>In Discussion</button>
-                  <button onClick={() => handleStageChange('quoted')}>Quoted</button>
-                  <button onClick={() => handleStageChange('won')}>Won</button>
-                  <button onClick={() => handleStageChange('lost')}>Lost</button>
+                  {stages.map(stage => (
+                    <button key={stage.name} onClick={() => handleStageChange(stage.name)}>
+                      {stage.name.charAt(0).toUpperCase() + stage.name.slice(1).replace('_', ' ')}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

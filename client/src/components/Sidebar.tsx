@@ -10,7 +10,8 @@ import {
   HiOutlineHome,
   HiOutlineClock,
   HiOutlineChevronLeft,
-  HiOutlineChevronRight
+  HiOutlineChevronRight,
+  HiOutlineCog
 } from 'react-icons/hi';
 import './Sidebar.css';
 
@@ -43,6 +44,7 @@ export default function Sidebar() {
       { label: 'Leads', icon: HiOutlineFlag, path: '/leads' },
       { label: 'Meetings', icon: HiOutlineCalendar, path: '/meetings' },
       { label: 'Reports', icon: HiOutlineDocumentReport, path: '/admin/reports' },
+      { label: 'Settings', icon: HiOutlineCog, path: '/admin/settings/lead-stages' },
     ],
     manager: [
       { label: 'Leads', icon: HiOutlineFlag, path: '/leads' },

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { useGetLeadsQuery, useUpdateLeadStageMutation, type Lead } from '../services/api';
+import { useGetLeadsQuery, useUpdateLeadStageMutation, useGetLeadStagesQuery, type Lead } from '../services/api';
 import {
   HiOutlineSparkles,
   HiOutlineChatAlt2,
@@ -28,20 +28,33 @@ interface StageColumn {
   icon: React.ReactNode;
 }
 
-const stages: StageColumn[] = [
-  { name: 'New', value: 'new', color: '#3b82f6', icon: <HiOutlineSparkles /> },
-  { name: 'In Discussion', value: 'in_discussion', color: '#8b5cf6', icon: <HiOutlineChatAlt2 /> },
-  { name: 'Quoted', value: 'quoted', color: '#f59e0b', icon: <HiOutlineDocumentText /> },
-  { name: 'Won', value: 'won', color: '#10b981', icon: <HiOutlineCheckCircle /> },
-  { name: 'Lost', value: 'lost', color: '#ef4444', icon: <HiOutlineXCircle /> }
-];
-
 export const LeadPipeline: React.FC = () => {
   const navigate = useNavigate();
-  const { data: leadsData, isLoading, error, refetch } = useGetLeadsQuery({ page: 1, limit: 100 });
+  const { data: stagesData = [], isLoading: isStagesLoading } = useGetLeadStagesQuery();
+  const { data: leadsData, isLoading: isLeadsLoading, error, refetch } = useGetLeadsQuery({ page: 1, limit: 100 });
   const [updateLeadStage] = useUpdateLeadStageMutation();
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
+
+  const isLoading = isStagesLoading || isLeadsLoading;
+
+  const getIconForStage = (stageName: string) => {
+    switch (stageName.toLowerCase()) {
+      case 'new': return <HiOutlineSparkles />;
+      case 'in_discussion': return <HiOutlineChatAlt2 />;
+      case 'quoted': return <HiOutlineDocumentText />;
+      case 'won': return <HiOutlineCheckCircle />;
+      case 'lost': return <HiOutlineXCircle />;
+      default: return <HiOutlinePencil />;
+    }
+  };
+
+  const stages: StageColumn[] = stagesData.map(s => ({
+    name: s.name.charAt(0).toUpperCase() + s.name.slice(1).replace('_', ' '), // simple formatting or just use name
+    value: s.name,
+    color: s.color,
+    icon: getIconForStage(s.name)
+  }));
 
   const leads = leadsData?.leads || [];
 

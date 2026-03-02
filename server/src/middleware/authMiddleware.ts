@@ -85,3 +85,11 @@ export const verifyJwt = async (req: Request, res: Response, next: NextFunction)
     res.status(401).json({ success: false, error: 'Unauthorized: Invalid token' });
   }
 };
+
+export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ success: false, error: 'Forbidden: Admin access required' });
+  }
+};

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGetLeadStatsQuery, type LeadStats } from '../services/api';
+import { useGetLeadStatsQuery, useGetLeadStagesQuery, type LeadStats } from '../services/api';
 import {
   HiOutlineExclamationCircle,
   HiOutlinePlus,
@@ -18,9 +18,12 @@ import {
 import '../styles/LeadDashboard.css';
 
 export const LeadDashboard: React.FC = () => {
-  const { data: stats, isLoading: loading, error } = useGetLeadStatsQuery();
+  const { data: stats, isLoading: statsLoading, error } = useGetLeadStatsQuery();
+  const { data: stagesData = [], isLoading: stagesLoading } = useGetLeadStagesQuery();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  const loading = statsLoading || stagesLoading;
 
   if (loading) {
     return (
@@ -76,13 +79,11 @@ export const LeadDashboard: React.FC = () => {
   };
 
   const stageCounts = stats.byStage || {};
-  const funnelStages = [
-    { key: 'new', label: 'New', color: '#3b82f6' },
-    { key: 'in_discussion', label: 'In Discussion', color: '#8b5cf6' },
-    { key: 'quoted', label: 'Quoted', color: '#f59e0b' },
-    { key: 'won', label: 'Won', color: '#10b981' },
-    { key: 'lost', label: 'Lost', color: '#ef4444' },
-  ];
+  const funnelStages = stagesData.map(s => ({
+    key: s.name,
+    label: s.name.charAt(0).toUpperCase() + s.name.slice(1).replace('_', ' '),
+    color: s.color
+  }));
   const maxStageCount = Math.max(
     1,
     ...funnelStages.map((stage) => Number(stageCounts[stage.key]) || 0)
