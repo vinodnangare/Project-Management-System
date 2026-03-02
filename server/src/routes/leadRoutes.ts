@@ -1,9 +1,17 @@
 import { Router } from 'express';
 import { apiRateLimiter } from '../middleware/rateLimitMiddleware.js';
+import { requireAdmin } from '../middleware/authMiddleware.js';
 import * as leadController from '../controllers/leadController.js';
+import * as leadStageController from '../controllers/leadStageController.js';
 const router = Router();
 
 router.use(apiRateLimiter);
+
+// Settings
+router.get('/settings/stages', leadStageController.getLeadStages);
+router.post('/settings/stages', requireAdmin, leadStageController.createLeadStage);
+router.put('/settings/stages/:id', requireAdmin, leadStageController.updateLeadStage);
+router.delete('/settings/stages/:id', requireAdmin, leadStageController.deleteLeadStage);
 
 router.get('/stats', leadController.getLeadStats);
 router.get('/owners', leadController.getAssignableOwners);

@@ -18,6 +18,7 @@ import LeadDashboard from './pages/LeadDashboard';
 import LeadPipeline from './pages/LeadPipeline';
 import LeadList from './pages/LeadList';
 import LeadDetail from './pages/LeadDetail';
+import LeadStagesSettings from './pages/LeadStagesSettings';
 import ProfileModal from './components/ProfileModal';
 import NotificationBell from './components/NotificationBell';
 
@@ -243,8 +244,7 @@ function App() {
             {user?.role === 'admin' && (
               <>
                 <Route path="/admin/analytics" element={<AdminStats />} />
-                <Route path="/admin/reports" element={<Reports />} />
-                <Route path="/leads" element={<LeadDashboard />} />
+                <Route path="/admin/reports" element={<Reports />} />                  <Route path="/admin/settings/lead-stages" element={<LeadStagesSettings />} />                <Route path="/leads" element={<LeadDashboard />} />
                 <Route path="/leads/pipeline" element={<LeadPipeline />} />
                 <Route path="/leads/list" element={<LeadList />} />
                 <Route path="/leads/:id" element={<LeadDetail />} />

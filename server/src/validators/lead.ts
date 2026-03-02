@@ -1,14 +1,6 @@
 import { z } from 'zod';
 import { LeadStage, LeadSource, LeadPriority } from '../types/index.js';
 
-const StageEnum = z.enum([
-  LeadStage.NEW,
-  LeadStage.IN_DISCUSSION,
-  LeadStage.QUOTED,
-  LeadStage.WON,
-  LeadStage.LOST
-]);
-
 const SourceEnum = z.enum([
   LeadSource.WEB,
   LeadSource.REFERRAL,
@@ -45,7 +37,7 @@ export const createLeadSchema = z.object({
     .max(65535, 'Notes must be less than 65535 characters')
     .nullable()
     .optional(),
-  stage: StageEnum.default(LeadStage.NEW),
+  stage: z.string().default(LeadStage.NEW),
   priority: PriorityEnum.default(LeadPriority.MEDIUM),
   source: SourceEnum.default(LeadSource.MANUAL),
   owner_id: z.string().nullable().optional()
@@ -77,14 +69,14 @@ export const updateLeadSchema = z.object({
     .max(65535, 'Notes must be less than 65535 characters')
     .nullable()
     .optional(),
-  stage: StageEnum.optional(),
+  stage: z.string().optional(),
   priority: PriorityEnum.optional(),
   source: SourceEnum.optional(),
   owner_id: z.string().nullable().optional()
 });
 
 export const updateLeadStageSchema = z.object({
-  stage: StageEnum
+  stage: z.string().min(1)
 });
 
 export type CreateLeadRequest = z.infer<typeof createLeadSchema>;

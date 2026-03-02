@@ -6,7 +6,7 @@ export interface ILead extends Document {
   contact_name: string;
   email: string;
   phone?: string | null;
-  stage: 'new' | 'in_discussion' | 'quoted' | 'won' | 'lost';
+  stage: string;
   priority: 'high' | 'medium' | 'low';
   source: 'web' | 'referral' | 'campaign' | 'manual';
   owner_id?: mongoose.Types.ObjectId | null;
@@ -45,7 +45,6 @@ const leadSchema = new Schema<ILead>(
     },
     stage: {
       type: String,
-      enum: ['new', 'in_discussion', 'quoted', 'won', 'lost'],
       default: 'new',
       index: true
     },

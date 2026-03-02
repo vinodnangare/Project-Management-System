@@ -176,8 +176,8 @@ export const updateLead = async (
 
 export const updateLeadStage = async (
   leadId: string,
-  stage: LeadStage
-): Promise<LeadType> => {
+  stage: string
+): Promise<any> => {
   const updatedLead = await Lead.findByIdAndUpdate(
     leadId,
     { $set: { stage } },
