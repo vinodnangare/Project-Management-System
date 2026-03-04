@@ -4,12 +4,14 @@ import 'dotenv/config'; // Load environment variables FIRST, before importing an
 console.log('MongoDB URI:', process.env.MONGO_URI ? 'configured' : 'using default');
 
 import express, { Express } from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { connectDatabase } from './config/database.js';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
+import { initSocketServer } from './services/socketService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +27,7 @@ import meetingRoutes from './routes/meetingRoutes.js';
 import { initMeetingScheduler } from './services/meetingSchedulerService.js';
 
 const app: Express = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
@@ -210,12 +213,16 @@ const startServer = async () => {
     // Initialize recurring meeting scheduler (cron job)
     initMeetingScheduler();
 
-    app.listen(PORT, () => {
+    // Attach Socket.IO to the HTTP server
+    initSocketServer(httpServer);
+
+    httpServer.listen(PORT, () => {
       console.log(`
 ╔═══════════════════════════════════════════════╗
 ║  Task Management System Backend               ║
 ║  Server running on http://localhost:${PORT}        ║
 ║  API: http://localhost:${PORT}/api              ║
+║  Socket.IO: ws://localhost:${PORT}              ║
 ║  Database: MongoDB                            ║
 ║  Recurring Meeting Scheduler: Active          ║
 ╚═══════════════════════════════════════════════╝
