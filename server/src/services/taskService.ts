@@ -281,17 +281,7 @@ export const createTask = async (data: CreateTaskRequest): Promise<TaskType> => 
     performed_by: data.created_by
   }).catch(console.error);
 
-  // Send notification to assigned user when task is created with an assignee
-  if (data.assigned_to) {
-    try {
-      await NotificationService.createNotification({
-        user_id: data.assigned_to,
-        message: `You have been assigned a new task: "${task.title}"`
-      });
-    } catch (error) {
-      console.error('Failed to send task assignment notification:', error);
-    }
-  }
+  // Notification is sent via addAssignee, not here, to avoid duplicates
 
   return formatTaskResponse(task);
 };

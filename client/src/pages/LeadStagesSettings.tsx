@@ -34,7 +34,7 @@ const LeadStagesSettings: React.FC = () => {
   const handleSaveEdit = async () => {
     if (!editingId) return;
     try {
-      await updateStage({ id: editingId, data: editForm }).unwrap();
+      await updateStage({ id: editingId, updates: editForm }).unwrap();
       toast.success('Stage updated successfully');
       setEditingId(null);
     } catch (err: any) {
@@ -43,7 +43,7 @@ const LeadStagesSettings: React.FC = () => {
   };
 
   const handleDelete = async (stage: LeadStageDef) => {
-    if (stage.is_default) {
+    if (stage.isDefault) {
       toast.error('Cannot delete default stages');
       return;
     }
@@ -154,7 +154,7 @@ const LeadStagesSettings: React.FC = () => {
                             <td>
                               <div className="lead-stages-name">
                                 <span>{stage.name}</span>
-                                {stage.is_default && (
+                                {stage.isDefault && (
                                   <span className="lead-stages-pill">Default</span>
                                 )}
                               </div>
@@ -170,7 +170,7 @@ const LeadStagesSettings: React.FC = () => {
                                 <button onClick={() => handleEditClick(stage)} className="lead-stages-action-btn primary">
                                   <HiPencil className="lead-stages-action-icon" />
                                 </button>
-                                {!stage.is_default && (
+                                {!stage.isDefault && (
                                   <button onClick={() => handleDelete(stage)} className="lead-stages-action-btn danger">
                                     <HiTrash className="lead-stages-action-icon" />
                                   </button>
