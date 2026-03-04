@@ -10,6 +10,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { connectDatabase } from './config/database.js';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
+import { createServer } from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -210,7 +211,10 @@ const startServer = async () => {
     // Initialize recurring meeting scheduler (cron job)
     initMeetingScheduler();
 
-    app.listen(PORT, () => {
+    // Initialize Socket.IO server
+    const httpServer = createServer(app);
+    import('./services/socketService.js').then(m => m.initSocketServer(httpServer));
+    httpServer.listen(PORT, () => {
       console.log(`
 ╔═══════════════════════════════════════════════╗
 ║  Task Management System Backend               ║

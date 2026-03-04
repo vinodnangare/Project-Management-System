@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Notification, INotification } from '../models/index.js';
 import type { NotificationModel } from '../models/Notification.js';
 import type { CreateNotificationPayload } from '../types/notification.js';
+import { emitNotificationToUser } from './socketService.js';
 
 export class NotificationService {
   /**
@@ -17,13 +18,16 @@ export class NotificationService {
         is_read: false
       });
 
-      return {
+      const notificationObj = {
         id: notification._id.toString(),
         user_id,
         message,
         is_read: false,
         created_at: notification.created_at.toISOString()
       };
+      // Emit real-time notification
+      emitNotificationToUser(user_id, notificationObj);
+      return notificationObj;
     } catch (error) {
       console.error('Error creating notification:', error);
       return null;

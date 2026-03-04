@@ -4,6 +4,7 @@ import { useAppDispatch } from '../hooks/redux';
 import { setCredentials } from '../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineExclamationCircle } from 'react-icons/hi';
+import { reconnectSocket } from '../utils/socket';
 import '../styles/Auth.css';
 import type { LoginProps } from '../types/components/LoginProps';
 
@@ -41,7 +42,8 @@ export default function Login({ onSwitchToRegister }: LoginProps) {
       const result = await login({ email, password }).unwrap();
       console.log('Login successful:', result);
       dispatch(setCredentials(result));
-    
+      // Reconnect socket with new auth token
+      reconnectSocket();
     } catch (err: any) {
       setLocalError(err?.data?.message || 'Login failed');
     }
