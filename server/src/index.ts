@@ -11,7 +11,6 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { connectDatabase } from './config/database.js';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
-import { createServer } from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,7 +26,6 @@ import meetingRoutes from './routes/meetingRoutes.js';
 import { initMeetingScheduler } from './services/meetingSchedulerService.js';
 
 const app: Express = express();
-const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
