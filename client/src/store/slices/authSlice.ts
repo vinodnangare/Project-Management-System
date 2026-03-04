@@ -15,9 +15,7 @@ export interface User {
 export interface AuthState {
   user: User | null;
   token: string | null;
-  accessToken: string | null;
   refreshToken: string | null;
-  expiresIn: number | null;
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
@@ -33,24 +31,16 @@ const loadUserFromStorage = (): User | null => {
 };
 
 const savedUser = loadUserFromStorage();
-const savedAccessToken = (() => {
+const savedToken = (() => {
   try {
-    return localStorage.getItem('accessToken');
+    return localStorage.getItem('access token');
   } catch {
     return null;
   }
 })();
 const savedRefreshToken = (() => {
   try {
-    return localStorage.getItem('refreshToken');
-  } catch {
-    return null;
-  }
-})();
-// Legacy token support for migration
-const legacyToken = (() => {
-  try {
-    return localStorage.getItem('token');
+    return localStorage.getItem('refreshtoken');
   } catch {
     return null;
   }
@@ -58,13 +48,11 @@ const legacyToken = (() => {
 
 const initialState: AuthState = {
   user: savedUser,
-  token: savedAccessToken || legacyToken,
-  accessToken: savedAccessToken || legacyToken,
+  token: savedToken,
   refreshToken: savedRefreshToken,
-  expiresIn: null,
   loading: false,
   error: null,
-  isAuthenticated: !!savedUser && !!(savedAccessToken || legacyToken)
+  isAuthenticated: !!savedUser && !!savedToken
 };
 
 
@@ -72,59 +60,37 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials: (state, action: PayloadAction<{ 
-      user: User; 
-      accessToken: string;
-      refreshToken: string;
-      expiresIn?: number;
-      // Legacy support
-      token?: string;
-    }>) => {
-      const { user, accessToken, refreshToken, expiresIn, token } = action.payload;
-      const actualAccessToken = accessToken || token || '';
-      
-      state.user = user;
-      state.token = actualAccessToken;
-      state.accessToken = actualAccessToken;
-      state.refreshToken = refreshToken || null;
-      state.expiresIn = expiresIn || null;
+    setCredentials: (state, action: PayloadAction<{ user: User; token: string; refreshToken?: string }>) => {
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.refreshToken = action.payload.refreshToken || null;
       state.isAuthenticated = true;
       state.error = null;
-      
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('accessToken', actualAccessToken);
-      if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('user', JSON.stringify(action.payload.user));
+      localStorage.setItem('access token', action.payload.token);
+      if (action.payload.refreshToken) {
+        localStorage.setItem('refreshtoken', action.payload.refreshToken);
       }
-      // Remove legacy token if exists
-      localStorage.removeItem('token');
     },
-    updateTokens: (state, action: PayloadAction<{
-      accessToken: string;
-      refreshToken: string;
-      expiresIn?: number;
-    }>) => {
-      const { accessToken, refreshToken, expiresIn } = action.payload;
-      state.token = accessToken;
-      state.accessToken = accessToken;
-      state.refreshToken = refreshToken;
-      state.expiresIn = expiresIn || null;
-      
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+    updateAccessToken: (state, action: PayloadAction<string>) => {
+      state.token = action.payload;
+      localStorage.setItem('access token', action.payload);
+    },
+    updateTokens: (state, action: PayloadAction<{ accessToken: string; refreshToken: string; expiresIn?: number }>) => {
+      state.token = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      localStorage.setItem('access token', action.payload.accessToken);
+      localStorage.setItem('refreshtoken', action.payload.refreshToken);
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
-      state.accessToken = null;
       state.refreshToken = null;
-      state.expiresIn = null;
       state.isAuthenticated = false;
       state.error = null;
       localStorage.removeItem('user');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('token'); // Remove legacy token
+      localStorage.removeItem('access token');
+      localStorage.removeItem('refreshtoken');
     },
     clearError: (state) => {
       state.error = null;
@@ -139,5 +105,5 @@ const authSlice = createSlice({
   extraReducers: () => {}
 });
 
-export const { setCredentials, updateTokens, logout, clearError, updateUser } = authSlice.actions;
+export const { setCredentials, updateAccessToken, updateTokens, logout, clearError, updateUser } = authSlice.actions;
 export default authSlice.reducer;

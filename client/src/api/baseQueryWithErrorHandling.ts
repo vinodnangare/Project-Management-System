@@ -1,32 +1,29 @@
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { RootState } from '../store';
+import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
+import type { AppDispatch } from '../store';
 import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Store dispatch reference for logout handling
-let storeDispatch: any = null;
-let storeGetState: (() => RootState) | null = null;
+let storeDispatch: AppDispatch | null = null;
 
 // Flag to prevent multiple refresh attempts
 let isRefreshing = false;
-let refreshPromise: Promise<any> | null = null;
 
-export const setStoreDispatchForBaseQuery = (dispatch: any, getState?: () => RootState) => {
+export const setStoreDispatchForBaseQuery = (dispatch: AppDispatch) => {
   storeDispatch = dispatch;
-  if (getState) {
-    storeGetState = getState;
-  }
 };
 
 /**
- * Refresh access token using refresh token
+ * Attempt to refresh the access token using the refresh token
+ * Returns true if successful, false otherwise
  */
-const refreshAccessToken = async (): Promise<{ accessToken: string; refreshToken: string; expiresIn: number } | null> => {
-  const refreshToken = localStorage.getItem('refreshToken');
+const attemptTokenRefresh = async (): Promise<boolean> => {
+  const refreshToken = localStorage.getItem('refreshtoken');
   
   if (!refreshToken) {
-    return null;
+    return false;
   }
 
   try {
@@ -39,41 +36,41 @@ const refreshAccessToken = async (): Promise<{ accessToken: string; refreshToken
     });
 
     if (!response.ok) {
-      return null;
+      return false;
     }
 
     const data = await response.json();
     
     if (data.success && data.data) {
-      return {
-        accessToken: data.data.accessToken,
-        refreshToken: data.data.refreshToken,
-        expiresIn: data.data.expiresIn,
-      };
+      // Update tokens in localStorage
+      localStorage.setItem('access token', data.data.accessToken);
+      if (data.data.refreshToken) {
+        localStorage.setItem('refreshtoken', data.data.refreshToken);
+      }
+      return true;
     }
     
-    return null;
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    return null;
+    return false;
+  } catch {
+    return false;
   }
 };
 
 /**
- * Handle logout - clear state and redirect
+ * Handle logout - clear tokens and redirect to login
  */
-const handleLogout = async (message: string = 'Session expired. Please login again.') => {
+const handleLogout = async (showToast: boolean = true) => {
   // Clear auth state from localStorage
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('access token');
+  localStorage.removeItem('refreshtoken');
   localStorage.removeItem('user');
-  localStorage.removeItem('token'); // Legacy cleanup
 
-  // Show error toast
-  toast.error(message, {
-    duration: 3000,
-    position: 'top-right',
-  });
+  if (showToast) {
+    toast.error('Session expired. Please login again.', {
+      duration: 3000,
+      position: 'top-right',
+    });
+  }
 
   // Dispatch logout action
   if (storeDispatch) {
@@ -90,70 +87,60 @@ const handleLogout = async (message: string = 'Session expired. Please login aga
 };
 
 /**
- * Base query with automatic token expiration handling and refresh
- * Detects 401 errors, attempts token refresh, falls back to logout
+ * Base query with automatic token expiration handling and refresh token support
+ * - Detects 401 errors
+ * - Attempts to refresh access token using refresh token
+ * - If refresh succeeds, retries the original request
+ * - If refresh fails, logs out the user
  */
-export const createBaseQueryWithErrorHandling = () => {
-  return async (args: any, api: any, extraOptions: any) => {
-    const baseQuery = fetchBaseQuery({
-      baseUrl: API_BASE_URL,
-      prepareHeaders: (headers: any, { getState }: any) => {
-        const state = getState() as RootState;
-        const token = state.auth.accessToken || state.auth.token || localStorage.getItem('accessToken') || localStorage.getItem('token');
-        if (token) {
-          headers.set('Authorization', `Bearer ${token}`);
-        }
-        return headers;
-      },
-    });
+export const createBaseQueryWithErrorHandling = (): BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> => {
+  const baseQuery = fetchBaseQuery({
+    baseUrl: API_BASE_URL,
+    prepareHeaders: (headers) => {
+      // Always get token from localStorage
+      const token = localStorage.getItem('access token');
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+      return headers;
+    },
+  });
 
+  return async (args, api, extraOptions) => {
     let result = await baseQuery(args, api, extraOptions);
 
-    // Handle 401 Unauthorized (token expired)
+    // Handle 401 Unauthorized (token expired or invalid)
     if (result.error?.status === 401) {
-      const errorData = result.error.data as any;
-      const errorCode = errorData?.code;
-      
-      // Check if token is expired (not invalidated or other auth errors)
-      if (errorCode === 'TOKEN_EXPIRED' || errorData?.error === 'Token expired') {
-        // Prevent multiple simultaneous refresh attempts
-        if (!isRefreshing) {
-          isRefreshing = true;
-          refreshPromise = refreshAccessToken();
-        }
-
-        const newTokens = await refreshPromise;
-        isRefreshing = false;
-        refreshPromise = null;
-
-        if (newTokens) {
-          // Update tokens in localStorage
-          localStorage.setItem('accessToken', newTokens.accessToken);
-          localStorage.setItem('refreshToken', newTokens.refreshToken);
-
-          // Update Redux state
-          if (storeDispatch) {
-            const { updateTokens } = await import('../store/slices/authSlice');
-            storeDispatch(updateTokens(newTokens));
-          }
-
-          // Retry the original request with new token
-          result = await baseQuery(args, api, extraOptions);
+      // Prevent multiple simultaneous refresh attempts
+      if (!isRefreshing) {
+        isRefreshing = true;
+        
+        try {
+          const refreshSuccess = await attemptTokenRefresh();
           
-          // If still failing after refresh, logout
-          if (result.error?.status === 401) {
-            await handleLogout('Session expired. Please login again.');
+          if (refreshSuccess) {
+            // Retry the original request with the new token
+            result = await baseQuery(args, api, extraOptions);
+          } else {
+            // Refresh failed - logout the user
+            await handleLogout();
           }
-        } else {
-          // Refresh failed, logout
-          await handleLogout('Session expired. Please login again.');
+        } finally {
+          isRefreshing = false;
         }
-      } else if (errorCode === 'TOKEN_INVALIDATED') {
-        // Token was explicitly invalidated (logout from another device, etc.)
-        await handleLogout('Your session was invalidated. Please login again.');
       } else {
-        // Other auth errors - just logout
-        await handleLogout('Authentication failed. Please login again.');
+        // Another refresh is in progress, wait a bit and retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        result = await baseQuery(args, api, extraOptions);
+        
+        // If still 401 after waiting for refresh, logout
+        if (result.error?.status === 401) {
+          await handleLogout();
+        }
       }
     }
 
