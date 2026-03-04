@@ -66,6 +66,17 @@ export const createMeetingSchema = z.object({
     .string()
     .max(5000, 'Notes must be less than 5000 characters')
     .nullable()
+    .optional(),
+  // optional uploaded file fields (base64 + name)
+  notesFileName: z
+    .string()
+    .max(255, 'File name must be less than 255 characters')
+    .nullable()
+    .optional(),
+  notesFileBase64: z
+    .string()
+    .max(10_000_000, 'File data too large') // limit ~10MB
+    .nullable()
     .optional()
 }).refine((data) => {
   // Validate that startTime is before endTime
@@ -91,6 +102,15 @@ export const createMeetingSchema = z.object({
 }, {
   message: 'Location is required for offline meetings',
   path: ['location']
+}).refine((data) => {
+  // notes file name and base64 must come together
+  if ((data.notesFileBase64 && !data.notesFileName) || (!data.notesFileBase64 && data.notesFileName)) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Both notesFileName and notesFileBase64 must be provided together',
+  path: ['notesFileName', 'notesFileBase64']
 });
 
 export const updateMeetingSchema = z.object({
@@ -141,6 +161,19 @@ export const updateMeetingSchema = z.object({
     .string()
     .max(5000, 'Notes must be less than 5000 characters')
     .nullable()
+    .optional(),
+  notesFileName: z
+    .string()
+    .max(255, 'File name must be less than 255 characters')
+    .nullable()
+    .optional(),
+  notesFileBase64: z
+    .string()
+    .max(10_000_000, 'File data too large')
+    .nullable()
+    .optional(),
+  replaceNotes: z
+    .boolean()
     .optional(),
   userNote: z
     .string()

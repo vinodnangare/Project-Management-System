@@ -25,6 +25,8 @@ router.get('/client/:clientId', meetingController.getMeetingsByClient);
 // CRUD operations
 router.get('/', meetingController.getAllMeetings);
 router.get('/:id', meetingController.getMeetingById);
+// serve attached notes file (if any)
+router.get('/:id/notes-file', meetingController.getMeetingNotesFile);
 router.post('/', meetingController.createMeeting);
 router.patch('/:id', meetingController.updateMeeting);
 router.patch('/:id/status', meetingController.updateMeetingStatus);

@@ -23,6 +23,8 @@ export interface IMeeting extends Document {
   recurrence: 'once' | 'daily' | 'weekly' | 'monthly';
   recurringTemplateId?: mongoose.Types.ObjectId | null;
   notes?: string | null;
+  notesFileName?: string | null;
+  notesFilePath?: string | null;
   userNotes: IUserNote[];
   is_deleted: boolean;
   created_at: Date;
@@ -98,6 +100,15 @@ const meetingSchema = new Schema<IMeeting>(
       type: String,
       default: null,
       maxlength: 5000
+    },
+    notesFileName: {
+      type: String,
+      default: null,
+      maxlength: 255
+    },
+    notesFilePath: {
+      type: String,
+      default: null
     },
     recurrence: {
       type: String,
