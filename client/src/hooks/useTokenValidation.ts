@@ -15,7 +15,7 @@ export const useTokenValidation = () => {
    * Attempt to refresh the access token using the refresh token
    */
   const refreshAccessToken = useCallback(async (): Promise<boolean> => {
-    const refreshToken = localStorage.getItem('refreshToken') || storeRefreshToken;
+    const refreshToken = localStorage.getItem('refreshtoken') || storeRefreshToken;
     
     if (!refreshToken) {
       return false;
@@ -24,7 +24,7 @@ export const useTokenValidation = () => {
     if (isRefreshing.current) {
       // Wait for ongoing refresh to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
-      return !!localStorage.getItem('accessToken');
+      return !!localStorage.getItem('access token');
     }
 
     isRefreshing.current = true;
@@ -72,8 +72,8 @@ export const useTokenValidation = () => {
   const validateAndRefreshTokens = useCallback(async () => {
     if (!isAuthenticated) return;
 
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
+    const accessToken = localStorage.getItem('access token');
+    const refreshToken = localStorage.getItem('refreshtoken');
     const user = localStorage.getItem('user');
 
     // If access token is missing but refresh token exists, try to refresh
@@ -114,13 +114,13 @@ export const useTokenValidation = () => {
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       // Handle access token removal
-      if (event.key === 'accessToken' && !event.newValue) {
+      if (event.key === 'access token' && !event.newValue) {
         console.log('Access token removed from storage');
         validateAndRefreshTokens();
       }
       
       // Handle refresh token removal - force logout
-      if (event.key === 'refreshToken' && !event.newValue) {
+      if (event.key === 'refreshtoken' && !event.newValue) {
         console.log('Refresh token removed from storage');
         if (isAuthenticated) {
           dispatch(logout());
@@ -150,21 +150,20 @@ export const useTokenValidation = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, [validateAndRefreshTokens]);
 
-  // Periodic check for token state (for same-tab changes like DevTools)
+  // Periodic check for token state
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // Check every 2 seconds for localStorage changes made in the same tab
     const intervalId = setInterval(() => {
-      const accessToken = localStorage.getItem('accessToken');
-      const refreshToken = localStorage.getItem('refreshToken');
+      const accessToken = localStorage.getItem('access token');
+      const refreshToken = localStorage.getItem('refreshtoken');
       
-      // If access token is missing, validate and potentially refresh
+      
       if (!accessToken) {
         validateAndRefreshTokens();
       }
       
-      // If both tokens are missing, logout immediately
+      
       if (!accessToken && !refreshToken) {
         dispatch(logout());
       }
@@ -176,6 +175,7 @@ export const useTokenValidation = () => {
   // Initial validation on mount
   useEffect(() => {
     validateAndRefreshTokens();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

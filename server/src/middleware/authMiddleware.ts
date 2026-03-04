@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { isTokenBlacklisted } from '../services/tokenService.js';
 
-// Access TokenExpiredError from the default export
+// Access TokenExpiredError from the jwt default export for ESM compatibility
 const { TokenExpiredError } = jwt;
 
 declare global {
@@ -86,10 +86,20 @@ export const verifyJwt = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
+/**
+ * Middleware to require admin role
+ * Must be used after verifyJwt middleware
+ */
 export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403).json({ success: false, error: 'Forbidden: Admin access required' });
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Unauthorized: Not authenticated' });
+    return;
   }
+
+  if (req.user.role !== 'admin') {
+    res.status(403).json({ success: false, error: 'Forbidden: Admin access required' });
+    return;
+  }
+
+  next();
 };

@@ -1,6 +1,5 @@
 // ...existing code...
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { RootState } from '../store';
+import { createApi } from '@reduxjs/toolkit/query/react';
 import { createBaseQueryWithErrorHandling, setStoreDispatchForBaseQuery } from '../api/baseQueryWithErrorHandling';
 
 // Re-export for convenience
@@ -77,14 +76,6 @@ export interface Subtask {
   created_at: string;
 }
 
-export interface LeadStageDef {
-  _id: string;
-  name: string;
-  sequence: number;
-  color: string;
-  is_default: boolean;
-}
-
 export interface LeadStats {
   totalLeads: number;
   total?: number;
@@ -121,6 +112,16 @@ export interface Lead {
   notes?: string;
   created_at: string;
   updated_at?: string;
+}
+
+export interface LeadStageDef {
+  _id: string;
+  name: string;
+  sequence: number;
+  color: string;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Activity {
@@ -181,7 +182,7 @@ const baseQueryWithErrorHandling = createBaseQueryWithErrorHandling();
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithErrorHandling,
-  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc', 'Notification', 'Lead', 'LeadStage'],
+  tagTypes: ['Task', 'Comment', 'Activity', 'Subtask', 'TimeLog', 'Stats', 'User', 'Profile', 'Doc', 'Notification'],
   endpoints: (builder) => ({
     // Notifications
     getNotifications: builder.query<
@@ -206,48 +207,32 @@ export const api = createApi({
       invalidatesTags: ['Notification'],
     }),
     // Auth Endpoints
-    login: builder.mutation<{ user: User; accessToken: string; refreshToken: string; expiresIn: number }, { email: string; password: string }>({
+    login: builder.mutation<{ user: User; token: string; refreshToken: string }, { email: string; password: string }>({
       query: (credentials) => ({
         url: '/auth/login',
         method: 'POST',
         body: credentials,
       }),
-      transformResponse: (response: { success: boolean; data: { user: User; accessToken: string; refreshToken: string; expiresIn: number } }) => response.data,
+      transformResponse: (response: { success: boolean; data: { user: User; accessToken: string; refreshToken: string; expiresIn: number } }) => ({
+        user: response.data.user,
+        token: response.data.accessToken,
+        refreshToken: response.data.refreshToken
+      }),
       invalidatesTags: ['Task', 'TimeLog', 'Comment', 'Activity', 'Stats', 'Profile'],
     }),
     
-    register: builder.mutation<{ user: User; accessToken: string; refreshToken: string; expiresIn: number }, { email: string; password: string; password_confirm: string; full_name: string; role?: 'manager' | 'employee' }>({
+    register: builder.mutation<{ user: User; token: string; refreshToken: string }, { email: string; password: string; password_confirm: string; full_name: string; role?: 'manager' | 'employee' }>({
       query: (data) => ({
         url: '/auth/register',
         method: 'POST',
         body: data,
       }),
-      transformResponse: (response: { success: boolean; data: { user: User; accessToken: string; refreshToken: string; expiresIn: number } }) => response.data,
+      transformResponse: (response: { success: boolean; data: { user: User; accessToken: string; refreshToken: string; expiresIn: number } }) => ({
+        user: response.data.user,
+        token: response.data.accessToken,
+        refreshToken: response.data.refreshToken
+      }),
       invalidatesTags: ['Task', 'TimeLog', 'Comment', 'Activity', 'Stats', 'Profile'],
-    }),
-
-    refreshToken: builder.mutation<{ accessToken: string; refreshToken: string; expiresIn: number }, { refreshToken: string }>({
-      query: (data) => ({
-        url: '/auth/refresh',
-        method: 'POST',
-        body: data,
-      }),
-      transformResponse: (response: { success: boolean; data: { accessToken: string; refreshToken: string; expiresIn: number } }) => response.data,
-    }),
-
-    logoutUser: builder.mutation<void, { refreshToken: string }>({
-      query: (data) => ({
-        url: '/auth/logout',
-        method: 'POST',
-        body: data,
-      }),
-    }),
-
-    logoutAllDevices: builder.mutation<void, void>({
-      query: () => ({
-        url: '/auth/logout-all',
-        method: 'POST',
-      }),
     }),
 
     getProfile: builder.query<User, undefined>({
@@ -275,7 +260,7 @@ export const api = createApi({
         method: 'POST',
         body: formData,
         prepareHeaders: (headers: Headers) => {
-          const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+          const token = localStorage.getItem('access token');
           if (token) {
             headers.set('Authorization', `Bearer ${token}`);
           }
@@ -294,6 +279,14 @@ export const api = createApi({
         method: 'DELETE',
       }),
       invalidatesTags: ['Stats'],
+    }),
+
+    logoutUser: builder.mutation<void, { refreshToken: string }>({
+      query: ({ refreshToken }) => ({
+        url: '/auth/logout',
+        method: 'POST',
+        body: { refreshToken },
+      }),
     }),
 
     // Task Endpoints
@@ -572,37 +565,42 @@ export const api = createApi({
     getLeadStats: builder.query<LeadStats, void>({
       query: () => '/leads/stats',
       transformResponse: (response: { success: boolean; data: LeadStats }) => response.data,
-      providesTags: ['Stats', 'Lead'],
+      providesTags: ['Stats'],
     }),
 
-    // Lead Stages
+    // Lead Stages (settings)
     getLeadStages: builder.query<LeadStageDef[], void>({
       query: () => '/leads/settings/stages',
       transformResponse: (response: { success: boolean; data: LeadStageDef[] }) => response.data,
-      providesTags: ['LeadStage'],
+      providesTags: ['Task'],
     }),
-    createLeadStage: builder.mutation<LeadStageDef, Partial<LeadStageDef>>({
-      query: (body) => ({
+
+    createLeadStage: builder.mutation<LeadStageDef, { name: string; sequence: number; color: string }>({
+      query: (data) => ({
         url: '/leads/settings/stages',
         method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['LeadStage'],
-    }),
-    updateLeadStageDef: builder.mutation<LeadStageDef, { id: string; data: Partial<LeadStageDef> }>({
-      query: ({ id, data }) => ({
-        url: `/leads/settings/stages/${id}`,
-        method: 'PUT',
         body: data,
       }),
-      invalidatesTags: ['LeadStage'],
+      transformResponse: (response: { success: boolean; data: LeadStageDef }) => response.data,
+      invalidatesTags: ['Task'],
     }),
-    deleteLeadStageDef: builder.mutation<{ success: boolean }, string>({
+
+    updateLeadStageDef: builder.mutation<LeadStageDef, { id: string; updates: Partial<LeadStageDef> }>({
+      query: ({ id, updates }) => ({
+        url: `/leads/settings/stages/${id}`,
+        method: 'PUT',
+        body: updates,
+      }),
+      transformResponse: (response: { success: boolean; data: LeadStageDef }) => response.data,
+      invalidatesTags: ['Task'],
+    }),
+
+    deleteLeadStageDef: builder.mutation<void, string>({
       query: (id) => ({
         url: `/leads/settings/stages/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['LeadStage'],
+      invalidatesTags: ['Task'],
     }),
 
     getLeads: builder.query<{ leads: Lead[]; meta: any }, { page?: number; limit?: number; stage?: string; source?: string; owner?: string }>({
@@ -679,13 +677,11 @@ export const {
   // Auth
   useLoginMutation,
   useRegisterMutation,
-  useRefreshTokenMutation,
-  useLogoutUserMutation,
-  useLogoutAllDevicesMutation,
   useGetProfileQuery,
   useUpdateProfileMutation,
   useUploadProfileImageMutation,
   useDeleteEmployeeMutation,
+  useLogoutUserMutation,
   
   // Tasks
   useGetTasksQuery,

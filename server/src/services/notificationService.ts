@@ -6,7 +6,8 @@ import { emitNotificationToUser } from './socketService.js';
 
 export class NotificationService {
   /**
-   * Create a new notification
+   * Create a new notification and push it to the user via Socket.IO
+   * so the frontend no longer needs to poll the REST endpoint.
    */
   static async createNotification(payload: CreateNotificationPayload): Promise<NotificationModel | null> {
     const { user_id, message } = payload;
