@@ -2,10 +2,12 @@ import mongoose from 'mongoose';
 import { Notification, INotification } from '../models/index.js';
 import type { NotificationModel } from '../models/Notification.js';
 import type { CreateNotificationPayload } from '../types/notification.js';
+import { emitNotificationToUser } from './socketService.js';
 
 export class NotificationService {
   /**
-   * Create a new notification
+   * Create a new notification and push it to the user via Socket.IO
+   * so the frontend no longer needs to poll the REST endpoint.
    */
   static async createNotification(payload: CreateNotificationPayload): Promise<NotificationModel | null> {
     const { user_id, message } = payload;
@@ -17,13 +19,20 @@ export class NotificationService {
         is_read: false
       });
 
-      return {
+      const result: NotificationModel = {
         id: notification._id.toString(),
         user_id,
         message,
         is_read: false,
         created_at: notification.created_at.toISOString()
       };
+
+      // ── Real-time push ──────────────────────────────────────────────────
+      // Emit to the user's private Socket.IO room immediately after saving.
+      // The frontend listens on the "notification:new" event.
+      emitNotificationToUser(user_id, result);
+
+      return result;
     } catch (error) {
       console.error('Error creating notification:', error);
       return null;
