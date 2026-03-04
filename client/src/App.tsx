@@ -21,6 +21,7 @@ import LeadDetail from './pages/LeadDetail';
 import LeadStagesSettings from './pages/LeadStagesSettings';
 import ProfileModal from './components/ProfileModal';
 import NotificationBell from './components/NotificationBell';
+import { disconnectSocket } from './utils/socket';
 
 import MeetingsListPage from './modules/meetings/pages/MeetingsListPage';
 import MeetingDetailPage from './modules/meetings/pages/MeetingDetailPage';
@@ -168,6 +169,7 @@ function App() {
       }
     }
     dispatch(logout());
+    disconnectSocket();
     navigate('/login', { replace: true });
   };
 

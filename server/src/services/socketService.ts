@@ -78,7 +78,7 @@ export function initSocketServer(httpServer: HttpServer): SocketIOServer {
     socket.join(userRoom);
 
     console.log(
-      `[Socket.IO] ✅  User connected — userId: ${userId}  socketId: ${socket.id}`
+      `[Socket.IO]  User connected — userId: ${userId}  socketId: ${socket.id}`
     );
 
     // ── Client events ──────────────────────────────────────────────────────
@@ -108,10 +108,31 @@ export function initSocketServer(httpServer: HttpServer): SocketIOServer {
       if (typeof ack === 'function') ack('pong');
     });
 
+    // Client requests all notifications
+    socket.on('get_notifications', async () => {
+      try {
+        const { notifications, unread_count } = await import('../services/notificationService.js').then(m => m.NotificationService.getUserNotifications(userId));
+        socket.emit('notifications', { data: notifications, unread_count });
+      } catch (err) {
+        socket.emit('notifications', { data: [], unread_count: 0 });
+      }
+    });
+
+    // Mark notification as read (from frontend)
+    socket.on('mark_notification_as_read', async (notificationId: string) => {
+      try {
+        await import('../services/notificationService.js').then(m => m.NotificationService.markAsRead(notificationId, userId));
+        const { notifications, unread_count } = await import('../services/notificationService.js').then(m => m.NotificationService.getUserNotifications(userId));
+        socket.emit('notifications', { data: notifications, unread_count });
+      } catch (err) {
+        // Optionally emit error
+      }
+    });
+
     // ── Disconnect ────────────────────────────────────────────────────────
     socket.on('disconnect', (reason) => {
       console.log(
-        `[Socket.IO] ❌  User disconnected — userId: ${userId}  reason: ${reason}`
+        `[Socket.IO]   User disconnected — userId: ${userId}  reason: ${reason}`
       );
     });
   });
@@ -155,7 +176,7 @@ export function emitNotificationToUser(
   }
   const room = `user:${userId}`;
   io.to(room).emit('notification:new', notification);
-  console.log(`[Socket.IO] 📨  Notification emitted to room "${room}"`);
+  console.log(`[Socket.IO]   Notification emitted to room "${room}"`);
 }
 
 /**
@@ -174,5 +195,5 @@ export function broadcastNotification(notification: {
     return;
   }
   io.emit('notification:broadcast', notification);
-  console.log('[Socket.IO] 📢  Broadcast notification emitted');
+  console.log('[Socket.IO]   Broadcast notification emitted');
 }

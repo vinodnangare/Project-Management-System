@@ -19,20 +19,16 @@ export class NotificationService {
         is_read: false
       });
 
-      const result: NotificationModel = {
+      const notificationObj = {
         id: notification._id.toString(),
         user_id,
         message,
         is_read: false,
         created_at: notification.created_at.toISOString()
       };
-
-      // ── Real-time push ──────────────────────────────────────────────────
-      // Emit to the user's private Socket.IO room immediately after saving.
-      // The frontend listens on the "notification:new" event.
-      emitNotificationToUser(user_id, result);
-
-      return result;
+      // Emit real-time notification
+      emitNotificationToUser(user_id, notificationObj);
+      return notificationObj;
     } catch (error) {
       console.error('Error creating notification:', error);
       return null;

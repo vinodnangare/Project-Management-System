@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getSocket } from '../utils/socket';
 import { useGetNotificationsQuery } from '../services/api';
 import NotificationDropdown from './NotificationDropdown';
 import { HiOutlineBell } from 'react-icons/hi';
@@ -6,16 +7,42 @@ import '../styles/NotificationBell.css';
 
 const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data, isLoading, refetch } = useGetNotificationsQuery(undefined, {
-    pollingInterval: 10000,
-    refetchOnMountOrArgChange: true,
-  });
+  useEffect(() => {
+    const socket = getSocket();
+    setIsLoading(true);
 
-  const notifications = data?.data ?? [];
-  const unreadCount =
-    data?.unread_count ??
-    notifications.filter((n) => !n.is_read).length;
+    // Request notifications once connected
+    if (socket.connected) {
+      socket.emit('get_notifications');
+    } else {
+      socket.on('connect', () => {
+        socket.emit('get_notifications');
+      });
+    }
+
+    // Listen for notifications list response
+    socket.on('notifications', (data: { data: any[]; unread_count: number }) => {
+      setNotifications(data.data || []);
+      setUnreadCount(data.unread_count ?? (data.data || []).filter((n) => !n.is_read).length);
+      setIsLoading(false);
+    });
+
+    // Listen for new real-time notifications 
+    socket.on('notification:new', (notification: any) => {
+      setNotifications((prev) => [notification, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('notifications');
+      socket.off('notification:new');
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,10 +65,7 @@ const NotificationBell: React.FC = () => {
     <div className="notification-bell-container">
       <button
         className="notification-bell"
-        onClick={() => {
-          setOpen((prev) => !prev);
-          refetch();
-        }}
+        onClick={() => setOpen((prev) => !prev)}
         title="Notifications"
         aria-label="Notifications"
       >

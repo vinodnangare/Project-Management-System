@@ -1,5 +1,6 @@
 import React from 'react';
-import { useMarkNotificationAsReadMutation, type Notification } from '../services/api';
+import { getSocket } from '../utils/socket';
+import type { Notification } from '../services/api';
 import '../styles/NotificationDropdown.css';
 import type { NotificationDropdownProps } from '../types/components/NotificationDropdownProps';
 
@@ -8,14 +9,9 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   isLoading,
   onClose,
 }) => {
-  const [markNotificationAsRead] = useMarkNotificationAsReadMutation();
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await markNotificationAsRead(notificationId).unwrap();
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
+  const handleMarkAsRead = (notificationId: string) => {
+    const socket = getSocket();
+    socket.emit('mark_notification_as_read', notificationId);
   };
 
   const formatDate = (dateString: string) => {

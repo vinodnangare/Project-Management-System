@@ -32,13 +32,15 @@ interface TaskDetailProps {
 export const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, onClose }) => {
   const dispatch = useAppDispatch();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = user?.role === 'admin';
   
   // Fetch task details
   const { data: selectedTask, isLoading: taskLoading } = useGetTaskByIdQuery(taskId);
   const { data: comments = [] } = useGetTaskCommentsQuery(taskId);
   const { data: activities = [] } = useGetTaskActivitiesQuery(taskId);
   const { data: assignees = [] } = useGetTaskAssigneesQuery(taskId);
-  const { data: availableUsers = [] } = useGetAssignableUsersQuery();
+  // Only fetch assignable users for admin users
+  const { data: availableUsers = [] } = useGetAssignableUsersQuery(undefined, { skip: !isAdmin });
   
   // Mutations
   const [addComment, { isLoading: isAddingComment }] = useAddCommentMutation();

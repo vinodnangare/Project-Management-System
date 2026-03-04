@@ -256,7 +256,7 @@ export const api = createApi({
 
     uploadProfileImage: builder.mutation<User, FormData>({
       query: (formData) => ({
-        url: '/auth/profile/image/',
+        url: '/auth/profile/image',
         method: 'POST',
         body: formData,
         prepareHeaders: (headers: Headers) => {
@@ -321,14 +321,14 @@ export const api = createApi({
     }),
 
     getTaskDoc: builder.query<TaskDoc, string>({
-      query: (taskId) => `/tasks/${taskId}/docs/`,
+      query: (taskId) => `/tasks/${taskId}/docs`,
       transformResponse: (response: { success: boolean; data: TaskDoc }) => response.data,
       providesTags: (result, error, taskId) => [{ type: 'Doc', id: taskId }],
     }),
 
     upsertTaskDoc: builder.mutation<TaskDoc, { taskId: string; content: string }>({
       query: ({ taskId, content }) => ({
-        url: `/tasks/${taskId}/docs/`,
+        url: `/tasks/${taskId}/docs`,
         method: 'PUT',
         body: { content },
       }),
@@ -338,7 +338,7 @@ export const api = createApi({
 
     createTask: builder.mutation<Task, Partial<Task> & { created_by: string; assignees?: string[] }>({
       query: (data) => ({
-        url: '/tasks/',
+        url: '/tasks',
         method: 'POST',
         body: data,
       }),
@@ -348,7 +348,7 @@ export const api = createApi({
 
     updateTask: builder.mutation<Task, { id: string; updates: Partial<Task>; performedBy: string }>({
       query: ({ id, updates, performedBy }) => ({
-        url: `/tasks/${id}/?performed_by=${performedBy}`,
+        url: `/tasks/${id}?performed_by=${performedBy}`,
         method: 'PATCH',
         body: updates,
       }),
@@ -418,7 +418,7 @@ export const api = createApi({
 
     // Comments
     getTaskComments: builder.query<Comment[], string>({
-      query: (taskId) => `/tasks/${taskId}/comments/`,
+      query: (taskId) => `/tasks/${taskId}/comments`,
       transformResponse: (response: { success: boolean; data: Comment[] }) => response.data,
       providesTags: (result, error, taskId) =>
         result
@@ -431,7 +431,7 @@ export const api = createApi({
 
     addComment: builder.mutation<Comment, { taskId: string; comment: string; created_by: string }>({
       query: ({ taskId, comment, created_by }) => ({
-        url: `/tasks/${taskId}/comments/`,
+        url: `/tasks/${taskId}/comments`,
         method: 'POST',
         body: { comment, created_by },
       }),
@@ -452,7 +452,7 @@ export const api = createApi({
 
     // Subtasks
     getSubtasks: builder.query<Subtask[], string>({
-      query: (taskId) => `/tasks/${taskId}/subtasks/`,
+      query: (taskId) => `/tasks/${taskId}/subtasks`,
       transformResponse: (response: { success: boolean; data: Subtask[] }) => response.data,
       providesTags: (result, error, taskId) =>
         result
@@ -465,7 +465,7 @@ export const api = createApi({
 
     createSubtask: builder.mutation<Subtask, { taskId: string; title: string; description?: string | null; created_by: string }>({
       query: ({ taskId, title, description, created_by }) => ({
-        url: `/tasks/${taskId}/subtasks/`,
+        url: `/tasks/${taskId}/subtasks`,
         method: 'POST',
         body: { title, description, created_by },
       }),
@@ -478,7 +478,7 @@ export const api = createApi({
 
     updateSubtaskStatus: builder.mutation<Subtask, { taskId: string; subtaskId: string; status: 'TODO' | 'DONE' }>({
       query: ({ taskId, subtaskId, status }) => ({
-        url: `/tasks/${taskId}/subtasks/${subtaskId}/`,
+        url: `/tasks/${taskId}/subtasks/${subtaskId}`,
         method: 'PATCH',
         body: { status },
       }),
@@ -493,7 +493,7 @@ export const api = createApi({
 
     deleteSubtask: builder.mutation<void, { taskId: string; subtaskId: string }>({
       query: ({ taskId, subtaskId }) => ({
-        url: `/tasks/${taskId}/subtasks/${subtaskId}/`,
+        url: `/tasks/${taskId}/subtasks/${subtaskId}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, { taskId, subtaskId }) => [
@@ -506,7 +506,7 @@ export const api = createApi({
     // Time Logs
     logTime: builder.mutation<TimeLog, { date: string; hours_worked: number; task_id?: string | null; description?: string | null }>({
       query: (data) => ({
-        url: '/time-logs/',
+        url: '/time-logs',
         method: 'POST',
         body: data,
       }),
@@ -540,14 +540,14 @@ export const api = createApi({
 
     // Stats
     getTaskStats: builder.query<any, void>({
-      query: () => '/tasks/stats/',
+      query: () => '/tasks/stats',
       transformResponse: (response: { success: boolean; data: any }) => response.data,
       providesTags: ['Stats'],
     }),
 
     // Reports
     getReportSummary: builder.query<any, { startDate: string; endDate: string }>({
-      query: ({ startDate, endDate }) => `/tasks/reports/summary/?startDate=${startDate}&endDate=${endDate}`,
+      query: ({ startDate, endDate }) => `/tasks/reports/summary?startDate=${startDate}&endDate=${endDate}`,
       transformResponse: (response: { success: boolean; data: any }) => response.data,
     }),
 
