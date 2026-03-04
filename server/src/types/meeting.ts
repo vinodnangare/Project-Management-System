@@ -68,6 +68,8 @@ export interface Meeting {
   recurrence: MeetingRecurrence;
   recurringTemplateId?: string | null;
   notes: string | null;
+  notesFileName?: string | null;
+  notesFilePath?: string | null;
   userNotes: UserNote[];
   is_deleted: boolean;
   created_at: string;

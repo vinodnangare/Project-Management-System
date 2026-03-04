@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
 import { Meeting, IMeeting } from '../models/Meeting.js';
 import { MeetingActivity } from '../models/MeetingActivity.js';
 import { RecurringMeetingTemplate } from '../models/RecurringMeetingTemplate.js';
@@ -198,6 +200,8 @@ const formatMeetingResponse = async (meeting: IMeeting): Promise<MeetingType> =>
     recurrence: (meeting.recurrence || MeetingRecurrence.ONCE) as MeetingRecurrence,
     recurringTemplateId: meeting.recurringTemplateId?.toString() || null,
     notes: meeting.notes || null,
+    notesFileName: meeting.notesFileName || null,
+    // we intentionally do not send base64 data back; file can be downloaded via dedicated endpoint
     userNotes,
     is_deleted: meeting.is_deleted,
     created_at: meeting.created_at.toISOString(),
@@ -375,6 +379,27 @@ export const createMeeting = async (
     console.log(`[MeetingService] Created recurring template ${template._id} for ${recurrence} meetings`);
   }
 
+  // prepare potential file path variables
+  let notesFilePath: string | null = null;
+  let notesFileName: string | null = null;
+
+  if (meetingData.notesFileBase64 && meetingData.notesFileName) {
+    try {
+      notesFileName = meetingData.notesFileName;
+      const buffer = Buffer.from(meetingData.notesFileBase64, 'base64');
+      const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'meeting-notes');
+      await fs.promises.mkdir(uploadsDir, { recursive: true });
+      const safeName = meetingData.notesFileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      notesFilePath = path.join(uploadsDir, `${new mongoose.Types.ObjectId().toString()}_${safeName}`);
+      await fs.promises.writeFile(notesFilePath, buffer);
+    } catch (err) {
+      console.error('Failed to save meeting notes file:', err);
+      // don't block creation; just continue without file
+      notesFilePath = null;
+      notesFileName = null;
+    }
+  }
+
   // Create the first meeting instance
   const meeting = await Meeting.create({
     title: meetingData.title,
@@ -392,6 +417,8 @@ export const createMeeting = async (
     recurrence,
     recurringTemplateId,
     notes: meetingData.notes || null,
+    notesFileName,
+    notesFilePath,
     userNotes: [],
     is_deleted: false
   });
@@ -588,6 +615,45 @@ export const updateMeeting = async (
         existingUserNotes.splice(existingNoteIndex, 1);
         updateData.userNotes = existingUserNotes;
         queueActivity(MeetingActivityAction.PERSONAL_NOTE_UPDATED, previousUserNote, null);
+      }
+    }
+    
+    // handle file attachment updates
+    if (meetingData.replaceNotes) {
+      // remove existing file if flagged
+      if (existingMeeting.notesFilePath) {
+        fs.promises.unlink(existingMeeting.notesFilePath).catch(() => {});
+        queueActivity(
+          MeetingActivityAction.NOTES_UPDATED,
+          existingMeeting.notesFileName || null,
+          null
+        );
+        updateData.notesFilePath = null;
+        updateData.notesFileName = null;
+      }
+    }
+    if (meetingData.notesFileBase64 && meetingData.notesFileName) {
+      // save new file (overwrite any previous)
+      try {
+        const buffer = Buffer.from(meetingData.notesFileBase64, 'base64');
+        const uploadsDir = path.resolve(__dirname, '..', 'uploads', 'meeting-notes');
+        await fs.promises.mkdir(uploadsDir, { recursive: true });
+        const safeName = meetingData.notesFileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const filePath = path.join(uploadsDir, `${meetingId}_${safeName}`);
+        await fs.promises.writeFile(filePath, buffer);
+        // delete old file if exists and path differs
+        if (existingMeeting.notesFilePath && existingMeeting.notesFilePath !== filePath) {
+          fs.promises.unlink(existingMeeting.notesFilePath).catch(() => {});
+        }
+        updateData.notesFilePath = filePath;
+        updateData.notesFileName = meetingData.notesFileName;
+        queueActivity(
+          MeetingActivityAction.NOTES_UPDATED,
+          existingMeeting.notesFileName || null,
+          meetingData.notesFileName
+        );
+      } catch (err) {
+        console.error('Failed to save updated meeting notes file:', err);
       }
     }
 

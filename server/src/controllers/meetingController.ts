@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import mongoose from 'mongoose';
+import path from 'path';
 import { Meeting } from '../models/Meeting.js';
 import * as meetingService from '../services/meetingService.js';
 import {
@@ -97,6 +98,47 @@ export const getMeetingById = async (
   }
 };
 
+// file download handler for meeting notes
+export const getMeetingNotesFile = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    const { id } = req.params;
+    // apply same access control as getMeetingById but we need raw document
+    const conditions: any = { _id: new mongoose.Types.ObjectId(id), is_deleted: false };
+    if (req.user.role === 'employee') {
+      conditions.assignedTo = { $in: [new mongoose.Types.ObjectId(req.user.id)] };
+    }
+
+    const meeting = await Meeting.findOne(conditions).select('notesFilePath notesFileName');
+    if (!meeting) {
+      res.status(404).json({ success: false, error: 'Meeting not found or access denied' });
+      return;
+    }
+
+    if (!meeting.notesFilePath) {
+      res.status(404).json({ success: false, error: 'No attachment available' });
+      return;
+    }
+
+    const absolutePath = path.resolve(meeting.notesFilePath);
+    res.sendFile(absolutePath, (err) => {
+      if (err) {
+        console.error('Error sending notes file:', err);
+        res.status(500).json({ success: false, error: 'Failed to download file' });
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching notes file:', error);
+    res.status(500).json({ success: false, error: 'Failed to download notes file' });
+  }
+};
 export const createMeeting = async (
   req: Request,
   res: Response

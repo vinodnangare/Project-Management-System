@@ -1,0 +1,24 @@
+{
+  "name": "project-management-system",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm run dev:express",
+    "dev:express": "concurrently \"cd server && npm run dev\" \"cd client && npm run dev\"",
+    "dev:django": "concurrently \"cd django_server && .\\venv\\Scripts\\python.exe manage.py runserver 8000\" \"cd client && npm run dev -- --mode django\"",
+    "client:express": "cd client && npm run dev",
+    "client:django": "cd client && npm run dev -- --mode django",
+    "server:express": "cd server && npm run dev",
+    "server:django": "cd django_server && .\\venv\\Scripts\\python.exe manage.py runserver 8000"
+  },
+  "dependencies": {
+    "@types/multer": "^2.0.0",
+    "cloudinary": "^2.9.0",
+    "express": "^5.2.1",
+    "multer": "^2.0.2",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^3.7.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
