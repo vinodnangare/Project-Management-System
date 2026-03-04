@@ -281,6 +281,18 @@ export const createTask = async (data: CreateTaskRequest): Promise<TaskType> => 
     performed_by: data.created_by
   }).catch(console.error);
 
+  // Send notification to assigned user when task is created with an assignee
+  if (data.assigned_to) {
+    try {
+      await NotificationService.createNotification({
+        user_id: data.assigned_to,
+        message: `You have been assigned a new task: "${task.title}"`
+      });
+    } catch (error) {
+      console.error('Failed to send task assignment notification:', error);
+    }
+  }
+
   return formatTaskResponse(task);
 };
 
@@ -341,6 +353,18 @@ export const updateTask = async (
     updates.assigned_to = data.assigned_to ? new mongoose.Types.ObjectId(data.assigned_to) : null;
     const action = data.assigned_to === null ? ActivityAction.UNASSIGNED : ActivityAction.ASSIGNED;
     trackChange('assigned_to', currentTask.assigned_to?.toString() || null, data.assigned_to || null, action);
+    
+    // Send notification to newly assigned user
+    if (data.assigned_to && data.assigned_to !== currentTask.assigned_to?.toString()) {
+      try {
+        await NotificationService.createNotification({
+          user_id: data.assigned_to,
+          message: `You have been assigned a task: "${currentTask.title}"`
+        });
+      } catch (error) {
+        console.error('Failed to send task assignment notification:', error);
+      }
+    }
   }
 
   if (data.due_date !== undefined) {
