@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AxiosInstance, AxiosError } from 'axios';
+import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -7,22 +7,47 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 export interface ApiError {
   message: string;
   status?: number;
-  data?: any;
+  data?: unknown;
 }
 
 // Store dispatch reference for logout handling
-let storeDispatch: any = null;
+let storeDispatch: unknown = null;
 
-export const setDispatchForClient = (dispatch: any) => {
+// Flag to prevent multiple refresh attempts
+let isRefreshing = false;
+// Queue of failed requests to retry after token refresh
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+  config: InternalAxiosRequestConfig;
+}> = [];
+
+export const setDispatchForClient = (dispatch: unknown) => {
   storeDispatch = dispatch;
 };
 
-// Token refresh helper
-const refreshAccessToken = async (): Promise<{ accessToken: string; refreshToken: string; expiresIn: number } | null> => {
-  const refreshToken = localStorage.getItem('refreshToken');
+/**
+ * Process the queue of failed requests after token refresh
+ */
+const processQueue = (error: unknown = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  failedQueue = [];
+};
+
+/**
+ * Attempt to refresh the access token
+ */
+const attemptTokenRefresh = async (): Promise<boolean> => {
+  const refreshToken = localStorage.getItem('refreshtoken');
   
   if (!refreshToken) {
-    return null;
+    return false;
   }
 
   try {
@@ -30,25 +55,44 @@ const refreshAccessToken = async (): Promise<{ accessToken: string; refreshToken
       refreshToken
     });
 
-    if (response.data.success && response.data.data) {
-      return {
-        accessToken: response.data.data.accessToken,
-        refreshToken: response.data.data.refreshToken,
-        expiresIn: response.data.data.expiresIn,
-      };
+    if (response.data?.success && response.data?.data) {
+      localStorage.setItem('access token', response.data.data.accessToken);
+      if (response.data.data.refreshToken) {
+        localStorage.setItem('refreshtoken', response.data.data.refreshToken);
+      }
+      return true;
     }
-    
-    return null;
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    return null;
+    return false;
+  } catch {
+    return false;
   }
+};
+
+/**
+ * Handle logout - clear all tokens and redirect
+ */
+const handleLogout = async () => {
+  localStorage.removeItem('access token');
+  localStorage.removeItem('refreshtoken');
+  localStorage.removeItem('user');
+
+  toast.error('Session expired. Please login again.', {
+    duration: 3000,
+    position: 'top-right',
+  });
+
+  if (storeDispatch) {
+    const { logout } = await import('../store/slices/authSlice');
+    (storeDispatch as (action: unknown) => void)(logout());
+  }
+
+  setTimeout(() => {
+    window.location.href = '/login';
+  }, 500);
 };
 
 class ApiClient {
   private client: AxiosInstance;
-  private isRefreshing = false;
-  private refreshPromise: Promise<any> | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -60,7 +104,7 @@ class ApiClient {
 
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+        const token = localStorage.getItem('access token');
         if (token) {
           config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -72,75 +116,53 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
         const apiError: ApiError = {
           message: error.message,
           status: error.response?.status,
           data: error.response?.data
         };
 
-        const originalRequest = error.config as any;
-
-        // Handle 401 Unauthorized (token expired)
-        if (apiError.status === 401 && !originalRequest._retry) {
-          const errorData = apiError.data as any;
-          
-          // Check if token is expired (not invalidated)
-          if (errorData?.code === 'TOKEN_EXPIRED' || errorData?.error === 'Token expired') {
-            originalRequest._retry = true;
-
-            // Prevent multiple simultaneous refresh attempts
-            if (!this.isRefreshing) {
-              this.isRefreshing = true;
-              this.refreshPromise = refreshAccessToken();
-            }
-
-            const newTokens = await this.refreshPromise;
-            this.isRefreshing = false;
-            this.refreshPromise = null;
-
-            if (newTokens) {
-              // Update tokens in localStorage
-              localStorage.setItem('accessToken', newTokens.accessToken);
-              localStorage.setItem('refreshToken', newTokens.refreshToken);
-
-              // Update Redux state
-              if (storeDispatch) {
-                const { updateTokens } = await import('../store/slices/authSlice');
-                storeDispatch(updateTokens(newTokens));
+        // Handle 401 Unauthorized (token expired or invalid)
+        if (apiError.status === 401 && originalRequest && !originalRequest._retry) {
+          if (isRefreshing) {
+            // Queue the request while another refresh is in progress
+            return new Promise((resolve, reject) => {
+              failedQueue.push({ resolve, reject, config: originalRequest });
+            }).then(() => {
+              // Update token in header and retry
+              const newToken = localStorage.getItem('access token');
+              if (newToken) {
+                originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
               }
-
-              // Retry the original request with new token
-              originalRequest.headers['Authorization'] = `Bearer ${newTokens.accessToken}`;
               return this.client(originalRequest);
+            });
+          }
+
+          originalRequest._retry = true;
+          isRefreshing = true;
+
+          try {
+            const refreshSuccess = await attemptTokenRefresh();
+            
+            if (refreshSuccess) {
+              const newToken = localStorage.getItem('access token');
+              if (newToken) {
+                originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+              }
+              processQueue();
+              return this.client(originalRequest);
+            } else {
+              processQueue(error);
+              await handleLogout();
             }
+          } finally {
+            isRefreshing = false;
           }
-
-          // Clear auth from localStorage
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-
-          // Show error toast
-          toast.error('Session expired. Please login again.', {
-            duration: 3000,
-            position: 'top-right',
-          });
-
-          // Dispatch logout if store dispatch is available
-          if (storeDispatch) {
-            const { logout } = await import('../store/slices/authSlice');
-            storeDispatch(logout());
-          }
-
-          // Redirect to login after a delay
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 500);
         }
         // Show toast for rate limit errors
         else if (apiError.status === 429) {
-          const msg = apiError.data?.error || 'Too many requests. Please try again later.';
+          const msg = (apiError.data as { error?: string })?.error || 'Too many requests. Please try again later.';
           toast.error(msg);
         }
 
