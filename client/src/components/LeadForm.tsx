@@ -14,7 +14,7 @@ const LeadForm: React.FC<LeadFormProps> = ({
   const { data: owners = [], isLoading: ownersLoading } = useGetLeadOwnersQuery();
   const { data: stages = [] } = useGetLeadStagesQuery();
 
-  const defaultStage = stages.find(s => s.is_default)?.name || stages[0]?.name || 'new';
+  const defaultStage = stages.find(s => s.isDefault)?.name || stages[0]?.name || 'new';
 
   const [formData, setFormData] = useState<LeadFormData>({
     company_name: initialData?.company_name || '',
